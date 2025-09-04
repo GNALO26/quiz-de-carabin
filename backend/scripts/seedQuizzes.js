@@ -104,7 +104,7 @@ async function seedFromDocx() {
       {
         path: path.join(__dirname, '../uploads/physiologie-respiratoire.docx'),
         category: 'physiologie-respiratoire',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-epithelial1.docx'),
@@ -175,7 +175,7 @@ async function seedFromDocx() {
     process.exit(0);
   }
 }
-
+console.log('Quiz model:', Quiz);
 // Connexion MongoDB + lancement du seed
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {

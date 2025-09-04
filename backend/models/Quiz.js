@@ -1,86 +1,50 @@
-const express = require('express');
-const Quiz = require('../models/Quiz');
-const auth = require('../middleware/auth');
-const router = express.Router();
+const mongoose = require('mongoose');
 
-// Get all quizzes
-router.get('/', auth, async (req, res) => {
-  try {
-    const quizzes = await Quiz.find();
-    res.json({ success: true, quizzes });
-  } catch (error) {
-    console.error('Get quizzes error:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+const QuestionSchema = new mongoose.Schema({
+  text: {
+    type: String,
+    required: true
+  },
+  options: [{
+    type: String,
+    required: false
+  }],
+  correctAnswers: [{
+    type: Number,
+    required: true
+  }],
+  justification: {
+    type: String,
+    default: ''
   }
 });
 
-// Get single quiz
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const quiz = await Quiz.findById(req.params.id);
-    
-    if (!quiz) {
-      return res.status(404).json({ success: false, message: 'Quiz non trouvé.' });
-    }
-    
-    // Check if user has access to premium quiz
-    if (!quiz.free && !req.user.isPremium) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Accès refusé. Abonnement premium requis.' 
-      });
-    }
-    
-    res.json({ success: true, quiz });
-  } catch (error) {
-    console.error('Get quiz error:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+const QuizSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  category: {
+    type: String,
+    required: true
+  },
+  free: {
+    type: Boolean,
+    default: true
+  },
+  questions: [QuestionSchema],
+  duration: {
+    type: Number, // en minutes
+    default: 30
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-// Submit quiz answers
-router.post('/:id/submit', auth, async (req, res) => {
-  try {
-    const { answers } = req.body;
-    const quiz = await Quiz.findById(req.params.id);
-    
-    if (!quiz) {
-      return res.status(404).json({ success: false, message: 'Quiz non trouvé.' });
-    }
-    
-    // Calculate score
-    let score = 0;
-    quiz.questions.forEach((question, index) => {
-      const userAnswer = answers[index] || [];
-      const correctAnswers = question.correctAnswers;
-      
-      if (userAnswer.length === correctAnswers.length && 
-          userAnswer.every(val => correctAnswers.includes(val))) {
-        score++;
-      }
-    });
-    
-    // Add to user's quiz history
-    req.user.quizHistory.push({
-      quizId: quiz._id,
-      score,
-      totalQuestions: quiz.questions.length,
-      correctAnswers: score,
-      completedAt: new Date()
-    });
-    
-    await req.user.save();
-    
-    res.json({
-      success: true,
-      score,
-      totalQuestions: quiz.questions.length,
-      correctAnswers: score
-    });
-  } catch (error) {
-    console.error('Submit quiz error:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
-  }
-});
-
-module.exports = router;
+module.exports = mongoose.model('Quiz', QuizSchema);

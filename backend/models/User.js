@@ -1,31 +1,54 @@
-const express = require('express');
-const auth = require('../middleware/auth');
-const router = express.Router();
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
-// Get user profile
-router.get('/profile', auth, async (req, res) => {
-  try {
-    await req.user.populate({
-      path: 'quizHistory.quizId',
-      select: 'title category'
-    });
-    
-    res.json({
-      success: true,
-      user: {
-        id: req.user._id,
-        name: req.user.name,
-        email: req.user.email,
-        isPremium: req.user.isPremium,
-        premiumExpiry: req.user.premiumExpiry,
-        quizHistory: req.user.quizHistory,
-        createdAt: req.user.createdAt
-      }
-    });
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
-  }
+const UserSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  isPremium: {
+    type: Boolean,
+    default: false,
+  },
+  premiumExpiry: {
+    type: Date,
+  },
+  quizHistory: [{
+    quizId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Quiz',
+    },
+    score: Number,
+    totalQuestions: Number,
+    correctAnswers: Number,
+    completedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-module.exports = router;
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+UserSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
+  return await bcrypt.compare(candidatePassword, userPassword);
+};
+
+module.exports = mongoose.model('User', UserSchema);
