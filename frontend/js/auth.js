@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://philosophical-carp-quiz-de-carabin-14ca72a2.koyeb.app';
+const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
 
 class Auth {
     constructor() {
