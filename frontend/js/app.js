@@ -1,4 +1,5 @@
-const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
+// Utilisez la configuration globale
+const API_BASE_URL = window.APP_CONFIG.API_BASE_URL;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Vérifier l'état d'authentification
