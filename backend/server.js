@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-// Import des routes
+// Import des routes - vérifiez que ces chemins sont corrects
 const authRoutes = require('./routes/auth');
 const quizRoutes = require('./routes/quiz');
 const paymentRoutes = require('./routes/payment');
