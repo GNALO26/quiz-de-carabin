@@ -1,19 +1,22 @@
-class Quiz {
+import { CONFIG } from './config.js';
+
+export class Quiz {
     constructor() {
         this.currentQuiz = null;
         this.currentQuestionIndex = 0;
         this.userAnswers = [];
         this.timerInterval = null;
         this.timeLeft = 0;
+        this.quizzes = [];
     }
 
     async loadQuizzes() {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/quiz`);
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz`);
             const data = await response.json();
 
             if (data.success) {
-                this.quizzes = data.data;
+                this.quizzes = data.quizzes;
                 this.renderQuizzes();
             } else {
                 console.error('Failed to load quizzes');
@@ -53,6 +56,10 @@ class Quiz {
         });
 
         // Add event listeners to quiz buttons
+        this.addQuizEventListeners();
+    }
+
+    addQuizEventListeners() {
         document.querySelectorAll('.start-quiz').forEach(button => {
             button.addEventListener('click', (e) => {
                 const quizId = e.target.getAttribute('data-quiz-id');
@@ -63,8 +70,8 @@ class Quiz {
 
     async startQuiz(quizId) {
         try {
-            const token = auth.getToken();
-            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}`, {
+            const token = window.auth.getToken();
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz/${quizId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -72,7 +79,7 @@ class Quiz {
             const data = await response.json();
 
             if (data.success) {
-                this.currentQuiz = data.data;
+                this.currentQuiz = data.quiz;
                 this.userAnswers = new Array(this.currentQuiz.questions.length).fill([]);
                 this.currentQuestionIndex = 0;
 
@@ -122,14 +129,21 @@ class Quiz {
         document.getElementById('submit-quiz').style.display = index === this.currentQuiz.questions.length - 1 ? 'block' : 'none';
 
         // Add event listeners to options
+        this.addOptionEventListeners(index);
+
+        // Add event listeners to navigation buttons
+        this.setupNavigationButtons(index);
+    }
+
+    addOptionEventListeners(index) {
         document.querySelectorAll('.option').forEach(option => {
-            option.addEventListener('click', (e) => {
+            option.addEventListener('click', () => {
                 const optionIndex = parseInt(option.getAttribute('data-option'));
                 const checkbox = option.querySelector('input[type="checkbox"]');
-
+                
                 // Toggle selection
                 checkbox.checked = !checkbox.checked;
-
+                
                 if (checkbox.checked) {
                     option.classList.add('selected');
                     // Add to selected answers
@@ -143,8 +157,9 @@ class Quiz {
                 }
             });
         });
+    }
 
-        // Add event listeners to navigation buttons
+    setupNavigationButtons(index) {
         document.getElementById('prev-btn').onclick = () => this.showQuestion(index - 1);
         document.getElementById('next-btn').onclick = () => this.showQuestion(index + 1);
         document.getElementById('submit-quiz').onclick = () => this.submitQuiz();
@@ -153,13 +168,13 @@ class Quiz {
     startTimer(seconds) {
         this.timeLeft = seconds;
         clearInterval(this.timerInterval);
-
+        
         this.updateTimerDisplay();
-
+        
         this.timerInterval = setInterval(() => {
             this.timeLeft--;
             this.updateTimerDisplay();
-
+            
             if (this.timeLeft <= 0) {
                 clearInterval(this.timerInterval);
                 alert('Temps écoulé! Le quiz sera soumis automatiquement.');
@@ -176,10 +191,10 @@ class Quiz {
 
     async submitQuiz() {
         clearInterval(this.timerInterval);
-
+        
         try {
-            const token = auth.getToken();
-            const response = await fetch(`${API_BASE_URL}/api/quiz/${this.currentQuiz._id}/submit`, {
+            const token = window.auth.getToken();
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz/${this.currentQuiz._id}/submit`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -187,11 +202,11 @@ class Quiz {
                 },
                 body: JSON.stringify({ answers: this.userAnswers })
             });
-
+            
             const data = await response.json();
-
+            
             if (data.success) {
-                this.showResults(data.data);
+                this.showResults(data);
             } else {
                 alert('Erreur lors de la soumission du quiz');
             }
@@ -200,8 +215,10 @@ class Quiz {
         }
     }
 
-    showResults(results) {
+    showResults(data) {
         const resultsContent = document.getElementById('results-content');
+        const results = data;
+        
         resultsContent.innerHTML = `
             <div class="text-center mb-4">
                 <h4>Votre score: ${results.score}/${results.totalQuestions}</h4>
@@ -213,17 +230,17 @@ class Quiz {
                 </div>
             </div>
         `;
-
+        
         // Add detailed results for each question
         this.currentQuiz.questions.forEach((question, index) => {
             const userAnswer = this.userAnswers[index];
             const correctAnswers = question.correctAnswers;
             const isCorrect = userAnswer.length === correctAnswers.length && 
                              userAnswer.every(val => correctAnswers.includes(val));
-
+            
             let userAnswerText = userAnswer.map(a => question.options[a]).join(', ') || 'Aucune réponse';
             let correctAnswerText = correctAnswers.map(a => question.options[a]).join(', ');
-
+            
             resultsContent.innerHTML += `
                 <div class="mb-4 p-3 ${isCorrect ? 'border-success' : 'border-danger'} border rounded">
                     <h5>Question ${index + 1}: ${question.text}</h5>
@@ -238,11 +255,9 @@ class Quiz {
                 </div>
             `;
         });
-
+        
         // Hide question container and show results
         document.getElementById('question-container').style.display = 'none';
         document.getElementById('results-container').style.display = 'block';
     }
 }
-
-const quiz = new Quiz();

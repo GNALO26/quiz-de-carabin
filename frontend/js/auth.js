@@ -1,7 +1,6 @@
-// Utilisez la configuration globale
-const API_BASE_URL = window.APP_CONFIG.API_BASE_URL;
+import { CONFIG } from './config.js';
 
-class Auth {
+export class Auth {
     constructor() {
         this.token = localStorage.getItem('quizToken');
         this.user = JSON.parse(localStorage.getItem('quizUser') || 'null');
@@ -21,7 +20,10 @@ class Auth {
         document.getElementById('register-btn').addEventListener('click', () => this.register());
         
         // Logout
-        document.getElementById('logout-btn').addEventListener('click', () => this.logout());
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => this.logout());
+        }
     }
 
     async login() {
@@ -34,7 +36,7 @@ class Auth {
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -80,7 +82,7 @@ class Auth {
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -179,6 +181,3 @@ class Auth {
         return this.user;
     }
 }
-
-// Initialize auth
-const auth = new Auth();

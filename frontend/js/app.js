@@ -1,29 +1,30 @@
-// Utilisez la configuration globale
-const API_BASE_URL = window.APP_CONFIG.API_BASE_URL;
+import { CONFIG } from './config.js';
+import { Auth } from './auth.js';
+import { Quiz } from './quiz.js';
+import { Payment } from './payment.js';
 
+// Initialize application after DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Vérifier l'état d'authentification
-    if (auth.isAuthenticated()) {
-        // Charger les quiz
-        quiz.loadQuizzes();
-    }
+    // Initialize modules
+    window.auth = new Auth();
+    window.quiz = new Quiz();
+    window.payment = new Payment();
 
-    // Gestionnaire pour le bouton de retour aux quiz
-    document.getElementById('back-to-quizzes').addEventListener('click', function() {
-        document.getElementById('quiz-interface').style.display = 'none';
-        document.getElementById('results-container').style.display = 'none';
-        document.getElementById('quiz-section').style.display = 'block';
-    });
+    // Load quizzes
+    window.quiz.loadQuizzes();
 
-    // Gestionnaire pour le tableau de bord
-    document.getElementById('dashboard-btn').addEventListener('click', function(e) {
-        e.preventDefault();
-        alert('Tableau de bord - Fonctionnalité à venir');
-    });
-
-    // Gestionnaire pour l'historique
-    document.getElementById('history-btn').addEventListener('click', function(e) {
-        e.preventDefault();
-        alert('Historique - Fonctionnalité à venir');
-    });
+    // Setup global event listeners
+    setupEventListeners();
 });
+
+function setupEventListeners() {
+    // Back to quizzes button
+    const backButton = document.getElementById('back-to-quizzes');
+    if (backButton) {
+        backButton.addEventListener('click', function() {
+            document.getElementById('quiz-interface').style.display = 'none';
+            document.getElementById('results-container').style.display = 'none';
+            document.getElementById('quiz-section').style.display = 'block';
+        });
+    }
+}
