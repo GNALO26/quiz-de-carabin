@@ -240,50 +240,51 @@ export class Quiz {
     }
 
     showResults(data) {
-        const resultsContent = document.getElementById('results-content');
-        const results = data.results || data;
-        
-        resultsContent.innerHTML = `
-            <div class="text-center mb-4">
-                <h4>Votre score: ${results.score}/${results.totalQuestions}</h4>
-                <div class="progress mb-3" style="height: 30px;">
-                    <div class="progress-bar" role="progressbar" 
-                         style="width: ${(results.score/results.totalQuestions)*100}%;" 
-                         aria-valuenow="${(results.score/results.totalQuestions)*100}" 
-                         aria-valuemin="0" aria-valuemax="100">
-                        ${Math.round((results.score/results.totalQuestions)*100)}%
-                    </div>
+    const resultsContent = document.getElementById('results-content');
+    const results = data.results || data;
+    
+    resultsContent.innerHTML = `
+        <div class="text-center mb-4">
+            <h4>Votre score: ${results.score}/${results.totalQuestions}</h4>
+            <div class="progress mb-3" style="height: 30px;">
+                <div class="progress-bar" role="progressbar" 
+                     style="width: ${(results.score/results.totalQuestions)*100}%;" 
+                     aria-valuenow="${(results.score/results.totalQuestions)*100}" 
+                     aria-valuemin="0" aria-valuemax="100">
+                    ${Math.round((results.score/results.totalQuestions)*100)}%
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Détails des résultats
+    this.currentQuiz.questions.forEach((question, index) => {
+        const userAnswer = this.userAnswers[index];
+        const correctAnswers = question.correctAnswers;
+        const isCorrect = userAnswer.length === correctAnswers.length && 
+                         userAnswer.every(val => correctAnswers.includes(val));
+
+        let userAnswerText = userAnswer.map(a => question.options[a]).join(', ') || 'Aucune réponse';
+        let correctAnswerText = correctAnswers.map(a => question.options[a]).join(', ');
+
+        // CORRECTION : Utilisation de += pour ajouter du HTML au lieu de réassigner
+        resultsContent.innerHTML += `
+            <div class="mb-4 p-3 ${isCorrect ? 'border-success' : 'border-danger'} border rounded">
+                <h5>Question ${index + 1}: ${question.text}</h5>
+                <p class="${isCorrect ? 'correct' : 'incorrect'}">
+                    <strong>Votre réponse:</strong> ${userAnswerText}
+                    ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
+                </p>
+                ${!isCorrect ? <p class="correct"><strong>Réponse correcte:</strong> ${correctAnswerText}</p> : ''}
+                <div class="justification">
+                    <strong>Explication:</strong> ${question.justification}
                 </div>
             </div>
         `;
+    });
 
-        // Détails des résultats
-        this.currentQuiz.questions.forEach((question, index) => {
-            const userAnswer = this.userAnswers[index];
-            const correctAnswers = question.correctAnswers;
-            const isCorrect = userAnswer.length === correctAnswers.length && 
-                             userAnswer.every(val => correctAnswers.includes(val));
-
-            let userAnswerText = userAnswer.map(a => question.options[a]).join(', ') || 'Aucune réponse';
-            let correctAnswerText = correctAnswers.map(a => question.options[a]).join(', ');
-
-            resultsContent.innerHTML += `
-                <div class="mb-4 p-3 ${isCorrect ? 'border-success' : 'border-danger'} border rounded">
-                    <h5>Question ${index + 1}: ${question.text}</h5>
-                    <p class="${isCorrect ? 'correct' : 'incorrect'}">
-                        <strong>Votre réponse:</strong> ${userAnswerText}
-                        ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
-                    </p>
-                    ${!isCorrect ? <p class="correct"><strong>Réponse correcte:</strong> ${correctAnswerText}</p> : ''}
-                    <div class="justification">
-                        <strong>Explication:</strong> ${question.justification}
-                    </div>
-                </div>
-            `;
-        });
-
-        // Afficher les résultats
-        document.getElementById('question-container').style.display = 'none';
-        document.getElementById('results-container').style.display = 'block';
-    }
+    // Afficher les résultats
+    document.getElementById('question-container').style.display = 'none';
+    document.getElementById('results-container').style.display = 'block';
+}
 }
