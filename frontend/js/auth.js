@@ -24,43 +24,53 @@ export class Auth {
     }
 
     async login() {
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
 
-        if (!email || !password) {
-            this.showAlert('Veuillez remplir tous les champs', 'danger');
-            return;
-        }
-
-        try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                this.token = data.token;
-                this.user = data.user;
-                
-                localStorage.setItem('quizToken', this.token);
-                localStorage.setItem('quizUser', JSON.stringify(this.user));
-                
-                this.updateUI();
-                this.hideModals();
-                this.showAlert('Connexion réussie!', 'success');
-            } else {
-                this.showAlert(data.message, 'danger');
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            this.showAlert('Erreur de connexion', 'danger');
-        }
+    if (!email || !password) {
+        this.showAlert('Veuillez remplir tous les champs', 'danger');
+        return;
     }
+
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+        });
+
+        // Vérifier si la réponse est OK
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            this.token = data.token;
+            this.user = data.user;
+            
+            localStorage.setItem('quizToken', this.token);
+            localStorage.setItem('quizUser', JSON.stringify(this.user));
+            
+            this.updateUI();
+            this.hideModals();
+            this.showAlert('Connexion réussie!', 'success');
+            
+            // Recharger les quizzes après la connexion
+            if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                window.quiz.loadQuizzes();
+            }
+        } else {
+            this.showAlert(data.message, 'danger');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        this.showAlert('Erreur de connexion: ' + error.message, 'danger');
+    }
+}
 
     async register() {
         const name = document.getElementById('registerName').value;

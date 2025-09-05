@@ -11,23 +11,57 @@ export class Quiz {
     }
 
     async loadQuizzes() {
-        try {
-            const token = window.auth.getToken();
-            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-            
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz`, { headers });
-            const data = await response.json();
-
-            if (data.success) {
-                this.quizzes = data.quizzes;
-                this.renderQuizzes();
-            } else {
-                console.error('Failed to load quizzes:', data.message);
-            }
-        } catch (error) {
-            console.error('Error loading quizzes:', error);
+    try {
+        const token = window.auth.getToken();
+        
+        if (!token) {
+            this.showLoginPrompt();
+            return;
         }
+
+        const headers = { 'Authorization': `Bearer ${token}` };
+            
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz`, { headers });
+        const data = await response.json();
+
+        if (data.success) {
+            this.quizzes = data.quizzes;
+            this.renderQuizzes();
+        } else {
+            console.error('Failed to load quizzes:', data.message);
+            this.showError('Erreur lors du chargement des quizzes: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error loading quizzes:', error);
+        this.showError('Erreur lors du chargement des quizzes');
     }
+}
+
+showLoginPrompt() {
+    const quizList = document.getElementById('quiz-list');
+    if (!quizList) return;
+    
+    quizList.innerHTML = `
+        <div class="col-12 text-center">
+            <p>Veuillez vous connecter pour accéder aux quizzes.</p>
+            <button class="btn btn-primary" id="quiz-login-button">Se connecter</button>
+        </div>
+    `;
+    
+    document.getElementById('quiz-login-button').addEventListener('click', () => {
+        // Ouvrir la modale de connexion
+        if (window.auth && typeof window.auth.showLoginModal === 'function') {
+            window.auth.showLoginModal();
+        }
+    });
+}
+
+showError(message) {
+    const quizList = document.getElementById('quiz-list');
+    if (!quizList) return;
+    
+    quizList.innerHTML =`<div class="col-12 text-center text-danger">${message}</div>`;
+}
 
     renderQuizzes() {
         const quizList = document.getElementById('quiz-list');
@@ -241,9 +275,10 @@ export class Quiz {
 
     showResults(data) {
     const resultsContent = document.getElementById('results-content');
-    const results = data.results || data;
+    const results = data;
     
-    resultsContent.innerHTML = `
+    // Construction du HTML des résultats
+    let resultsHTML = `
         <div class="text-center mb-4">
             <h4>Votre score: ${results.score}/${results.totalQuestions}</h4>
             <div class="progress mb-3" style="height: 30px;">
@@ -257,7 +292,7 @@ export class Quiz {
         </div>
     `;
 
-    // Détails des résultats
+    // Détails des résultats pour chaque question
     this.currentQuiz.questions.forEach((question, index) => {
         const userAnswer = this.userAnswers[index];
         const correctAnswers = question.correctAnswers;
@@ -267,21 +302,28 @@ export class Quiz {
         let userAnswerText = userAnswer.map(a => question.options[a]).join(', ') || 'Aucune réponse';
         let correctAnswerText = correctAnswers.map(a => question.options[a]).join(', ');
 
-        // CORRECTION : Utilisation de += pour ajouter du HTML au lieu de réassigner
-        resultsContent.innerHTML += `
+        resultsHTML += `
             <div class="mb-4 p-3 ${isCorrect ? 'border-success' : 'border-danger'} border rounded">
                 <h5>Question ${index + 1}: ${question.text}</h5>
                 <p class="${isCorrect ? 'correct' : 'incorrect'}">
                     <strong>Votre réponse:</strong> ${userAnswerText}
                     ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
                 </p>
-                ${!isCorrect ? <p class="correct"><strong>Réponse correcte:</strong> ${correctAnswerText}</p> : ''}
+        `;
+
+        if (!isCorrect) {
+            resultsHTML += `<p class="correct"><strong>Réponse correcte:</strong> ${correctAnswerText}</p>`;
+        }
+
+        resultsHTML += `
                 <div class="justification">
                     <strong>Explication:</strong> ${question.justification}
                 </div>
             </div>
         `;
     });
+
+    resultsContent.innerHTML = resultsHTML;
 
     // Afficher les résultats
     document.getElementById('question-container').style.display = 'none';
