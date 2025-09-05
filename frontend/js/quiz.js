@@ -12,14 +12,17 @@ export class Quiz {
 
     async loadQuizzes() {
         try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz`);
+            const token = window.auth.getToken();
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz`, { headers });
             const data = await response.json();
 
             if (data.success) {
                 this.quizzes = data.quizzes;
                 this.renderQuizzes();
             } else {
-                console.error('Failed to load quizzes');
+                console.error('Failed to load quizzes:', data.message);
             }
         } catch (error) {
             console.error('Error loading quizzes:', error);
@@ -28,6 +31,8 @@ export class Quiz {
 
     renderQuizzes() {
         const quizList = document.getElementById('quiz-list');
+        if (!quizList) return;
+        
         quizList.innerHTML = '';
 
         this.quizzes.forEach(quiz => {
@@ -37,7 +42,9 @@ export class Quiz {
             quizCard.innerHTML = `
                 <div class="card quiz-card h-100">
                     <div class="card-body">
-                        <span class="badge ${isFree ? 'badge-free' : 'bg-warning text-dark'} mb-2">${isFree ? 'GRATUIT' : 'PREMIUM'}</span>
+                        <span class="badge ${isFree ? 'badge-free' : 'bg-warning text-dark'} mb-2">
+                            ${isFree ? 'GRATUIT' : 'PREMIUM'}
+                        </span>
                         <h4 class="card-title">${quiz.title}</h4>
                         <p class="card-text">${quiz.description}</p>
                         <div class="d-flex justify-content-between align-items-center">
@@ -46,7 +53,8 @@ export class Quiz {
                         </div>
                     </div>
                     <div class="card-footer bg-white">
-                        <button class="btn ${isFree ? 'btn-outline-primary' : 'btn-primary'} w-100 start-quiz" data-quiz-id="${quiz._id}">
+                        <button class="btn ${isFree ? 'btn-outline-primary' : 'btn-primary'} w-100 start-quiz" 
+                                data-quiz-id="${quiz._id}">
                             ${isFree ? 'Commencer le quiz' : 'Accéder (5.000 XOF)'}
                         </button>
                     </div>
@@ -55,7 +63,7 @@ export class Quiz {
             quizList.appendChild(quizCard);
         });
 
-        // Add event listeners to quiz buttons
+        // Ajout des écouteurs d'événements
         this.addQuizEventListeners();
     }
 
@@ -71,11 +79,18 @@ export class Quiz {
     async startQuiz(quizId) {
         try {
             const token = window.auth.getToken();
+            
+            if (!token) {
+                alert('Vous devez vous connecter pour accéder à ce quiz.');
+                return;
+            }
+
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz/${quizId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
+            
             const data = await response.json();
 
             if (data.success) {
@@ -83,25 +98,29 @@ export class Quiz {
                 this.userAnswers = new Array(this.currentQuiz.questions.length).fill([]);
                 this.currentQuestionIndex = 0;
 
-                // Hide main content and show quiz interface
+                // Afficher l'interface du quiz
                 document.getElementById('quiz-section').style.display = 'none';
                 document.getElementById('quiz-interface').style.display = 'block';
 
-                // Initialize quiz
+                // Initialiser le quiz
                 document.getElementById('quiz-title').textContent = this.currentQuiz.title;
                 this.showQuestion(0);
                 this.startTimer(this.currentQuiz.duration * 60);
             } else {
-                alert(data.message);
+                alert('Erreur: ' + data.message);
             }
         } catch (error) {
             console.error('Error starting quiz:', error);
+            alert('Erreur lors du chargement du quiz');
         }
     }
 
     showQuestion(index) {
+        if (!this.currentQuiz || index < 0 || index >= this.currentQuiz.questions.length) return;
+
         const question = this.currentQuiz.questions[index];
         const questionContainer = document.getElementById('question-container');
+        this.currentQuestionIndex = index;
 
         let optionsHTML = '';
         question.options.forEach((option, i) => {
@@ -118,50 +137,52 @@ export class Quiz {
 
         questionContainer.innerHTML = `
             <div class="question">Question ${index + 1}/${this.currentQuiz.questions.length}: ${question.text}</div>
-            <div class="options">
-                ${optionsHTML}
-            </div>
+            <div class="options">${optionsHTML}</div>
         `;
 
-        // Update navigation buttons
+        // Mise à jour de la navigation
         document.getElementById('prev-btn').disabled = index === 0;
         document.getElementById('next-btn').style.display = index < this.currentQuiz.questions.length - 1 ? 'block' : 'none';
         document.getElementById('submit-quiz').style.display = index === this.currentQuiz.questions.length - 1 ? 'block' : 'none';
 
-        // Add event listeners to options
+        // Ajout des écouteurs d'événements pour les options
         this.addOptionEventListeners(index);
-
-        // Add event listeners to navigation buttons
+        
+        // Configuration des boutons de navigation
         this.setupNavigationButtons(index);
     }
 
-    addOptionEventListeners(index) {
+    addOptionEventListeners(questionIndex) {
         document.querySelectorAll('.option').forEach(option => {
-            option.addEventListener('click', () => {
+            option.addEventListener('click', (e) => {
                 const optionIndex = parseInt(option.getAttribute('data-option'));
                 const checkbox = option.querySelector('input[type="checkbox"]');
                 
-                // Toggle selection
+                // Basculer la sélection
                 checkbox.checked = !checkbox.checked;
                 
                 if (checkbox.checked) {
                     option.classList.add('selected');
-                    // Add to selected answers
-                    if (!this.userAnswers[index].includes(optionIndex)) {
-                        this.userAnswers[index] = [...this.userAnswers[index], optionIndex];
+                    if (!this.userAnswers[questionIndex].includes(optionIndex)) {
+                        this.userAnswers[questionIndex] = [...this.userAnswers[questionIndex], optionIndex];
                     }
                 } else {
                     option.classList.remove('selected');
-                    // Remove from selected answers
-                    this.userAnswers[index] = this.userAnswers[index].filter(i => i !== optionIndex);
+                    this.userAnswers[questionIndex] = this.userAnswers[questionIndex].filter(i => i !== optionIndex);
                 }
             });
         });
     }
 
     setupNavigationButtons(index) {
-        document.getElementById('prev-btn').onclick = () => this.showQuestion(index - 1);
-        document.getElementById('next-btn').onclick = () => this.showQuestion(index + 1);
+        document.getElementById('prev-btn').onclick = () => {
+            if (index > 0) this.showQuestion(index - 1);
+        };
+        
+        document.getElementById('next-btn').onclick = () => {
+            if (index < this.currentQuiz.questions.length - 1) this.showQuestion(index + 1);
+        };
+        
         document.getElementById('submit-quiz').onclick = () => this.submitQuiz();
     }
 
@@ -186,7 +207,8 @@ export class Quiz {
     updateTimerDisplay() {
         const minutes = Math.floor(this.timeLeft / 60);
         const seconds = this.timeLeft % 60;
-        document.getElementById('quiz-timer').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        document.getElementById('quiz-timer').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
     async submitQuiz() {
@@ -194,6 +216,7 @@ export class Quiz {
         
         try {
             const token = window.auth.getToken();
+            
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz/${this.currentQuiz._id}/submit`, {
                 method: 'POST',
                 headers: {
@@ -208,39 +231,42 @@ export class Quiz {
             if (data.success) {
                 this.showResults(data);
             } else {
-                alert('Erreur lors de la soumission du quiz');
+                alert('Erreur lors de la soumission du quiz: ' + data.message);
             }
         } catch (error) {
             console.error('Error submitting quiz:', error);
+            alert('Erreur lors de la soumission du quiz');
         }
     }
 
     showResults(data) {
         const resultsContent = document.getElementById('results-content');
-        const results = data;
+        const results = data.results || data;
         
         resultsContent.innerHTML = `
             <div class="text-center mb-4">
                 <h4>Votre score: ${results.score}/${results.totalQuestions}</h4>
                 <div class="progress mb-3" style="height: 30px;">
-                    <div class="progress-bar" role="progressbar" style="width: ${(results.score/results.totalQuestions)*100}%;" 
-                        aria-valuenow="${(results.score/results.totalQuestions)*100}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: ${(results.score/results.totalQuestions)*100}%;" 
+                         aria-valuenow="${(results.score/results.totalQuestions)*100}" 
+                         aria-valuemin="0" aria-valuemax="100">
                         ${Math.round((results.score/results.totalQuestions)*100)}%
                     </div>
                 </div>
             </div>
         `;
-        
-        // Add detailed results for each question
+
+        // Détails des résultats
         this.currentQuiz.questions.forEach((question, index) => {
             const userAnswer = this.userAnswers[index];
             const correctAnswers = question.correctAnswers;
             const isCorrect = userAnswer.length === correctAnswers.length && 
                              userAnswer.every(val => correctAnswers.includes(val));
-            
+
             let userAnswerText = userAnswer.map(a => question.options[a]).join(', ') || 'Aucune réponse';
             let correctAnswerText = correctAnswers.map(a => question.options[a]).join(', ');
-            
+
             resultsContent.innerHTML += `
                 <div class="mb-4 p-3 ${isCorrect ? 'border-success' : 'border-danger'} border rounded">
                     <h5>Question ${index + 1}: ${question.text}</h5>
@@ -255,8 +281,8 @@ export class Quiz {
                 </div>
             `;
         });
-        
-        // Hide question container and show results
+
+        // Afficher les résultats
         document.getElementById('question-container').style.display = 'none';
         document.getElementById('results-container').style.display = 'block';
     }

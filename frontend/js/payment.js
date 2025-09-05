@@ -2,25 +2,17 @@ import { CONFIG } from './config.js';
 
 export class Payment {
     constructor() {
-        this.setupEventListeners();
-    }
-
-    setupEventListeners() {
-        // Subscribe button
-        document.getElementById('subscribe-btn').addEventListener('click', () => this.initiatePayment());
-        
-        // Validate code button
-        document.getElementById('validate-code').addEventListener('click', () => this.validateAccessCode());
+        // Initialisation
     }
 
     async initiatePayment() {
-        if (!window.auth.isAuthenticated()) {
-            alert('Veuillez vous connecter pour souscrire à un abonnement.');
-            return;
-        }
-
         try {
             const token = window.auth.getToken();
+            if (!token) {
+                alert('Vous devez vous connecter pour souscrire à un abonnement.');
+                return;
+            }
+
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/payment/initiate`, {
                 method: 'POST',
                 headers: {
@@ -46,40 +38,26 @@ export class Payment {
         }
     }
 
-    async validateAccessCode() {
-        const code = document.getElementById('accessCode').value;
-        const email = window.auth.getUser().email;
-
-        if (!code || code.length !== 6) {
-            alert('Veuillez entrer un code valide à 6 chiffres.');
-            return;
-        }
-
+    async validateAccessCode(code, email) {
         try {
-            const token = window.auth.getToken();
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/payment/validate-code`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ code, email })
+                body: JSON.stringify({ code, email }),
             });
 
             const data = await response.json();
 
             if (data.success) {
-                alert('Félicitations! Votre abonnement est maintenant activé.');
-                // Close modal and refresh user data
-                const codeModal = bootstrap.Modal.getInstance(document.getElementById('codeModal'));
-                codeModal.hide();
-                window.location.reload();
+                return { success: true, message: data.message };
             } else {
-                alert('Code invalide: ' + data.message);
+                return { success: false, message: data.message };
             }
         } catch (error) {
-            console.error('Error validating code:', error);
-            alert('Erreur lors de la validation du code');
+            console.error('Error validating access code:', error);
+            return { success: false, message: 'Erreur de validation du code' };
         }
     }
 }

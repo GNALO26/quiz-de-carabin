@@ -14,16 +14,13 @@ export class Auth {
 
     setupEventListeners() {
         // Login
-        document.getElementById('login-btn').addEventListener('click', () => this.login());
+        document.getElementById('login-btn')?.addEventListener('click', () => this.login());
         
         // Register
-        document.getElementById('register-btn').addEventListener('click', () => this.register());
+        document.getElementById('register-btn')?.addEventListener('click', () => this.register());
         
         // Logout
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.logout());
-        }
+        document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
     }
 
     async login() {
@@ -122,11 +119,11 @@ export class Auth {
         const userMenu = document.getElementById('user-menu');
         const userName = document.getElementById('user-name');
 
-        if (this.user) {
+        if (this.user && authButtons && userMenu && userName) {
             authButtons.style.display = 'none';
             userMenu.style.display = 'block';
             userName.textContent = this.user.name;
-        } else {
+        } else if (authButtons && userMenu) {
             authButtons.style.display = 'flex';
             userMenu.style.display = 'none';
         }
