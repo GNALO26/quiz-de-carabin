@@ -1,54 +1,57 @@
+// models/User.js
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
-const UserSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
+    trim: true
   },
   email: {
     type: String,
     required: true,
     unique: true,
+    lowercase: true
   },
   password: {
     type: String,
     required: true,
+    minlength: 6
   },
   isPremium: {
     type: Boolean,
-    default: false,
+    default: false
   },
-  premiumExpiry: {
+  premiumExpiresAt: {
     type: Date,
+    default: null
   },
-  quizHistory: [{
-    quizId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Quiz',
-    },
-    score: Number,
-    totalQuestions: Number,
-    correctAnswers: Number,
-    completedAt: {
-      type: Date,
-      default: Date.now,
-    },
-  }],
+  accessCode: {
+    type: String,
+    default: null
+  },
   createdAt: {
     type: Date,
-    default: Date.now,
+    default: Date.now
   },
+  lastLogin: {
+    type: Date,
+    default: Date.now
+  }
 });
 
-UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
+// Méthode pour vérifier si l'abonnement est encore valide
+userSchema.virtual('isPremiumActive').get(function() {
+  if (!this.isPremium) return false;
+  if (!this.premiumExpiresAt) return true;
+  return this.premiumExpiresAt > new Date();
 });
 
-UserSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
-  return await bcrypt.compare(candidatePassword, userPassword);
+// Cache les informations sensibles lors de la sérialisation
+userSchema.methods.toJSON = function() {
+  const user = this.toObject();
+  delete user.password;
+  return user;
 };
 
-module.exports = mongoose.model('User', UserSchema);
+module.exports = mongoose.model('User', userSchema);

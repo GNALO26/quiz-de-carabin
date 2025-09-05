@@ -1,6 +1,8 @@
+// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 // Import des routes
@@ -11,9 +13,12 @@ const userRoutes = require('./routes/user');
 
 const app = express();
 
-// Middleware CORS avec configuration plus permissive pour le développement
+// Middleware CORS pour production
 app.use(cors({
-  origin: ['https://quiz-de-carabin.netlify.app', 'http://localhost:3000'],
+  origin: [
+    'https://quiz-de-carabin.netlify.app',
+    'https://quiz-de-carabin-backend.onrender.com'
+  ],
   credentials: true
 }));
 
@@ -28,18 +33,19 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('Could not connect to MongoDB', err));
 
-// Routes
+// Routes API
 app.use('/api/auth', authRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/user', userRoutes);
 
-// Route de santé pour tester le serveur
+// Route de santé
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 
     success: true, 
     message: 'Server is running correctly',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    mode: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -62,4 +68,8 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`PayDunya Mode: ${process.env.PAYDUNYA_MODE || 'test'}`);
+});
