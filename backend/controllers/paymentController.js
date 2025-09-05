@@ -6,14 +6,14 @@ const setup = new Paydunya.Setup({
   privateKey: process.env.PAYDUNYA_PRIVATE_KEY,
   publicKey: process.env.PAYDUNYA_PUBLIC_KEY,
   token: process.env.PAYDUNYA_TOKEN,
-  mode: process.env.PAYDUNYA_MODE || 'test' // 'test' ou 'live'
+  mode: process.env.PAYDUNYA_MODE || 'live' // 'test' ou 'live'
 });
 
 const store = new Paydunya.Store({
   name: "Quiz de Carabin",
   tagline: "Formation médicale par quiz",
-  postalAddress: "Dakar, Sénégal",
-  phoneNumber: process.env.STORE_PHONE || "+221770000000",
+  postalAddress: "Ouidah, Bénin",
+  phoneNumber: process.env.STORE_PHONE || "+22956035888",
   websiteURL: process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app",
   logoURL: process.env.STORE_LOGO_URL || "https://quiz-de-carabin.netlify.app/assets/images/logo.png"
 });
