@@ -1,4 +1,3 @@
-// routes/payment.js
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
@@ -16,7 +15,7 @@ router.get('/status/:paymentId', auth, paymentController.checkPaymentStatus);
 // Route pour les webhooks PayDunya
 router.post('/webhook', paymentController.handleWebhook);
 
-// Route de diagnostic des clés
+// routes/payment.js - Ajoutez cette route
 router.get('/debug-keys', (req, res) => {
   const { cleanPaydunyaKey } = require('../utils/cleanKeys');
   
@@ -49,7 +48,6 @@ router.get('/debug-keys', (req, res) => {
   
   res.status(200).json({
     success: true,
-    mode: process.env.PAYDUNYA_MODE || 'test',
     rawKeys: {
       masterKey: rawKeys.masterKey ? rawKeys.masterKey.substring(0, 10) + '...' : 'Non définie',
       privateKey: rawKeys.privateKey ? rawKeys.privateKey.substring(0, 10) + '...' : 'Non définie',

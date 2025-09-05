@@ -1,4 +1,3 @@
-// controllers/paymentController.js
 const { cleanPaydunyaKey } = require('../utils/cleanKeys');
 const Paydunya = require('paydunya');
 
@@ -39,7 +38,7 @@ exports.initiatePayment = async (req, res) => {
       privateKey: privateKey,
       publicKey: publicKey,
       token: token,
-      mode: 'live' // Forcer le mode live
+      mode: 'live'
     });
 
     const store = new Paydunya.Store({
@@ -120,7 +119,6 @@ exports.initiatePayment = async (req, res) => {
   }
 };
 
-// Autres fonctions du contrôleur...
 exports.validateAccessCode = async (req, res) => {
   try {
     const { code, email } = req.body;
@@ -146,5 +144,37 @@ exports.validateAccessCode = async (req, res) => {
       message: "Erreur serveur lors de la validation du code",
       error: error.message
     });
+  }
+};
+
+exports.checkPaymentStatus = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    
+    // Implémentez la logique de vérification du statut de paiement
+    // Pour l'instant, retournons une réponse factice
+    res.status(200).json({
+      success: true,
+      status: 'completed',
+      message: 'Statut de paiement vérifié'
+    });
+  } catch (error) {
+    console.error('Error in checkPaymentStatus:', error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors de la vérification du statut",
+      error: error.message
+    });
+  }
+};
+
+exports.handleWebhook = async (req, res) => {
+  try {
+    // Implémentez la logique de traitement des webhooks PayDunya
+    console.log('Webhook reçu:', req.body);
+    res.status(200).send('Webhook processed');
+  } catch (error) {
+    console.error('Error in handleWebhook:', error);
+    res.status(500).send('Webhook processing error');
   }
 };
