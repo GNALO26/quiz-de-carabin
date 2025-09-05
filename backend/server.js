@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-// Import des routes - vérifiez que ces chemins sont corrects
+// Import des routes
 const authRoutes = require('./routes/auth');
 const quizRoutes = require('./routes/quiz');
 const paymentRoutes = require('./routes/payment');
@@ -11,9 +11,14 @@ const userRoutes = require('./routes/user');
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Middleware CORS avec configuration plus permissive pour le développement
+app.use(cors({
+  origin: ['https://quiz-de-carabin.netlify.app', 'http://localhost:3000'],
+  credentials: true
+}));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
@@ -28,6 +33,33 @@ app.use('/api/auth', authRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/user', userRoutes);
+
+// Route de santé pour tester le serveur
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    success: true, 
+    message: 'Server is running correctly',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Gestion des routes non trouvées
+app.use('*', (req, res) => {
+  res.status(404).json({ 
+    success: false, 
+    message: 'Route not found' 
+  });
+});
+
+// Gestionnaire d'erreurs global
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ 
+    success: false, 
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

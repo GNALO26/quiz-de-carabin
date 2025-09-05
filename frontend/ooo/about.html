@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>À propos - Quiz de Carabin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation (identique à index.html) -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-brain me-2"></i>Quiz de Carabin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="quiz.html">Quiz</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="about.html">À propos</a>
+                    </li>
+                </ul>
+                <div class="d-flex" id="auth-buttons">
+                    <a href="#" class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Se connecter</a>
+                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">Créer un compte</a>
+                </div>
+                <div id="user-menu" style="display: none;">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i> <span id="user-name"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" id="dashboard-btn"><i class="fas fa-tachometer-alt me-2"></i>Tableau de bord</a></li>
+                            <li><a class="dropdown-item" href="#" id="history-btn"><i class="fas fa-history me-2"></i>Historique</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- About Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <h2 class="fw-bold text-center mb-4">À propos de Quiz de Carabin</h2>
+                    <p class="lead">Quiz de Carabin est une plateforme interactive conçue spécialement pour les étudiants en médecine qui souhaitent tester et améliorer leurs connaissances médicales.</p>
+                    
+                    <h3 class="mt-5">Notre Mission</h3>
+                    <p>Notre mission est de fournir aux étudiants en médecine un outil d'apprentissage efficace et engageant qui les aide à maîtriser les concepts complexes de la médecine through des quiz interactifs et spécialisés.</p>
+                    
+                    <h3 class="mt-5">Notre Équipe</h3>
+                    <p>Notre équipe est composée de professionnels de santé, d'enseignants en médecine et de développeurs passionnés par l'éducation médicale.</p>
+                    
+                    <h3 class="mt-5">Contact</h3>
+                    <p>Pour toute question ou suggestion, n'hésitez pas à nous contacter :</p>
+                    <ul>
+                        <li><i class="fas fa-envelope me-2"></i> contact@quizdecarabin.bj</li>
+                        <li><i class="fas fa-phone me-2"></i> +229 01 56 03 58 88</li>
+                        <li><i class="fas fa-map-marker-alt me-2"></i> Cotonou, Bénin</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer (identique à index.html) -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h4 class="text-uppercase mb-4">Quiz de Carabin</h4>
+                    <p>La plateforme interactive de quiz spécialement conçue pour les étudiants en médecine.</p>
+                </div>
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h4 class="text-uppercase mb-4">Contact</h4>
+                    <p><i class="fas fa-phone me-2"></i> +229 01 56 03 58 88</p>
+                    <p><i class="fas fa-phone me-2"></i> +229 01 41 99 64 52</p>
+                    <p><i class="fas fa-phone me-2"></i> +229 01 41 99 64 52</p>
+                </div>
+                <div class="col-lg-4">
+                    <h4 class="text-uppercase mb-4">Email</h4>
+                    <p><i class="fas fa-envelope me-2"></i> contact@quizdecarabin.bj</p>
+                    <p><i class="fas fa-envelope me-2"></i> support@quizdecarabin.bj</p>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0">&copy; 2023 Quiz de Carabin. Tous droits réservés.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="#" class="text-white me-3"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="text-white"><i class="fab fa-linkedin-in"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
