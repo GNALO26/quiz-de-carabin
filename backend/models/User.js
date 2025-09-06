@@ -46,7 +46,23 @@ accessCodeCreatedAt: {
   lastLogin: {
     type: Date,
     default: Date.now
-  }
+  },
+    quizHistory: {
+    type: [{
+      quizId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Quiz'
+      },
+      score: Number,
+      totalQuestions: Number,
+      correctAnswers: Number,
+      completedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+    default: [] // Initialiser avec un tableau vide
+  }
 });
 
 // Middleware pour hasher le mot de passe avant sauvegarde

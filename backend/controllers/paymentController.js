@@ -5,10 +5,10 @@ const crypto = require('crypto');
 
 // Configuration de PayDunya
 const setup = new Paydunya.Setup({
-  masterKey: process.env.PAYDUNYA_MASTER_KEY ? process.env.PAYDUNYA_MASTER_KEY.trim() : '',
-  privateKey: process.env.PAYDUNYA_PRIVATE_KEY ? process.env.PAYDUNYA_PRIVATE_KEY.trim() : '',
-  publicKey: process.env.PAYDUNYA_PUBLIC_KEY ? process.env.PAYDUNYA_PUBLIC_KEY.trim() : '',
-  token: process.env.PAYDUNYA_TOKEN ? process.env.PAYDUNYA_TOKEN.trim() : '',
+  masterKey: process.env.PAYDUNYA_MASTER_KEY.trim(),
+  privateKey: process.env.PAYDUNYA_PRIVATE_KEY.trim(),
+  publicKey: process.env.PAYDUNYA_PUBLIC_KEY.trim(),
+  token: process.env.PAYDUNYA_TOKEN.trim(),
   mode: process.env.PAYDUNYA_MODE || 'live'
 });
 
@@ -21,101 +21,12 @@ const store = new Paydunya.Store({
   logoURL: process.env.STORE_LOGO_URL || "https://quiz-de-carabin.netlify.app/assets/images/logo.png"
 });
 
+// Fonction pour générer un ID de transaction unique
+const generateUniqueTransactionID = () => {
+  return 'TXN_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+};
+
 exports.initiatePayment = async (req, res) => {
-  let transaction;
-  let attempt = 0;
-  const MAX_ATTEMPTS = 3; // Maximum de tentatives
-  
-  // Fonction interne pour gérer les tentatives
-  const tryCreateInvoice = async () => {
-    attempt++;
-    console.log(`🔄 Tentative ${attempt}/${MAX_ATTEMPTS}`);
-    
-    const transactionId = crypto.randomBytes(16).toString('hex');
-    const timestamp = Date.now();
-
-    // Enregistrer la transaction en base de données
-    transaction = new Transaction({
-      userId: req.user._id,
-      transactionId: transactionId,
-      amount: 5000,
-      status: 'pending',
-      retryCount: attempt
-    });
-
-    await transaction.save();
-
-    // Créer une facture avec des paramètres uniques
-    const invoice = new Paydunya.CheckoutInvoice(setup, store);
-
-    // Ajouter des articles à la facture avec un libellé unique
-    invoice.addItem(
-      `Abonnement Premium - ${timestamp}-${attempt}`,
-      1,
-      5000.00,
-      5000.00,
-      `Accès illimité à tous les quiz premium - Ref: ${transactionId}`
-    );
-
-    invoice.totalAmount = 5000.00;
-    invoice.description = `Abonnement Premium Quiz de Carabin - ${timestamp}-${attempt}`;
-    
-    // Utiliser les URLs de callback
-    const baseUrl = process.env.API_BASE_URL || "https://quiz-de-carabin-backend.onrender.com";
-    const frontendUrl = process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app";
-    
-    invoice.callbackURL = `${baseUrl}/api/payment/webhook`;
-    invoice.returnURL = `${frontendUrl}/payment-callback.html`;
-    invoice.cancelURL = `${frontendUrl}/payment-error.html`;
-
-    // Ajouter des données personnalisées avec un ID unique
-    invoice.addCustomData('user_id', req.user._id.toString());
-    invoice.addCustomData('user_email', req.user.email);
-    invoice.addCustomData('service', 'premium_subscription');
-    invoice.addCustomData('transaction_id', transactionId);
-    invoice.addCustomData('timestamp', timestamp.toString());
-    invoice.addCustomData('attempt', attempt.toString());
-    invoice.addCustomData('unique_ref', `quiz_${timestamp}_${transactionId}_${attempt}`);
-
-    // Créer la facture
-    console.log('Création de la facture PayDunya...');
-    console.log('Transaction ID:', transactionId);
-    console.log('Timestamp:', timestamp);
-    console.log('Attempt:', attempt);
-    
-    const created = await invoice.create();
-    
-    if (created) {
-      // Mettre à jour la transaction avec le token PayDunya
-      transaction.paydunyaInvoiceToken = invoice.token;
-      transaction.paydunyaInvoiceURL = invoice.url;
-      await transaction.save();
-
-      console.log('✅ Payment invoice created successfully');
-      console.log('Invoice URL:', invoice.url);
-
-      return {
-        success: true,
-        invoiceURL: invoice.url,
-        token: invoice.token
-      };
-    } else {
-      // Marquer la transaction comme échouée
-      transaction.status = 'failed';
-      await transaction.save();
-
-      console.error('❌ Échec de la création de la facture:', invoice.responseText);
-      
-      // Vérifier si c'est une erreur de transaction existante et si on peut réessayer
-      if (invoice.responseText && invoice.responseText.includes('Transaction Found') && attempt < MAX_ATTEMPTS) {
-        console.log('🔄 Transaction déjà existante, nouvelle tentative...');
-        return null; // Indiquer qu'il faut réessayer
-      }
-      
-      throw new Error(invoice.responseText || 'Erreur inconnue de PayDunya');
-    }
-  };
-
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
     
@@ -129,24 +40,80 @@ exports.initiatePayment = async (req, res) => {
       });
     }
 
-    let result;
-    while (attempt < MAX_ATTEMPTS) {
-      result = await tryCreateInvoice();
-      if (result) break; // Sortir de la boucle si réussite
-      
-      // Attendre un peu avant de réessayer
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
+    // Générer un ID de transaction unique
+    const transactionID = generateUniqueTransactionID();
     
-    if (result && result.success) {
+    // Enregistrer la transaction en base de données
+    const transaction = new Transaction({
+      userId: req.user._id,
+      transactionId: transactionID,
+      amount: 5000,
+      status: 'pending'
+    });
+
+    await transaction.save();
+
+    // Créer une facture PayDunya
+    const invoice = new Paydunya.CheckoutInvoice(setup, store);
+
+    // Ajouter des articles à la facture
+    invoice.addItem(
+      'Abonnement Premium Quiz de Carabin',
+      1,
+      5000.00,
+      5000.00,
+      'Accès illimité à tous les quiz premium'
+    );
+
+    invoice.totalAmount = 5000.00;
+    invoice.description = 'Abonnement Premium Quiz de Carabin';
+
+    // Utiliser les URLs de callback
+    const baseUrl = process.env.API_BASE_URL;
+    const frontendUrl = process.env.FRONTEND_URL;
+    
+    invoice.callbackURL = `${baseUrl}/api/payment/webhook`;
+    invoice.returnURL = `${frontendUrl}/payment-callback.html`;
+    invoice.cancelURL = `${frontendUrl}/payment-error.html`;
+
+    // Ajouter des données personnalisées
+    invoice.addCustomData('user_id', req.user._id.toString());
+    invoice.addCustomData('user_email', req.user.email);
+    invoice.addCustomData('service', 'premium_subscription');
+    invoice.addCustomData('transaction_id', transactionID);
+
+    // Créer la facture
+    console.log('Création de la facture PayDunya...');
+    console.log('Transaction ID:', transactionID);
+    
+    const created = await invoice.create();
+    
+    if (created) {
+      // Mettre à jour la transaction avec le token PayDunya
+      transaction.paydunyaInvoiceToken = invoice.token;
+      transaction.paydunyaInvoiceURL = invoice.url;
+      await transaction.save();
+
+      console.log('✅ Payment invoice created successfully');
+      console.log('Invoice URL:', invoice.url);
+
       res.status(200).json({
         success: true,
         message: "Paiement initié avec succès",
-        invoiceURL: result.invoiceURL,
-        token: result.token
+        invoiceURL: invoice.url,
+        token: invoice.token
       });
     } else {
-      throw new Error(`Échec après ${MAX_ATTEMPTS} tentatives`);
+      // Marquer la transaction comme échouée
+      transaction.status = 'failed';
+      await transaction.save();
+
+      console.error('❌ Échec de la création de la facture:', invoice.responseText);
+      
+      res.status(400).json({
+        success: false,
+        message: "Erreur lors de la création du paiement: " + invoice.responseText
+      });
     }
   } catch (error) {
     console.error('❌ Erreur dans initiatePayment:', error);

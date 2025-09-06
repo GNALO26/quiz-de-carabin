@@ -42,5 +42,10 @@ router.get('/debug/transactions', async (req, res) => {
     });
   }
 });
+// Dans routes/payment.js, ajoutez ce middleware
+router.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 module.exports = router;

@@ -10,7 +10,6 @@ const paymentRoutes = require('./routes/payment');
 const userRoutes = require('./routes/user');
 const cleanupTransactions = require('./scripts/cleanupTransactions');
 
-
 const app = express();
 
 // Middleware CORS
@@ -18,7 +17,8 @@ app.use(cors({
   origin: [
     'https://quiz-de-carabin.netlify.app',
     'https://quiz-de-carabin-backend.onrender.com',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'http://localhost:3001'
   ],
   credentials: true
 }));
@@ -26,25 +26,21 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Connexion à MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('Could not connect to MongoDB', err));
-
-// Après la connexion à MongoDB
+// UNE SEULE CONNEXION À MONGODB
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => {
   console.log('Connected to MongoDB');
+  
   // Démarrer le nettoyage des transactions après la connexion DB
   cleanupTransactions();
+  
+  // Planifier le nettoyage toutes les heures (3600000 ms = 1 heure)
+  setInterval(cleanupTransactions, 60 * 60 * 1000);
 })
-.catch(err => console.error('Could not connect to MongoDB', err));
+.catch(err => console.error('Could not connect to MongoDB', err));
 
 // Routes API
 app.use('/api/auth', authRoutes);

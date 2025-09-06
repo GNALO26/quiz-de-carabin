@@ -60,6 +60,11 @@ router.post('/:id/submit', auth, async (req, res) => {
       }
     });
     
+    // S'assurer que quizHistory est initialisé
+    if (!req.user.quizHistory) {
+      req.user.quizHistory = [];
+    }
+    
     // Add to user's quiz history
     req.user.quizHistory.push({
       quizId: quiz._id,
