@@ -12,8 +12,8 @@ router.post('/validate-code', paymentController.validateAccessCode);
 // Route pour vérifier le statut d'un paiement
 router.get('/status/:paymentId', auth, paymentController.checkPaymentStatus);
 
-// Route pour les webhooks PayDunya
-router.post('/webhook', paymentController.handleWebhook);
+// Route pour les webhooks PayDunya - CORRIGÉE pour correspondre à votre IPN
+router.post('/callback', paymentController.handleCallback);
 
 // Route de diagnostic des transactions
 router.get('/debug/transactions', async (req, res) => {

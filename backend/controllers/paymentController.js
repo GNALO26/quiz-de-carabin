@@ -35,16 +35,6 @@ exports.initiatePayment = async (req, res) => {
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
     
-    // Ajoutez ce code au début de votre initiatePayment pour debugger
-console.log('=== CONFIGURATION PAYDUNYA ===');
-console.log('Master Key:', process.env.PAYDUNYA_MASTER_KEY ? 'Défini' : 'Non défini');
-console.log('Private Key:', process.env.PAYDUNYA_PRIVATE_KEY ? 'Défini' : 'Non défini');
-console.log('Public Key:', process.env.PAYDUNYA_PUBLIC_KEY ? 'Défini' : 'Non défini');
-console.log('Token:', process.env.PAYDUNYA_TOKEN ? 'Défini' : 'Non défini');
-console.log('Mode:', process.env.PAYDUNYA_MODE);
-console.log('Store Phone:', process.env.STORE_PHONE);
-console.log('Store Logo URL:', process.env.STORE_LOGO_URL);
-    
     const user = req.user;
     const uniqueReference = generateUniqueReference();
 
@@ -76,19 +66,19 @@ console.log('Store Logo URL:', process.env.STORE_LOGO_URL);
     invoice.addItem(
       `Abonnement Premium - ${uniqueReference}`,
       1,
-      5000.00,
-      5000.00,
+      100.00,
+      100.00,
       `Accès illimité à tous les quiz premium - Référence: ${uniqueReference}`
     );
 
-    invoice.totalAmount = 5000.00;
-    invoice.description = `Abonnement Premium Quiz de Carabin - ${uniqueReference}`;
+    invoice.totalAmount = 100.00;
+    invoice.description =` Abonnement Premium Quiz de Carabin - ${uniqueReference}`;
 
     // Utiliser les URLs de callback
     const baseUrl = process.env.API_BASE_URL;
     const frontendUrl = process.env.FRONTEND_URL;
     
-    invoice.callbackURL = `${baseUrl}/api/payment/webhook`;
+    invoice.callbackURL = `${baseUrl}/api/payment/callback`; // Changé pour correspondre à votre IPN
     invoice.returnURL = `${frontendUrl}/payment-callback.html`;
     invoice.cancelURL = `${frontendUrl}/payment-error.html`;
 
@@ -113,17 +103,13 @@ console.log('Store Logo URL:', process.env.STORE_LOGO_URL);
     console.log('PayDunya Invoice Token:', invoice.token);
     console.log('PayDunya Invoice URL:', invoice.url);
     
-    if (created && invoice.status === 'completed') {
+    // CORRECTION PRINCIPALE: "Transaction Found" n'est pas une erreur!
+    if (created || invoice.token) {
       // Mettre à jour la transaction avec le token PayDunya
       transaction.paydunyaInvoiceToken = invoice.token;
       transaction.paydunyaInvoiceURL = invoice.url;
-      transaction.status = 'completed';
+      transaction.status = 'pending'; // Rester en attente jusqu'au webhook
       await transaction.save();
-
-      // Mettre à jour le statut premium de l'utilisateur
-      user.isPremium = true;
-      user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
-      await user.save();
 
       console.log('✅ Payment invoice created successfully');
       console.log('Invoice URL:', invoice.url);
@@ -141,41 +127,67 @@ console.log('Store Logo URL:', process.env.STORE_LOGO_URL);
 
       console.error('❌ Échec de la création de la facture:', invoice.responseText);
       
-      // Analyser la réponse pour donner un message plus précis
-      let errorMessage = "Erreur lors de la création du paiement";
-      if (invoice.responseText.includes('Transaction Found')) {
-        errorMessage = "Une transaction avec ces paramètres existe déjà. Veuillez réessayer avec des paramètres différents.";
-      } else if (invoice.responseText.includes('Authentication')) {
-        errorMessage = "Erreur d'authentification avec le service de paiement. Veuillez contacter le support.";
-      }
-      
       res.status(400).json({
         success: false,
-        message: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? invoice.responseText : undefined
+        message: "Erreur lors de la création du paiement: " + (invoice.responseText || 'Erreur inconnue')
       });
     }
   } catch (error) {
     console.error('❌ Erreur dans initiatePayment:', error);
     
-    let errorMessage = "Erreur serveur lors de l'initiation du paiement";
-    
-    // Messages d'erreur spécifiques à PayDunya
-    if (error.message.includes('Transaction Found')) {
-      errorMessage = "Une transaction similaire existe déjà. Veuillez réessayer dans quelques instants.";
-    } else if (error.message.includes('Authentication')) {
-      errorMessage = "Erreur d'authentification avec le service de paiement. Veuillez contacter le support.";
-    }
-    
     res.status(500).json({
       success: false,
-      message: errorMessage,
+      message: "Erreur serveur lors de l'initiation du paiement",
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
 
-// ... autres fonctions (validateAccessCode, checkPaymentStatus, handleWebhook)
+// Gestionnaire de webhook pour PayDunya
+exports.handleCallback = async (req, res) => {
+  try {
+    console.log('📨 Webhook reçu de PayDunya:', req.body);
+    
+    const data = req.body;
+    const token = data.invoice.token;
+    
+    // Trouver la transaction par le token
+    const transaction = await Transaction.findOne({ paydunyaInvoiceToken: token });
+    
+    if (!transaction) {
+      console.error('Transaction non trouvée pour le token:', token);
+      return res.status(404).send('Transaction non trouvée');
+    }
+    
+    // Mettre à jour le statut de la transaction
+    if (data.status === 'completed') {
+      transaction.status = 'completed';
+      await transaction.save();
+      
+      // Mettre à jour le statut premium de l'utilisateur
+      const user = await User.findById(transaction.userId);
+      if (user) {
+        user.isPremium = true;
+        user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
+        await user.save();
+        console.log('✅ Utilisateur mis à jour vers premium:', user.email);
+      }
+      
+      console.log('✅ Paiement confirmé pour la transaction:', transaction.transactionId);
+    } else if (data.status === 'failed') {
+      transaction.status = 'failed';
+      await transaction.save();
+      console.log('❌ Paiement échoué pour la transaction:', transaction.transactionId);
+    }
+    
+    res.status(200).send('Webhook traité avec succès');
+  } catch (error) {
+    console.error('❌ Erreur dans handleCallback:', error);
+    res.status(500).send('Erreur de traitement du webhook');
+  }
+};
+
+// ... autres fonctions (validateAccessCode, checkPaymentStatus)
 
 exports.validateAccessCode = async (req, res) => {
   try {
