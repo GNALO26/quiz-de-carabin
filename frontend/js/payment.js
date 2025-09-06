@@ -22,61 +22,44 @@ export class Payment {
             
             console.log('Utilisateur:', user.email);
             
-            // Obtenir l'URL active de l'API
             const API_BASE_URL = await this.getActiveAPIUrl();
             console.log('API URL:', API_BASE_URL);
             
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-
             const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    callback_url: `${CONFIG.FRONTEND_URL}/payment-callback.html`
-                }),
-                signal: controller.signal
+                }
             });
 
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorData;
-                
-                try {
-                    errorData = JSON.parse(errorText);
-                } catch {
-                    throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
-                }
-                
-                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
-            }
-
             const data = await response.json();
-            console.log('Réponse paiement:', data);
+            console.log('Réponse complète du serveur:', data);
 
             if (data.success && data.invoiceURL) {
-                // Redirection vers PayDunya
+                console.log('Redirection vers:', data.invoiceURL);
                 window.location.href = data.invoiceURL;
             } else {
-                this.showAlert('Erreur lors de l\'initiation du paiement: ' + (data.message || 'Erreur inconnue'), 'danger');
+                console.error('Erreur du serveur:', data);
+                
+                // Gestion spécifique de l'erreur "Transaction Found"
+                if (data.error && data.error.includes('Transaction Found')) {
+                    this.showAlert('Une transaction est déjà en cours. Veuillez réessayer dans quelques instants.', 'warning');
+                } else {
+                    this.showAlert('Erreur lors de l\'initiation du paiement: ' + (data.message || 'Erreur inconnue'), 'danger');
+                }
             }
         } catch (error) {
             console.error('Error initiating payment:', error);
             
-            if (error.name === 'AbortError') {
-                this.showAlert('Le serveur ne répond pas. Veuillez réessayer plus tard.', 'danger');
-            } else if (error.message.includes('Failed to fetch')) {
-                this.showAlert('Impossible de se connecter au serveur. Vérifiez votre connexion internet.', 'danger');
+            if (error.message.includes('Transaction Found')) {
+                this.showAlert('Une transaction est déjà en cours. Veuillez réessayer dans quelques instants.', 'warning');
             } else {
                 this.showAlert('Erreur lors de l\'initiation du paiement: ' + error.message, 'danger');
             }
         }
     }
+
 
     async validateAccessCode(code, email) {
         try {

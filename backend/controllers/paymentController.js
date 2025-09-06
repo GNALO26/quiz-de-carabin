@@ -22,6 +22,7 @@ const store = new Paydunya.Store({
 });
 
 exports.initiatePayment = async (req, res) => {
+  let transaction;
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
     
@@ -38,7 +39,7 @@ exports.initiatePayment = async (req, res) => {
     }
 
     // Enregistrer la transaction en base de données
-    const transaction = new Transaction({
+    transaction = new Transaction({
       userId: user._id,
       transactionId: transactionId,
       amount: 5000,
@@ -47,20 +48,20 @@ exports.initiatePayment = async (req, res) => {
 
     await transaction.save();
 
-    // Créer la facture PayDunya
+    // Créer une facture avec des paramètres uniques pour éviter les doublons
     const invoice = new Paydunya.CheckoutInvoice(setup, store);
 
-    // Ajouter des articles à la facture avec un libellé unique
+    // Ajouter des articles à la facture avec un libellé unique incluant le timestamp
     invoice.addItem(
-      `Abonnement Premium Quiz de Carabin - ${timestamp}`,
+      `Abonnement Premium - ${timestamp}`,
       1,
       5000.00,
       5000.00,
-      "Accès illimité à tous les quiz premium pendant 30 jours"
+      `Accès illimité à tous les quiz premium pendant 30 jours - Ref: ${transactionId}`
     );
 
     invoice.totalAmount = 5000.00;
-    invoice.description = `Abonnement Premium - Quiz de Carabin - ${timestamp}`;
+    invoice.description = `Abonnement Premium Quiz de Carabin - ${timestamp}`;
     
     // Utiliser les URLs de callback
     const baseUrl = process.env.API_BASE_URL || "https://quiz-de-carabin-backend.onrender.com";
@@ -76,6 +77,7 @@ exports.initiatePayment = async (req, res) => {
     invoice.addCustomData('service', 'premium_subscription');
     invoice.addCustomData('transaction_id', transactionId);
     invoice.addCustomData('timestamp', timestamp.toString());
+    invoice.addCustomData('unique_ref', `quiz_${timestamp}_${transactionId}`);
 
     // Créer la facture
     console.log('Création de la facture PayDunya...');
@@ -99,6 +101,14 @@ exports.initiatePayment = async (req, res) => {
         token: invoice.token
       });
     } else {
+      // Vérifier si c'est une erreur de transaction existante
+      if (invoice.responseText && invoice.responseText.includes('Transaction Found')) {
+        console.log('🔄 Transaction déjà existante, tentative avec de nouveaux paramètres...');
+        
+        // Réessayer avec de nouveaux paramètres uniques
+        return this.initiatePayment(req, res);
+      }
+      
       // Marquer la transaction comme échouée
       transaction.status = 'failed';
       await transaction.save();
@@ -113,6 +123,13 @@ exports.initiatePayment = async (req, res) => {
     }
   } catch (error) {
     console.error('❌ Erreur dans initiatePayment:', error);
+    
+    // Marquer la transaction comme échouée en cas d'erreur
+    if (transaction) {
+      transaction.status = 'failed';
+      await transaction.save();
+    }
+    
     res.status(500).json({
       success: false,
       message: "Erreur serveur lors de l'initiation du paiement",
@@ -120,6 +137,8 @@ exports.initiatePayment = async (req, res) => {
     });
   }
 };
+
+// ... autres fonctions (validateAccessCode, checkPaymentStatus, handleWebhook)
 
 exports.validateAccessCode = async (req, res) => {
   try {

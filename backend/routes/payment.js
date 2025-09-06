@@ -15,4 +15,32 @@ router.get('/status/:paymentId', auth, paymentController.checkPaymentStatus);
 // Route pour les webhooks PayDunya
 router.post('/webhook', paymentController.handleWebhook);
 
+// Route de diagnostic des transactions
+router.get('/debug/transactions', async (req, res) => {
+  try {
+    const transactions = await Transaction.find()
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate('userId', 'email name');
+    
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      transactions: transactions.map(t => ({
+        id: t._id,
+        transactionId: t.transactionId,
+        status: t.status,
+        amount: t.amount,
+        createdAt: t.createdAt,
+        user: t.userId ? t.userId.email : 'N/A'
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
