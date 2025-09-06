@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs'); // AJOUTER CET IMPORT
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -39,6 +40,17 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+// Middleware pour hasher le mot de passe avant sauvegarde
+userSchema.pre('save', async function(next) {
+  // Ne hasher que si le mot de passe a été modifié
+  if (!this.isModified('password')) return next();
+  
+  // Hasher le mot de passe avec un coût de 12
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+// Méthode pour comparer les mots de passe
 userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
   return await bcrypt.compare(candidatePassword, userPassword);
 };

@@ -60,7 +60,8 @@ export class Auth {
                     throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
                 }
                 
-                throw new Error(`errorData.message || Erreur HTTP ${response.status}`);
+                // CORRECTION: Utilisation correcte du message d'erreur
+                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
             }
 
             const data = await response.json();
@@ -90,10 +91,12 @@ export class Auth {
             } else if (error.message.includes('Failed to fetch')) {
                 this.showAlert('Impossible de se connecter au serveur. Vérifiez votre connexion internet.', 'danger');
             } else {
-                this.showAlert('Erreur de connexion: ' + error.message, 'danger');
+                // CORRECTION: Affichage correct du message d'erreur
+                this.showAlert(error.message, 'danger');
             }
         }
     }
+
 
     async register() {
         const name = document.getElementById('registerName').value;
@@ -139,7 +142,7 @@ export class Auth {
                     throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
                 }
                 
-                throw new Error(`errorData.message || Erreur HTTP ${response.status}`);
+                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
             }
 
             const data = await response.json();
