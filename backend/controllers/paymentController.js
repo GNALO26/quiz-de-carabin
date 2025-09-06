@@ -2,39 +2,34 @@ const Paydunya = require('paydunya');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const crypto = require('crypto');
-const { cleanPaydunyaKey } = require('../utils/cleanKeys');
 
-// Configuration de PayDunya avec debug détaillé
+// Configuration de PayDunya - APPROCHE ALTERNATIVE SANS NETTOYAGE
 const setupPaydunya = () => {
   try {
-    // Nettoyer les clés
-    const masterKey = cleanPaydunyaKey(process.env.PAYDUNYA_MASTER_KEY);
-    const privateKey = cleanPaydunyaKey(process.env.PAYDUNYA_PRIVATE_KEY);
-    const publicKey = cleanPaydunyaKey(process.env.PAYDUNYA_PUBLIC_KEY);
-    const token = cleanPaydunyaKey(process.env.PAYDUNYA_TOKEN);
+    // Utilisation directe des variables d'environnement
+    const masterKey = process.env.PAYDUNYA_MASTER_KEY;
+    const privateKey = process.env.PAYDUNYA_PRIVATE_KEY;
+    const publicKey = process.env.PAYDUNYA_PUBLIC_KEY;
+    const token = process.env.PAYDUNYA_TOKEN;
 
-    console.log('🔧 Configuration PayDunya - DEBUG COMPLET:');
+    console.log('🔧 Configuration PayDunya - DIRECT:');
     console.log('Mode:', process.env.PAYDUNYA_MODE || 'live');
-    console.log('Master Key (nettoyée):', masterKey ? `${masterKey.substring(0, 10)}...` : 'NULL');
-    console.log('Private Key (nettoyée):', privateKey ? `${privateKey.substring(0, 10)}...` : 'NULL');
-    console.log('Public Key (nettoyée):', publicKey ? `${publicKey.substring(0, 10)}...` : 'NULL');
-    console.log('Token (nettoyé):', token ? `${token.substring(0, 5)}...` : 'NULL');
+    console.log('Master Key (direct):', masterKey ? 'Définie' : 'Manquante');
+    console.log('Private Key (direct):', privateKey ? 'Définie' : 'Manquante');
+    console.log('Public Key (direct):', publicKey ? 'Définie' : 'Manquante');
+    console.log('Token (direct):', token ? 'Défini' : 'Manquant');
 
-    // Vérification de la longueur des clés
-    console.log('Longueur Master Key:', masterKey ? masterKey.length : 0);
-    console.log('Longueur Private Key:', privateKey ? privateKey.length : 0);
-    console.log('Longueur Public Key:', publicKey ? publicKey.length : 0);
-    console.log('Longueur Token:', token ? token.length : 0);
-
+    // Validation basique
     if (!masterKey || !privateKey || !publicKey || !token) {
-      throw new Error('Une ou plusieurs clés PayDunya sont manquantes après nettoyage');
+      throw new Error('Une ou plusieurs clés PayDunya sont manquantes');
     }
 
+    // Application d'un simple trim() pour enlever les espaces éventuels
     return new Paydunya.Setup({
-      masterKey: masterKey,
-      privateKey: privateKey,
-      publicKey: publicKey,
-      token: token,
+      masterKey: masterKey.trim(),
+      privateKey: privateKey.trim(),
+      publicKey: publicKey.trim(),
+      token: token.trim(),
       mode: process.env.PAYDUNYA_MODE || 'live'
     });
   } catch (error) {
@@ -42,8 +37,6 @@ const setupPaydunya = () => {
     throw error;
   }
 };
-
-// ... le reste du code reste inchangé
 
 const store = new Paydunya.Store({
   name: "Quiz de Carabin",
@@ -53,6 +46,7 @@ const store = new Paydunya.Store({
   websiteURL: process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app",
   logoURL: process.env.STORE_LOGO_URL || "https://quiz-de-carabin.netlify.app/assets/images/logo.png"
 });
+
 
 exports.initiatePayment = async (req, res) => {
   try {
