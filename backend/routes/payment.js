@@ -15,36 +15,52 @@ router.get('/status/:paymentId', auth, paymentController.checkPaymentStatus);
 // Route pour les webhooks PayDunya
 router.post('/webhook', paymentController.handleWebhook);
 
-// routes/payment.js - Ajoutez cette route
-router.get('/debug-keys', (req, res) => {
-  const { cleanPaydunyaKey } = require('../utils/cleanKeys');
+// Route de diagnostic complet des clés
+router.get('/debug/keys-detailed', (req, res) => {
+  const masterKey = process.env.PAYDUNYA_MASTER_KEY || '';
+  const privateKey = process.env.PAYDUNYA_PRIVATE_KEY || '';
+  const publicKey = process.env.PAYDUNYA_PUBLIC_KEY || '';
+  const token = process.env.PAYDUNYA_TOKEN || '';
   
-  const rawKeys = {
-    masterKey: process.env.PAYDUNYA_MASTER_KEY,
-    privateKey: process.env.PAYDUNYA_PRIVATE_KEY,
-    publicKey: process.env.PAYDUNYA_PUBLIC_KEY,
-    token: process.env.PAYDUNYA_TOKEN
+  const cleanedMasterKey = cleanPaydunyaKey(masterKey);
+  const cleanedPrivateKey = cleanPaydunyaKey(privateKey);
+  const cleanedPublicKey = cleanPaydunyaKey(publicKey);
+  const cleanedToken = cleanPaydunyaKey(token);
+  
+  // Analyse des caractères
+  const analyzeKey = (key, name) => {
+    const hasSpaces = /\s/.test(key);
+    const hasQuotes = /['"`]/.test(key);
+    const hasNonAscii = /[^\x20-\x7E]/.test(key);
+    const isValid = /^[a-zA-Z0-9_\-]+$/.test(key);
+    
+    return {
+      name,
+      originalLength: key.length,
+      cleanedLength: cleanedKey.length,
+      hasSpaces,
+      hasQuotes,
+      hasNonAscii,
+      isValid,
+      cleanedPreview: cleanedKey.substring(0, 15) + '...'
+    };
   };
   
-  const cleanedKeys = {
-    masterKey: cleanPaydunyaKey(process.env.PAYDUNYA_MASTER_KEY),
-    privateKey: cleanPaydunyaKey(process.env.PAYDUNYA_PRIVATE_KEY),
-    publicKey: cleanPaydunyaKey(process.env.PAYDUNYA_PUBLIC_KEY),
-    token: cleanPaydunyaKey(process.env.PAYDUNYA_TOKEN)
-  };
+  const analysis = [
+    analyzeKey(masterKey, 'Master Key'),
+    analyzeKey(privateKey, 'Private Key'),
+    analyzeKey(publicKey, 'Public Key'),
+    analyzeKey(token, 'Token')
+  ];
   
-  // Vérifier la présence de caractères problématiques
-  const problematicChars = {};
-  Object.keys(rawKeys).forEach(key => {
-    if (rawKeys[key]) {
-      problematicChars[key] = {
-        hasSpaces: /\s/.test(rawKeys[key]),
-        hasQuotes: /["']/.test(rawKeys[key]),
-        hasNonAscii: /[^\x20-\x7E]/.test(rawKeys[key]),
-        length: rawKeys[key].length
-      };
-    }
+  res.status(200).json({
+    success: true,
+    analysis,
+    recommendations: analysis.filter(a => !a.isValid).map(a => 
+      `${a.name} contient des caractères invalides`
+    )
   });
+});
   
   res.status(200).json({
     success: true,
@@ -65,6 +81,5 @@ router.get('/debug-keys', (req, res) => {
       "Vos clés contiennent des caractères non-ASCII. Veuillez les regénérer dans le tableau de bord PayDunya." : 
       "Les clés semblent correctes."
   });
-});
 
 module.exports = router;

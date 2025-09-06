@@ -1,12 +1,12 @@
 function cleanPaydunyaKey(key) {
   if (!key) return null;
   
-  // Supprimer tous les caractères non-ASCII et espaces
+  // Nettoyage agressif mais préservant les tirets
   return key
     .toString()
-    .replace(/[^\x20-\x7E]/g, '')  // Supprimer les caractères non-ASCII
-    .replace(/\s/g, '')             // Supprimer les espaces
-    .replace(/['"]/g, '')           // Supprimer les guillemets
+    .replace(/[\x00-\x1F\x7F]/g, '')  // Supprime les caractères de contrôle
+    .replace(/\s/g, '')               // Supprime tous les espaces
+    .replace(/['"`]/g, '')            // Supprime les guillemets
     .trim();
 }
 

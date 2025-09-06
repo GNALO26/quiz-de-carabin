@@ -2,14 +2,48 @@ const Paydunya = require('paydunya');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const crypto = require('crypto');
+const { cleanPaydunyaKey } = require('../utils/cleanKeys');
 
-const setup = new Paydunya.Setup({
-  masterKey: process.env.PAYDUNYA_MASTER_KEY,
-  privateKey: process.env.PAYDUNYA_PRIVATE_KEY,
-  publicKey: process.env.PAYDUNYA_PUBLIC_KEY,
-  token: process.env.PAYDUNYA_TOKEN,
-  mode: process.env.PAYDUNYA_MODE || 'live'
-});
+// Configuration de PayDunya avec debug détaillé
+const setupPaydunya = () => {
+  try {
+    // Nettoyer les clés
+    const masterKey = cleanPaydunyaKey(process.env.PAYDUNYA_MASTER_KEY);
+    const privateKey = cleanPaydunyaKey(process.env.PAYDUNYA_PRIVATE_KEY);
+    const publicKey = cleanPaydunyaKey(process.env.PAYDUNYA_PUBLIC_KEY);
+    const token = cleanPaydunyaKey(process.env.PAYDUNYA_TOKEN);
+
+    console.log('🔧 Configuration PayDunya - DEBUG COMPLET:');
+    console.log('Mode:', process.env.PAYDUNYA_MODE || 'live');
+    console.log('Master Key (nettoyée):', masterKey ? `${masterKey.substring(0, 10)}...` : 'NULL');
+    console.log('Private Key (nettoyée):', privateKey ? `${privateKey.substring(0, 10)}...` : 'NULL');
+    console.log('Public Key (nettoyée):', publicKey ? `${publicKey.substring(0, 10)}...` : 'NULL');
+    console.log('Token (nettoyé):', token ? `${token.substring(0, 5)}...` : 'NULL');
+
+    // Vérification de la longueur des clés
+    console.log('Longueur Master Key:', masterKey ? masterKey.length : 0);
+    console.log('Longueur Private Key:', privateKey ? privateKey.length : 0);
+    console.log('Longueur Public Key:', publicKey ? publicKey.length : 0);
+    console.log('Longueur Token:', token ? token.length : 0);
+
+    if (!masterKey || !privateKey || !publicKey || !token) {
+      throw new Error('Une ou plusieurs clés PayDunya sont manquantes après nettoyage');
+    }
+
+    return new Paydunya.Setup({
+      masterKey: masterKey,
+      privateKey: privateKey,
+      publicKey: publicKey,
+      token: token,
+      mode: process.env.PAYDUNYA_MODE || 'live'
+    });
+  } catch (error) {
+    console.error('❌ Erreur configuration PayDunya:', error);
+    throw error;
+  }
+};
+
+// ... le reste du code reste inchangé
 
 const store = new Paydunya.Store({
   name: "Quiz de Carabin",
