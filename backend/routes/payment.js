@@ -18,6 +18,7 @@ router.post('/callback', paymentController.handleCallback);
 // Route de diagnostic des transactions
 router.get('/debug/transactions', async (req, res) => {
   try {
+    const Transaction = require('../models/Transaction');
     const transactions = await Transaction.find()
       .sort({ createdAt: -1 })
       .limit(10)
@@ -42,6 +43,7 @@ router.get('/debug/transactions', async (req, res) => {
     });
   }
 });
+
 // Dans routes/payment.js, ajoutez ce middleware
 router.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);

@@ -2,6 +2,7 @@ const Paydunya = require('paydunya');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const crypto = require('crypto');
+const { sendEmail } = require('../utils/email');
 
 // Configuration de PayDunya
 const setup = new Paydunya.Setup({
@@ -72,13 +73,13 @@ exports.initiatePayment = async (req, res) => {
     );
 
     invoice.totalAmount = 200.00;
-    invoice.description =` Abonnement Premium Quiz de Carabin - ${uniqueReference}`;
+    invoice.description = `Abonnement Premium Quiz de Carabin - ${uniqueReference}`;
 
     // Utiliser les URLs de callback
     const baseUrl = process.env.API_BASE_URL;
     const frontendUrl = process.env.FRONTEND_URL;
     
-    invoice.callbackURL = `${baseUrl}/api/payment/callback`; // Changé pour correspondre à votre IPN
+    invoice.callbackURL = `${baseUrl}/api/payment/callback`;
     invoice.returnURL = `${frontendUrl}/payment-callback.html`;
     invoice.cancelURL = `${frontendUrl}/payment-error.html`;
 
@@ -103,7 +104,7 @@ exports.initiatePayment = async (req, res) => {
     console.log('PayDunya Invoice Token:', invoice.token);
     console.log('PayDunya Invoice URL:', invoice.url);
     
-    // CORRECTION PRINCIPALE: "Transaction Found" n'est pas une erreur!
+    // CORRECTION: "Transaction Found" n'est pas une erreur!
     if (created || invoice.token) {
       // Mettre à jour la transaction avec le token PayDunya
       transaction.paydunyaInvoiceToken = invoice.token;
@@ -146,10 +147,23 @@ exports.initiatePayment = async (req, res) => {
 // Gestionnaire de webhook pour PayDunya
 exports.handleCallback = async (req, res) => {
   try {
-    console.log('📨 Webhook reçu de PayDunya:', req.body);
+    console.log('📨 Webhook reçu de PayDunya:', JSON.stringify(req.body, null, 2));
     
-    const data = req.body;
-    const token = data.invoice.token;
+    // PayDunya envoie les données dans un champ "data"
+    const data = req.body.data;
+    
+    if (!data) {
+      console.error('❌ Données manquantes dans le webhook');
+      return res.status(400).send('Données manquantes');
+    }
+    
+    // Récupérer le token depuis la bonne structure de données
+    const token = data.invoice?.token;
+    
+    if (!token) {
+      console.error('❌ Token manquant dans le webhook:', data);
+      return res.status(400).send('Token manquant');
+    }
     
     // Trouver la transaction par le token
     const transaction = await Transaction.findOne({ paydunyaInvoiceToken: token });
@@ -158,6 +172,8 @@ exports.handleCallback = async (req, res) => {
       console.error('Transaction non trouvée pour le token:', token);
       return res.status(404).send('Transaction non trouvée');
     }
+    
+    console.log('📊 Statut reçu du webhook:', data.status);
     
     // Mettre à jour le statut de la transaction
     if (data.status === 'completed') {
@@ -170,7 +186,35 @@ exports.handleCallback = async (req, res) => {
         user.isPremium = true;
         user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
         await user.save();
+        
         console.log('✅ Utilisateur mis à jour vers premium:', user.email);
+        
+        // Envoyer un email de confirmation
+        const emailSent = await sendEmail({
+          to: user.email,
+          subject: 'Confirmation d\'abonnement Premium - Quiz de Carabin',
+          text: `Félicitations! Votre abonnement premium a été activé avec succès. Vous avez maintenant accès à tous les quizzes premium.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #4CAF50;">Félicitations!</h2>
+              <p>Votre abonnement premium a été activé avec succès.</p>
+              <p>Vous avez maintenant accès à tous les quizzes premium sur <strong>Quiz de Carabin</strong>.</p>
+              <p>Montant payé: <strong>5,000 XOF</strong></p>
+              <p>Date d'expiration: <strong>${new Date(user.premiumExpiresAt).toLocaleDateString('fr-FR')}</strong></p>
+              <br>
+              <p>Merci pour votre confiance!</p>
+              <p>L'équipe Quiz de Carabin</p>
+            </div>
+          `
+        });
+        
+        if (emailSent) {
+          console.log('✅ Email de confirmation envoyé à:', user.email);
+        } else {
+          console.error('❌ Échec de l\'envoi de l\'email à:', user.email);
+        }
+      } else {
+        console.error('❌ Utilisateur non trouvé pour ID:', transaction.userId);
       }
       
       console.log('✅ Paiement confirmé pour la transaction:', transaction.transactionId);
@@ -178,6 +222,8 @@ exports.handleCallback = async (req, res) => {
       transaction.status = 'failed';
       await transaction.save();
       console.log('❌ Paiement échoué pour la transaction:', transaction.transactionId);
+    } else {
+      console.log('📊 Statut non traité:', data.status);
     }
     
     res.status(200).send('Webhook traité avec succès');
@@ -214,6 +260,69 @@ exports.validateAccessCode = async (req, res) => {
       message: "Erreur serveur lors de la validation du code",
       error: error.message
     });
+  }
+};
+// Gestionnaire de webhook pour PayDunya
+exports.handleCallback = async (req, res) => {
+  try {
+    console.log('📨 Webhook reçu de PayDunya:', JSON.stringify(req.body, null, 2));
+    
+    // PayDunya envoie les données dans un champ "data"
+    const data = req.body.data;
+    
+    if (!data) {
+      console.error('❌ Données manquantes dans le webhook');
+      return res.status(400).send('Données manquantes');
+    }
+    
+    // Récupérer le token depuis la bonne structure de données
+    const token = data.invoice?.token;
+    
+    if (!token) {
+      console.error('❌ Token manquant dans le webhook:', data);
+      return res.status(400).send('Token manquant');
+    }
+    
+    // Trouver la transaction par le token
+    const transaction = await Transaction.findOne({ paydunyaInvoiceToken: token });
+    
+    if (!transaction) {
+      console.error('Transaction non trouvée pour le token:', token);
+      return res.status(404).send('Transaction non trouvée');
+    }
+    
+    console.log('📊 Statut reçu du webhook:', data.status);
+    console.log('📊 Données complètes:', data);
+    
+    // Mettre à jour le statut de la transaction
+    if (data.status === 'completed') {
+      transaction.status = 'completed';
+      await transaction.save();
+      
+      // Mettre à jour le statut premium de l'utilisateur
+      const user = await User.findById(transaction.userId);
+      if (user) {
+        user.isPremium = true;
+        user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
+        await user.save();
+        console.log('✅ Utilisateur mis à jour vers premium:', user.email);
+      } else {
+        console.error('❌ Utilisateur non trouvé pour ID:', transaction.userId);
+      }
+      
+      console.log('✅ Paiement confirmé pour la transaction:', transaction.transactionId);
+    } else if (data.status === 'failed') {
+      transaction.status = 'failed';
+      await transaction.save();
+      console.log('❌ Paiement échoué pour la transaction:', transaction.transactionId);
+    } else {
+      console.log('📊 Statut non traité:', data.status);
+    }
+    
+    res.status(200).send('Webhook traité avec succès');
+  } catch (error) {
+    console.error('❌ Erreur dans handleCallback:', error);
+    res.status(500).send('Erreur de traitement du webhook');
   }
 };
 

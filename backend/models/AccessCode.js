@@ -1,30 +1,22 @@
-const mongoose = require('mongoose');
+const transporter = require('../config/email');
 
-const AccessCodeSchema = new mongoose.Schema({
-  code: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  email: {
-    type: String,
-    required: true
-  },
-  expiresAt: {
-    type: Date,
-    required: true
-  },
-  used: {
-    type: Boolean,
-    default: false
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+const sendEmail = async ({ to, subject, text, html }) => {
+  try {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      text,
+      html,
+    };
+    
+    await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully to:', to);
+    return true;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return false;
   }
-});
+};
 
-// Create index for expiration
-AccessCodeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-
-module.exports = mongoose.model('AccessCode', AccessCodeSchema);
+module.exports = { sendEmail };

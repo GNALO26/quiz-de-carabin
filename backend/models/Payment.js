@@ -1,25 +1,22 @@
 const mongoose = require('mongoose');
 
-const PaymentSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  amount: {
-    type: Number,
-    required: true
-  },
-  status: {
+const AccessCodeSchema = new mongoose.Schema({
+  code: {
     type: String,
-    enum: ['pending', 'completed', 'failed'],
-    default: 'pending'
+    required: true,
+    unique: true
   },
-  paydunyaToken: {
-    type: String
+  email: {
+    type: String,
+    required: true
   },
-  invoiceURL: {
-    type: String
+  expiresAt: {
+    type: Date,
+    required: true
+  },
+  used: {
+    type: Boolean,
+    default: false
   },
   createdAt: {
     type: Date,
@@ -27,4 +24,7 @@ const PaymentSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Payment', PaymentSchema);
+// Create index for expiration
+AccessCodeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+module.exports = mongoose.model('AccessCode', AccessCodeSchema);
