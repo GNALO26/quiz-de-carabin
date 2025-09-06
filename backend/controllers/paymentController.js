@@ -66,12 +66,12 @@ exports.initiatePayment = async (req, res) => {
     invoice.addItem(
       `Abonnement Premium - ${uniqueReference}`,
       1,
-      100.00,
-      100.00,
+      200.00,
+      200.00,
       `Accès illimité à tous les quiz premium - Référence: ${uniqueReference}`
     );
 
-    invoice.totalAmount = 100.00;
+    invoice.totalAmount = 200.00;
     invoice.description =` Abonnement Premium Quiz de Carabin - ${uniqueReference}`;
 
     // Utiliser les URLs de callback
