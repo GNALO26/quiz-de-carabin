@@ -5,11 +5,11 @@ const crypto = require('crypto');
 
 // Configuration de PayDunya
 const setup = new Paydunya.Setup({
-  masterKey: process.env.PAYDUNYA_MASTER_KEY.trim(),
-  privateKey: process.env.PAYDUNYA_PRIVATE_KEY.trim(),
-  publicKey: process.env.PAYDUNYA_PUBLIC_KEY.trim(),
-  token: process.env.PAYDUNYA_TOKEN.trim(),
-  mode: process.env.PAYDUNYA_MODE || 'live'
+  masterKey: process.env.PAYDUNYA_MASTER_KEY ? process.env.PAYDUNYA_MASTER_KEY.trim() : '',
+  privateKey: process.env.PAYDUNYA_PRIVATE_KEY ? process.env.PAYDUNYA_PRIVATE_KEY.trim() : '',
+  publicKey: process.env.PAYDUNYA_PUBLIC_KEY ? process.env.PAYDUNYA_PUBLIC_KEY.trim() : '',
+  token: process.env.PAYDUNYA_TOKEN ? process.env.PAYDUNYA_TOKEN.trim() : '',
+  mode: (process.env.PAYDUNYA_MODE || 'live').trim()
 });
 
 const store = new Paydunya.Store({
@@ -34,6 +34,16 @@ const generateUniqueReference = () => {
 exports.initiatePayment = async (req, res) => {
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
+    
+    // Ajoutez ce code au début de votre initiatePayment pour debugger
+console.log('=== CONFIGURATION PAYDUNYA ===');
+console.log('Master Key:', process.env.PAYDUNYA_MASTER_KEY ? 'Défini' : 'Non défini');
+console.log('Private Key:', process.env.PAYDUNYA_PRIVATE_KEY ? 'Défini' : 'Non défini');
+console.log('Public Key:', process.env.PAYDUNYA_PUBLIC_KEY ? 'Défini' : 'Non défini');
+console.log('Token:', process.env.PAYDUNYA_TOKEN ? 'Défini' : 'Non défini');
+console.log('Mode:', process.env.PAYDUNYA_MODE);
+console.log('Store Phone:', process.env.STORE_PHONE);
+console.log('Store Logo URL:', process.env.STORE_LOGO_URL);
     
     const user = req.user;
     const uniqueReference = generateUniqueReference();
@@ -88,6 +98,7 @@ exports.initiatePayment = async (req, res) => {
     invoice.addCustomData('service', 'premium_subscription');
     invoice.addCustomData('transaction_id', transactionID);
     invoice.addCustomData('unique_reference', uniqueReference);
+    invoice.addCustomData('timestamp', Date.now().toString());
 
     // Créer la facture
     console.log('Création de la facture PayDunya...');
@@ -96,17 +107,23 @@ exports.initiatePayment = async (req, res) => {
     
     const created = await invoice.create();
     
-    // Logs de réponse de PayDunya (placés au bon endroit)
+    // Logs de réponse de PayDunya
     console.log('PayDunya Invoice Response:', invoice.responseText);
     console.log('PayDunya Invoice Status:', invoice.status);
     console.log('PayDunya Invoice Token:', invoice.token);
     console.log('PayDunya Invoice URL:', invoice.url);
     
-    if (created) {
+    if (created && invoice.status === 'completed') {
       // Mettre à jour la transaction avec le token PayDunya
       transaction.paydunyaInvoiceToken = invoice.token;
       transaction.paydunyaInvoiceURL = invoice.url;
+      transaction.status = 'completed';
       await transaction.save();
+
+      // Mettre à jour le statut premium de l'utilisateur
+      user.isPremium = true;
+      user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
+      await user.save();
 
       console.log('✅ Payment invoice created successfully');
       console.log('Invoice URL:', invoice.url);
@@ -124,9 +141,18 @@ exports.initiatePayment = async (req, res) => {
 
       console.error('❌ Échec de la création de la facture:', invoice.responseText);
       
+      // Analyser la réponse pour donner un message plus précis
+      let errorMessage = "Erreur lors de la création du paiement";
+      if (invoice.responseText.includes('Transaction Found')) {
+        errorMessage = "Une transaction avec ces paramètres existe déjà. Veuillez réessayer avec des paramètres différents.";
+      } else if (invoice.responseText.includes('Authentication')) {
+        errorMessage = "Erreur d'authentification avec le service de paiement. Veuillez contacter le support.";
+      }
+      
       res.status(400).json({
         success: false,
-        message: "Erreur lors de la création du paiement: " + (invoice.responseText || 'Erreur inconnue')
+        message: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? invoice.responseText : undefined
       });
     }
   } catch (error) {
