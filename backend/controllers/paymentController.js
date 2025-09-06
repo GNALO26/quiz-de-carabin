@@ -1,62 +1,55 @@
-const { cleanPaydunyaKey } = require('../utils/cleanKeys');
 const Paydunya = require('paydunya');
+const User = require('../models/User');
+const { cleanPaydunyaKey } = require('../utils/cleanKeys');
+
+// Configuration de PayDunya
+const setupPaydunya = () => {
+  // Nettoyer les clés PayDunya
+  let masterKey = cleanPaydunyaKey(process.env.PAYDUNYA_MASTER_KEY);
+  const privateKey = cleanPaydunyaKey(process.env.PAYDUNYA_PRIVATE_KEY);
+  const publicKey = cleanPaydunyaKey(process.env.PAYDUNYA_PUBLIC_KEY);
+  const token = cleanPaydunyaKey(process.env.PAYDUNYA_TOKEN);
+
+  // Correction du format de la clé master si nécessaire
+  if (masterKey && !masterKey.startsWith('master_live_') && !masterKey.startsWith('masterKey_')) {
+    console.log('⚠  Correction du format de la clé master');
+    masterKey = 'master_live_' + masterKey;
+  }
+
+  console.log('Configuration PayDunya:');
+  console.log('Mode:', process.env.PAYDUNYA_MODE || 'live');
+  console.log('Master Key:', masterKey ? masterKey.substring(0, 15) + '...' : 'Non définie');
+  console.log('Private Key:', privateKey ? privateKey.substring(0, 15) + '...' : 'Non définie');
+
+  return new Paydunya.Setup({
+    masterKey: masterKey,
+    privateKey: privateKey,
+    publicKey: publicKey,
+    token: token,
+    mode: process.env.PAYDUNYA_MODE || 'live'
+  });
+};
+
+const store = new Paydunya.Store({
+  name: "Quiz de Carabin",
+  tagline: "Formation médicale par quiz",
+  postalAddress: "Cotonou, Bénin",
+  phoneNumber: process.env.STORE_PHONE || "+2290156035888",
+  websiteURL: process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app",
+  logoURL: process.env.STORE_LOGO_URL || "https://quiz-de-carabin.netlify.app/assets/images/logo.png"
+});
 
 exports.initiatePayment = async (req, res) => {
   try {
-    console.log('=== DÉBUT INITIATION PAIEMENT LIVE ===');
+    console.log('=== DÉBUT INITIATION PAIEMENT ===');
+    console.log('User ID:', req.user._id);
 
-    // Nettoyer les clés PayDunya
-    let masterKey = cleanPaydunyaKey(process.env.PAYDUNYA_MASTER_KEY);
-    const privateKey = cleanPaydunyaKey(process.env.PAYDUNYA_PRIVATE_KEY);
-    const publicKey = cleanPaydunyaKey(process.env.PAYDUNYA_PUBLIC_KEY);
-    const token = cleanPaydunyaKey(process.env.PAYDUNYA_TOKEN);
-
-    // Correction du format de la clé master si nécessaire
-    if (masterKey && !masterKey.startsWith('master_live_') && !masterKey.startsWith('masterKey_')) {
-      console.log('⚠  Correction du format de la clé master');
-      masterKey = 'master_live_' + masterKey;
-    }
-
-    console.log('Clés utilisées:');
-    console.log('Master Key:', masterKey.substring(0, 15) + '...');
-    console.log('Private Key:', privateKey.substring(0, 15) + '...');
-    console.log('Public Key:', publicKey.substring(0, 15) + '...');
-    console.log('Token:', token.substring(0, 5) + '...');
-
-    // Vérification que toutes les clés sont présentes
-    if (!masterKey || !privateKey || !publicKey || !token) {
-      console.error('Clés PayDunya manquantes');
-      return res.status(500).json({
-        success: false,
-        message: "Configuration de paiement incomplète"
-      });
-    }
-
-    // Configuration de Paydunya avec les clés corrigées
-    const setup = new Paydunya.Setup({
-      masterKey: masterKey,
-      privateKey: privateKey,
-      publicKey: publicKey,
-      token: token,
-      mode: 'live'
-    });
-
-    const store = new Paydunya.Store({
-      name: "Quiz de Carabin",
-      tagline: "Formation médicale par quiz",
-      postalAddress: "Cotonou, Bénin",
-      phoneNumber: process.env.STORE_PHONE || "+2290156035888",
-      websiteURL: process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app",
-      logoURL: process.env.STORE_LOGO_URL
-    });
-
+    const setup = setupPaydunya();
     const { callback_url } = req.body;
     const user = req.user;
 
-    console.log('Initiating payment for user:', user._id);
-
     // Vérifier si l'utilisateur a déjà un abonnement actif
-    if (user.isPremium) {
+    if (user.isPremium && user.premiumExpiresAt > new Date()) {
       return res.status(400).json({
         success: false,
         message: 'Vous avez déjà un abonnement premium actif'
@@ -72,14 +65,14 @@ exports.initiatePayment = async (req, res) => {
       1,
       5000.00,
       5000.00,
-      "Accès illimité à tous les quiz premium"
+      "Accès illimité à tous les quiz premium pendant 30 jours"
     );
 
     invoice.totalAmount = 5000.00;
     invoice.description = "Abonnement Premium - Quiz de Carabin";
-    invoice.callbackURL = callback_url || `${process.env.FRONTEND_URL}/payment-callback.html`;
+    invoice.callbackURL = process.env.API_BASE_URL + "/api/payment/webhook";
+    invoice.returnURL = callback_url || `${process.env.FRONTEND_URL}/payment-callback.html`;
     invoice.cancelURL = `${process.env.FRONTEND_URL}/payment-error.html`;
-    invoice.returnURL = `${process.env.FRONTEND_URL}/payment-callback.html`;
 
     // Ajouter des données personnalisées
     invoice.addCustomData('user_id', user._id.toString());
@@ -91,9 +84,8 @@ exports.initiatePayment = async (req, res) => {
     const created = await invoice.create();
     
     if (created) {
-      console.log('Payment invoice created successfully');
+      console.log('✅ Payment invoice created successfully');
       console.log('Invoice URL:', invoice.getInvoiceURL());
-      console.log('Token:', invoice.token);
 
       res.status(200).json({
         success: true,
@@ -102,7 +94,7 @@ exports.initiatePayment = async (req, res) => {
         token: invoice.token
       });
     } else {
-      console.error('Échec de la création de la facture:', invoice.responseText);
+      console.error('❌ Échec de la création de la facture:', invoice.responseText);
       res.status(500).json({
         success: false,
         message: "Erreur lors de la création de la facture de paiement",
@@ -110,7 +102,7 @@ exports.initiatePayment = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Erreur dans initiatePayment:', error);
+    console.error('❌ Erreur dans initiatePayment:', error);
     res.status(500).json({
       success: false,
       message: "Erreur serveur lors de l'initiation du paiement",
@@ -123,20 +115,52 @@ exports.validateAccessCode = async (req, res) => {
   try {
     const { code, email } = req.body;
 
-    // Code de validation (exemple)
-    const validCode = "CARABIN2024";
-    
-    if (code === validCode) {
-      res.status(200).json({
-        success: true,
-        message: "Code validé avec succès. Votre compte a été mis à jour vers Premium."
+    if (!code || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Code et email requis"
       });
-    } else {
-      res.status(400).json({
+    }
+
+    // Rechercher l'utilisateur
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Utilisateur non trouvé"
+      });
+    }
+
+    // Vérifier si le code correspond
+    if (user.accessCode !== code) {
+      return res.status(400).json({
         success: false,
         message: "Code d'accès invalide"
       });
     }
+
+    // Vérifier si le code n'a pas expiré (30 minutes)
+    const now = new Date();
+    if (now - user.accessCodeCreatedAt > 30 * 60 * 1000) {
+      return res.status(400).json({
+        success: false,
+        message: "Code expiré"
+      });
+    }
+
+    // Activer l'abonnement premium
+    user.isPremium = true;
+    user.premiumExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 jours
+    user.accessCode = null;
+    user.accessCodeCreatedAt = null;
+    
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Abonnement activé avec succès! Vous avez maintenant accès à tous les quiz premium."
+    });
   } catch (error) {
     console.error('Error in validateAccessCode:', error);
     res.status(500).json({
@@ -152,7 +176,6 @@ exports.checkPaymentStatus = async (req, res) => {
     const { paymentId } = req.params;
     
     // Implémentez la logique de vérification du statut de paiement
-    // Pour l'instant, retournons une réponse factice
     res.status(200).json({
       success: true,
       status: 'completed',
@@ -170,9 +193,42 @@ exports.checkPaymentStatus = async (req, res) => {
 
 exports.handleWebhook = async (req, res) => {
   try {
-    // Implémentez la logique de traitement des webhooks PayDunya
     console.log('Webhook reçu:', req.body);
-    res.status(200).send('Webhook processed');
+    
+    const setup = setupPaydunya();
+    const invoice = new Paydunya.CheckoutInvoice(setup, store);
+    
+    // Vérifier le statut de la facture
+    invoice.confirm(req.body);
+    
+    console.log('Statut de la facture:', invoice.status);
+    console.log('Données personnalisées:', invoice.custom_data);
+    
+    if (invoice.status === 'completed') {
+      // Récupérer les données utilisateur
+      const userId = invoice.custom_data.user_id;
+      const userEmail = invoice.custom_data.user_email;
+      
+      console.log('Paiement réussi pour:', userEmail);
+      
+      // Trouver l'utilisateur
+      const user = await User.findById(userId);
+      
+      if (user) {
+        // Générer un code d'accès
+        const accessCode = Math.floor(100000 + Math.random() * 900000).toString();
+        user.accessCode = accessCode;
+        user.accessCodeCreatedAt = new Date();
+        
+        await user.save();
+
+        console.log(`Code d'accès généré pour ${user.email}: ${accessCode}`);
+        
+        // TODO: Envoyer un email avec le code d'accès
+      }
+    }
+    
+    res.status(200).send('OK');
   } catch (error) {
     console.error('Error in handleWebhook:', error);
     res.status(500).send('Webhook processing error');

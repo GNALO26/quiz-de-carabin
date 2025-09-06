@@ -18,6 +18,15 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
+  // Dans models/User.js, ajoutez ces champs au schéma:
+accessCode: {
+  type: String,
+  default: null
+},
+accessCodeCreatedAt: {
+  type: Date,
+  default: null
+},
   isPremium: {
     type: Boolean,
     default: false
