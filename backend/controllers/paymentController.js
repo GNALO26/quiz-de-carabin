@@ -10,16 +10,17 @@ const setupPaydunya = () => {
   const publicKey = cleanPaydunyaKey(process.env.PAYDUNYA_PUBLIC_KEY);
   const token = cleanPaydunyaKey(process.env.PAYDUNYA_TOKEN);
 
-  // Correction du format de la clé master si nécessaire
-  if (masterKey && !masterKey.startsWith('master_live_') && !masterKey.startsWith('masterKey_')) {
-    console.log('⚠  Correction du format de la clé master');
-    masterKey = 'master_live_' + masterKey;
-  }
-
   console.log('Configuration PayDunya:');
   console.log('Mode:', process.env.PAYDUNYA_MODE || 'live');
-  console.log('Master Key:', masterKey ? masterKey.substring(0, 15) + '...' : 'Non définie');
-  console.log('Private Key:', privateKey ? privateKey.substring(0, 15) + '...' : 'Non définie');
+  console.log('Master Key:', masterKey ? 'Définie' : 'Manquante');
+  console.log('Private Key:', privateKey ? 'Définie' : 'Manquante');
+  console.log('Public Key:', publicKey ? 'Définie' : 'Manquante');
+  console.log('Token:', token ? 'Défini' : 'Manquant');
+
+  // Vérifier que toutes les clés sont présentes
+  if (!masterKey || !privateKey || !publicKey || !token) {
+    throw new Error('Clés PayDunya manquantes ou invalides après nettoyage');
+  }
 
   return new Paydunya.Setup({
     masterKey: masterKey,
@@ -42,10 +43,8 @@ const store = new Paydunya.Store({
 exports.initiatePayment = async (req, res) => {
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
-    console.log('User ID:', req.user._id);
 
     const setup = setupPaydunya();
-    const { callback_url } = req.body;
     const user = req.user;
 
     // Vérifier si l'utilisateur a déjà un abonnement actif
@@ -70,8 +69,8 @@ exports.initiatePayment = async (req, res) => {
 
     invoice.totalAmount = 5000.00;
     invoice.description = "Abonnement Premium - Quiz de Carabin";
-    invoice.callbackURL = process.env.API_BASE_URL + "/api/payment/webhook";
-    invoice.returnURL = callback_url || `${process.env.FRONTEND_URL}/payment-callback.html`;
+    invoice.callbackURL = `${process.env.API_BASE_URL}/api/payment/webhook`;
+    invoice.returnURL = `${process.env.FRONTEND_URL}/payment-callback.html`;
     invoice.cancelURL = `${process.env.FRONTEND_URL}/payment-error.html`;
 
     // Ajouter des données personnalisées
@@ -85,12 +84,12 @@ exports.initiatePayment = async (req, res) => {
     
     if (created) {
       console.log('✅ Payment invoice created successfully');
-      console.log('Invoice URL:', invoice.getInvoiceURL());
+      console.log('Invoice URL:', invoice.url);
 
       res.status(200).json({
         success: true,
         message: "Paiement initié avec succès",
-        invoiceURL: invoice.getInvoiceURL(),
+        invoiceURL: invoice.url,
         token: invoice.token
       });
     } else {
@@ -106,10 +105,11 @@ exports.initiatePayment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Erreur serveur lors de l'initiation du paiement",
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
+
 
 exports.validateAccessCode = async (req, res) => {
   try {

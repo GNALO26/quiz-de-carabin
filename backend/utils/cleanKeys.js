@@ -1,13 +1,13 @@
-// utils/cleanKeys.js
 function cleanPaydunyaKey(key) {
   if (!key) return null;
   
-  // Supprimer les espaces, guillemets et caractères invisibles
+  // Supprimer tous les caractères non-ASCII et espaces
   return key
     .toString()
-    .trim()
-    .replace(/['"]/g, '') // Supprimer les guillemets
-    .replace(/\s/g, '');   // Supprimer les espaces
+    .replace(/[^\x20-\x7E]/g, '')  // Supprimer les caractères non-ASCII
+    .replace(/\s/g, '')             // Supprimer les espaces
+    .replace(/['"]/g, '')           // Supprimer les guillemets
+    .trim();
 }
 
 module.exports = { cleanPaydunyaKey };
