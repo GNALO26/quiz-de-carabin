@@ -1,82 +1,37 @@
-const express = require('express');
-const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const auth = require('../middleware/auth');
 
-// Register
-router.post('/register', async (req, res) => {
+const auth = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const token = req.header('Authorization')?.replace('Bearer ', '');
     
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: 'Un utilisateur avec cet email existe déjà.' });
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Access denied. No token provided.' 
+      });
     }
-    
-    // Create user
-    const user = new User({ name, email, password });
-    await user.save();
-    
-    // Generate token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    
-    res.status(201).json({
-      success: true,
-      message: 'Utilisateur créé avec succès.',
-      token,
-      user: { id: user._id, name: user.name, email: user.email, isPremium: user.isPremium }
-    });
-  } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
-  }
-});
 
-// Login
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // CORRECTION: Utiliser decoded.id au lieu de decoded.userId
+    const user = await User.findById(decoded.id).select('-password');
     
-    // Check if user exists
-    const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ success: false, message: 'Email ou mot de passe incorrect.' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Token is not valid. User not found.' 
+      });
     }
-    
-    // Check password
-    const isMatch = await user.correctPassword(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ success: false, message: 'Email ou mot de passe incorrect.' });
-    }
-    
-    // Generate token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    
-    res.json({
-      success: true,
-      message: 'Connexion réussie.',
-      token,
-      user: { id: user._id, name: user.name, email: user.email, isPremium: user.isPremium }
-    });
+
+    req.user = user;
+    next();
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    console.error('Auth middleware error:', error);
+    res.status(401).json({ 
+      success: false, 
+      message: 'Token is not valid.' 
+    });
   }
-});
+};
 
-// Get current user
-router.get('/me', auth, async (req, res) => {
-  res.json({
-    success: true,
-    user: { 
-      id: req.user._id, 
-      name: req.user.name, 
-      email: req.user.email, 
-      isPremium: req.user.isPremium 
-    }
-  });
-});
-
-module.exports = router;
+module.exports = auth;

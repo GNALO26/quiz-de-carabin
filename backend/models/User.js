@@ -39,6 +39,10 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
+  return await bcrypt.compare(candidatePassword, userPassword);
+};
+
 // Méthode pour vérifier si l'abonnement est encore valide
 userSchema.virtual('isPremiumActive').get(function() {
   if (!this.isPremium) return false;

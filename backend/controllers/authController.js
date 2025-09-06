@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
+    expiresIn: '7d',
   });
 };
 
@@ -42,9 +42,10 @@ exports.register = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('Register error:', error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: 'Erreur serveur lors de la création du compte.',
     });
   }
 };
@@ -85,13 +86,15 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: 'Erreur serveur lors de la connexion.',
     });
   }
 };
 
+// Middleware de protection (vous pouvez garder celui-ci ou utiliser celui du dossier middleware)
 exports.protect = async (req, res, next) => {
   try {
     let token;
@@ -124,6 +127,7 @@ exports.protect = async (req, res, next) => {
     req.user = currentUser;
     next();
   } catch (error) {
+    console.error('Protect middleware error:', error);
     res.status(401).json({
       success: false,
       message: 'Token invalide.',
