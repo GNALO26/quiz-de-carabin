@@ -15,4 +15,7 @@ const cleanupOldTransactions = async () => {
 // Exécuter le nettoyage toutes les heures
 setInterval(cleanupOldTransactions, 60 * 60 * 1000);
 
+// Exécuter immédiatement au démarrage
+cleanupOldTransactions();
+
 module.exports = cleanupOldTransactions;
