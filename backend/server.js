@@ -8,6 +8,8 @@ const authRoutes = require('./routes/auth');
 const quizRoutes = require('./routes/quiz');
 const paymentRoutes = require('./routes/payment');
 const userRoutes = require('./routes/user');
+const cleanupTransactions = require('./scripts/cleanupTransactions');
+
 
 const app = express();
 
@@ -31,6 +33,18 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('Could not connect to MongoDB', err));
+
+// Après la connexion à MongoDB
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('Connected to MongoDB');
+  // Démarrer le nettoyage des transactions après la connexion DB
+  cleanupTransactions();
+})
+.catch(err => console.error('Could not connect to MongoDB', err));
 
 // Routes API
 app.use('/api/auth', authRoutes);

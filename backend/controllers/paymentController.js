@@ -1,39 +1,19 @@
 const Paydunya = require('paydunya');
 const User = require('../models/User');
-const { cleanPaydunyaKey } = require('../utils/cleanKeys');
+const Transaction = require('../models/Transaction');
+const crypto = require('crypto');
 
-// Configuration de PayDunya
-const setupPaydunya = () => {
-  // Nettoyer les clés PayDunya
-  let masterKey = cleanPaydunyaKey(process.env.PAYDUNYA_MASTER_KEY);
-  const privateKey = cleanPaydunyaKey(process.env.PAYDUNYA_PRIVATE_KEY);
-  const publicKey = cleanPaydunyaKey(process.env.PAYDUNYA_PUBLIC_KEY);
-  const token = cleanPaydunyaKey(process.env.PAYDUNYA_TOKEN);
-
-  console.log('Configuration PayDunya:');
-  console.log('Mode:', process.env.PAYDUNYA_MODE || 'live');
-  console.log('Master Key:', masterKey ? 'Définie' : 'Manquante');
-  console.log('Private Key:', privateKey ? 'Définie' : 'Manquante');
-  console.log('Public Key:', publicKey ? 'Définie' : 'Manquante');
-  console.log('Token:', token ? 'Défini' : 'Manquant');
-
-  // Vérifier que toutes les clés sont présentes
-  if (!masterKey || !privateKey || !publicKey || !token) {
-    throw new Error('Clés PayDunya manquantes ou invalides après nettoyage');
-  }
-
-  return new Paydunya.Setup({
-    masterKey: masterKey,
-    privateKey: privateKey,
-    publicKey: publicKey,
-    token: token,
-    mode: process.env.PAYDUNYA_MODE || 'live'
-  });
-};
+const setup = new Paydunya.Setup({
+  masterKey: process.env.PAYDUNYA_MASTER_KEY,
+  privateKey: process.env.PAYDUNYA_PRIVATE_KEY,
+  publicKey: process.env.PAYDUNYA_PUBLIC_KEY,
+  token: process.env.PAYDUNYA_TOKEN,
+  mode: process.env.PAYDUNYA_MODE || 'live'
+});
 
 const store = new Paydunya.Store({
   name: "Quiz de Carabin",
-  tagline: "Formation médicale par quiz",
+  tagline: "Plateforme de quiz médicaux",
   postalAddress: "Cotonou, Bénin",
   phoneNumber: process.env.STORE_PHONE || "+2290156035888",
   websiteURL: process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app",
@@ -43,9 +23,10 @@ const store = new Paydunya.Store({
 exports.initiatePayment = async (req, res) => {
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
-
-    const setup = setupPaydunya();
+    
     const user = req.user;
+    const transactionId = crypto.randomBytes(16).toString('hex');
+    const timestamp = Date.now();
 
     // Vérifier si l'utilisateur a déjà un abonnement actif
     if (user.isPremium && user.premiumExpiresAt > new Date()) {
@@ -55,12 +36,22 @@ exports.initiatePayment = async (req, res) => {
       });
     }
 
-    // Créer une facture
+    // Enregistrer la transaction en base de données
+    const transaction = new Transaction({
+      userId: user._id,
+      transactionId: transactionId,
+      amount: 5000,
+      status: 'pending'
+    });
+
+    await transaction.save();
+
+    // Créer la facture PayDunya
     const invoice = new Paydunya.CheckoutInvoice(setup, store);
 
-    // Ajouter des articles à la facture
+    // Ajouter des articles à la facture avec un libellé unique
     invoice.addItem(
-      "Abonnement Premium Quiz de Carabin",
+      `Abonnement Premium Quiz de Carabin - ${timestamp}`,
       1,
       5000.00,
       5000.00,
@@ -68,21 +59,35 @@ exports.initiatePayment = async (req, res) => {
     );
 
     invoice.totalAmount = 5000.00;
-    invoice.description = "Abonnement Premium - Quiz de Carabin";
-    invoice.callbackURL = `${process.env.API_BASE_URL}/api/payment/webhook`;
-    invoice.returnURL = `${process.env.FRONTEND_URL}/payment-callback.html`;
-    invoice.cancelURL = `${process.env.FRONTEND_URL}/payment-error.html`;
+    invoice.description = `Abonnement Premium - Quiz de Carabin - ${timestamp}`;
+    
+    // Utiliser les URLs de callback
+    const baseUrl = process.env.API_BASE_URL || "https://quiz-de-carabin-backend.onrender.com";
+    const frontendUrl = process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app";
+    
+    invoice.callbackURL = `${baseUrl}/api/payment/webhook`;
+    invoice.returnURL = `${frontendUrl}/payment-callback.html`;
+    invoice.cancelURL = `${frontendUrl}/payment-error.html`;
 
-    // Ajouter des données personnalisées
+    // Ajouter des données personnalisées avec un ID unique
     invoice.addCustomData('user_id', user._id.toString());
     invoice.addCustomData('user_email', user.email);
     invoice.addCustomData('service', 'premium_subscription');
+    invoice.addCustomData('transaction_id', transactionId);
+    invoice.addCustomData('timestamp', timestamp.toString());
 
     // Créer la facture
     console.log('Création de la facture PayDunya...');
+    console.log('Transaction ID:', transactionId);
+    console.log('Timestamp:', timestamp);
+    
     const created = await invoice.create();
     
     if (created) {
+      // Mettre à jour la transaction avec le token PayDunya
+      transaction.paydunyaInvoiceToken = invoice.token;
+      await transaction.save();
+
       console.log('✅ Payment invoice created successfully');
       console.log('Invoice URL:', invoice.url);
 
@@ -93,7 +98,19 @@ exports.initiatePayment = async (req, res) => {
         token: invoice.token
       });
     } else {
+      // Marquer la transaction comme échouée
+      transaction.status = 'failed';
+      await transaction.save();
+
       console.error('❌ Échec de la création de la facture:', invoice.responseText);
+      
+      // Vérifier si c'est une erreur de transaction existante
+      if (invoice.responseText.includes('Transaction Found') || invoice.responseText.includes('Duplicate')) {
+        // Recommencer avec un nouvel ID unique
+        console.log('🔄 Tentative avec un nouvel identifiant de transaction...');
+        return this.initiatePayment(req, res); // Réessayer
+      }
+      
       res.status(500).json({
         success: false,
         message: "Erreur lors de la création de la facture de paiement",
@@ -109,7 +126,6 @@ exports.initiatePayment = async (req, res) => {
     });
   }
 };
-
 
 exports.validateAccessCode = async (req, res) => {
   try {
