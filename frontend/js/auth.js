@@ -24,79 +24,76 @@ export class Auth {
     }
 
     async login() {
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
 
-        if (!email || !password) {
-            this.showAlert('Veuillez remplir tous les champs', 'danger');
-            return;
-        }
-
-        try {
-            // Obtenir l'URL active
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorData;
-                
-                try {
-                    errorData = JSON.parse(errorText);
-                } catch {
-                    throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
-                }
-                
-                // CORRECTION: Utilisation correcte du message d'erreur
-                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                this.token = data.token;
-                this.user = data.user;
-                
-                localStorage.setItem('quizToken', this.token);
-                localStorage.setItem('quizUser', JSON.stringify(this.user));
-                
-                this.updateUI();
-                this.hideModals();
-                this.showAlert('Connexion réussie!', 'success');
-                
-                if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-                    window.quiz.loadQuizzes();
-                }
-            } else {
-                this.showAlert(data.message, 'danger');
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            
-            if (error.name === 'AbortError') {
-                this.showAlert('Le serveur ne répond pas. Veuillez réessayer plus tard.', 'danger');
-            } else if (error.message.includes('Failed to fetch')) {
-                this.showAlert('Impossible de se connecter au serveur. Vérifiez votre connexion internet.', 'danger');
-            } else {
-                // CORRECTION: Affichage correct du message d'erreur
-                this.showAlert(error.message, 'danger');
-            }
-        }
+    if (!email || !password) {
+        this.showAlert('Veuillez remplir tous les champs', 'danger');
+        return;
     }
 
+    try {
+        const API_BASE_URL = await this.getActiveAPIUrl();
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorData;
+            
+            try {
+                errorData = JSON.parse(errorText);
+            } catch {
+                throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+            }
+            
+            // CORRECTION: Utilisation correcte du message d'erreur
+            throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            this.token = data.token;
+            this.user = data.user;
+            
+            localStorage.setItem('quizToken', this.token);
+            localStorage.setItem('quizUser', JSON.stringify(this.user));
+            
+            this.updateUI();
+            this.hideModals();
+            this.showAlert('Connexion réussie!', 'success');
+            
+            if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                window.quiz.loadQuizzes();
+            }
+        } else {
+            this.showAlert(data.message, 'danger');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        
+        if (error.name === 'AbortError') {
+            this.showAlert('Le serveur ne répond pas. Veuillez réessayer plus tard.', 'danger');
+        } else if (error.message.includes('Failed to fetch')) {
+            this.showAlert('Impossible de se connecter au serveur. Vérifiez votre connexion internet.', 'danger');
+        } else {
+            this.showAlert('Erreur de connexion: ' + error.message, 'danger');
+        }
+    }
+}
 
     async register() {
         const name = document.getElementById('registerName').value;

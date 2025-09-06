@@ -1,15 +1,24 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '7d',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
 };
 
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
+    // Validation des champs requis
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez fournir un nom, un email et un mot de passe.',
+      });
+    }
 
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await User.findOne({ email });
@@ -30,7 +39,6 @@ exports.register = async (req, res) => {
     // Générer le token JWT
     const token = signToken(newUser._id);
 
-    // Retourner la réponse sans le mot de passe
     res.status(201).json({
       success: true,
       token,
@@ -43,6 +51,17 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error('Register error:', error);
+    
+    // Gestion des erreurs de validation Mongoose
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Données invalides',
+        errors: errors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la création du compte.',
@@ -62,15 +81,29 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Vérifier si l'utilisateur existe et que le mot de passe est correct
+    // Vérifier si l'utilisateur existe
     const user = await User.findOne({ email }).select('+password');
 
-    if (!user || !(await user.correctPassword(password, user.password))) {
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Email ou mot de passe incorrect.',
       });
     }
+
+    // Vérifier le mot de passe avec bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Email ou mot de passe incorrect.',
+      });
+    }
+
+    // Mettre à jour la date de dernière connexion
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
 
     // Générer le token JWT
     const token = signToken(user._id);
@@ -90,47 +123,6 @@ exports.login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la connexion.',
-    });
-  }
-};
-
-// Middleware de protection (vous pouvez garder celui-ci ou utiliser celui du dossier middleware)
-exports.protect = async (req, res, next) => {
-  try {
-    let token;
-
-    // Vérifier si le token est présent dans les en-têtes
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Vous n\'êtes pas connecté. Veuillez vous connecter pour accéder à cette ressource.',
-      });
-    }
-
-    // Vérifier le token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Vérifier si l'utilisateur existe toujours
-    const currentUser = await User.findById(decoded.id);
-    if (!currentUser) {
-      return res.status(401).json({
-        success: false,
-        message: 'L\'utilisateur associé à ce token n\'existe plus.',
-      });
-    }
-
-    // Ajouter l'utilisateur à la requête
-    req.user = currentUser;
-    next();
-  } catch (error) {
-    console.error('Protect middleware error:', error);
-    res.status(401).json({
-      success: false,
-      message: 'Token invalide.',
     });
   }
 };
