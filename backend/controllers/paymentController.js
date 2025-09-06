@@ -26,11 +26,17 @@ const generateUniqueTransactionID = () => {
   return 'TXN_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
 };
 
+// Fonction pour générer une référence unique
+const generateUniqueReference = () => {
+  return 'REF_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+};
+
 exports.initiatePayment = async (req, res) => {
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
     
     const user = req.user;
+    const uniqueReference = generateUniqueReference();
 
     // Vérifier si l'utilisateur a déjà un abonnement actif
     if (user.isPremium && user.premiumExpiresAt > new Date()) {
@@ -56,17 +62,17 @@ exports.initiatePayment = async (req, res) => {
     // Créer une facture PayDunya
     const invoice = new Paydunya.CheckoutInvoice(setup, store);
 
-    // Ajouter des articles à la facture
+    // Ajouter des articles à la facture avec une référence unique
     invoice.addItem(
-      'Abonnement Premium Quiz de Carabin',
+      `Abonnement Premium - ${uniqueReference}`,
       1,
       5000.00,
       5000.00,
-      'Accès illimité à tous les quiz premium'
+      `Accès illimité à tous les quiz premium - Référence: ${uniqueReference}`
     );
 
     invoice.totalAmount = 5000.00;
-    invoice.description = 'Abonnement Premium Quiz de Carabin';
+    invoice.description = `Abonnement Premium Quiz de Carabin - ${uniqueReference}`;
 
     // Utiliser les URLs de callback
     const baseUrl = process.env.API_BASE_URL;
@@ -76,17 +82,25 @@ exports.initiatePayment = async (req, res) => {
     invoice.returnURL = `${frontendUrl}/payment-callback.html`;
     invoice.cancelURL = `${frontendUrl}/payment-error.html`;
 
-    // Ajouter des données personnalisées
+    // Ajouter des données personnalisées avec référence unique
     invoice.addCustomData('user_id', req.user._id.toString());
     invoice.addCustomData('user_email', req.user.email);
     invoice.addCustomData('service', 'premium_subscription');
     invoice.addCustomData('transaction_id', transactionID);
+    invoice.addCustomData('unique_reference', uniqueReference);
 
     // Créer la facture
     console.log('Création de la facture PayDunya...');
     console.log('Transaction ID:', transactionID);
+    console.log('Unique Reference:', uniqueReference);
     
     const created = await invoice.create();
+    
+    // Logs de réponse de PayDunya (placés au bon endroit)
+    console.log('PayDunya Invoice Response:', invoice.responseText);
+    console.log('PayDunya Invoice Status:', invoice.status);
+    console.log('PayDunya Invoice Token:', invoice.token);
+    console.log('PayDunya Invoice URL:', invoice.url);
     
     if (created) {
       // Mettre à jour la transaction avec le token PayDunya
@@ -112,15 +126,24 @@ exports.initiatePayment = async (req, res) => {
       
       res.status(400).json({
         success: false,
-        message: "Erreur lors de la création du paiement: " + invoice.responseText
+        message: "Erreur lors de la création du paiement: " + (invoice.responseText || 'Erreur inconnue')
       });
     }
   } catch (error) {
     console.error('❌ Erreur dans initiatePayment:', error);
     
+    let errorMessage = "Erreur serveur lors de l'initiation du paiement";
+    
+    // Messages d'erreur spécifiques à PayDunya
+    if (error.message.includes('Transaction Found')) {
+      errorMessage = "Une transaction similaire existe déjà. Veuillez réessayer dans quelques instants.";
+    } else if (error.message.includes('Authentication')) {
+      errorMessage = "Erreur d'authentification avec le service de paiement. Veuillez contacter le support.";
+    }
+    
     res.status(500).json({
       success: false,
-      message: "Erreur serveur lors de l'initiation du paiement",
+      message: errorMessage,
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
