@@ -23,45 +23,42 @@ const store = new Paydunya.Store({
 
 exports.initiatePayment = async (req, res) => {
   let transaction;
-  try {
-    console.log('=== DÉBUT INITIATION PAIEMENT ===');
+  let attempt = 0;
+  const MAX_ATTEMPTS = 3; // Maximum de tentatives
+  
+  // Fonction interne pour gérer les tentatives
+  const tryCreateInvoice = async () => {
+    attempt++;
+    console.log(`🔄 Tentative ${attempt}/${MAX_ATTEMPTS}`);
     
-    const user = req.user;
     const transactionId = crypto.randomBytes(16).toString('hex');
     const timestamp = Date.now();
 
-    // Vérifier si l'utilisateur a déjà un abonnement actif
-    if (user.isPremium && user.premiumExpiresAt > new Date()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vous avez déjà un abonnement premium actif'
-      });
-    }
-
     // Enregistrer la transaction en base de données
     transaction = new Transaction({
-      userId: user._id,
+      userId: req.user._id,
       transactionId: transactionId,
       amount: 5000,
-      status: 'pending'
+      status: 'pending',
+      retryCount: attempt
     });
 
     await transaction.save();
 
-    // Créer une facture avec des paramètres uniques pour éviter les doublons
+    // Créer une facture avec des paramètres uniques
     const invoice = new Paydunya.CheckoutInvoice(setup, store);
 
-    // Ajouter des articles à la facture avec un libellé unique incluant le timestamp
+    // Ajouter des articles à la facture avec un libellé unique
     invoice.addItem(
-      `Abonnement Premium - ${timestamp}`,
+      `Abonnement Premium - ${timestamp}-${attempt}`,
       1,
       5000.00,
       5000.00,
-      `Accès illimité à tous les quiz premium pendant 30 jours - Ref: ${transactionId}`
+      `Accès illimité à tous les quiz premium - Ref: ${transactionId}`
     );
 
     invoice.totalAmount = 5000.00;
-    invoice.description = `Abonnement Premium Quiz de Carabin - ${timestamp}`;
+    invoice.description = `Abonnement Premium Quiz de Carabin - ${timestamp}-${attempt}`;
     
     // Utiliser les URLs de callback
     const baseUrl = process.env.API_BASE_URL || "https://quiz-de-carabin-backend.onrender.com";
@@ -72,63 +69,87 @@ exports.initiatePayment = async (req, res) => {
     invoice.cancelURL = `${frontendUrl}/payment-error.html`;
 
     // Ajouter des données personnalisées avec un ID unique
-    invoice.addCustomData('user_id', user._id.toString());
-    invoice.addCustomData('user_email', user.email);
+    invoice.addCustomData('user_id', req.user._id.toString());
+    invoice.addCustomData('user_email', req.user.email);
     invoice.addCustomData('service', 'premium_subscription');
     invoice.addCustomData('transaction_id', transactionId);
     invoice.addCustomData('timestamp', timestamp.toString());
-    invoice.addCustomData('unique_ref', `quiz_${timestamp}_${transactionId}`);
+    invoice.addCustomData('attempt', attempt.toString());
+    invoice.addCustomData('unique_ref', `quiz_${timestamp}_${transactionId}_${attempt}`);
 
     // Créer la facture
     console.log('Création de la facture PayDunya...');
     console.log('Transaction ID:', transactionId);
     console.log('Timestamp:', timestamp);
+    console.log('Attempt:', attempt);
     
     const created = await invoice.create();
     
     if (created) {
       // Mettre à jour la transaction avec le token PayDunya
       transaction.paydunyaInvoiceToken = invoice.token;
+      transaction.paydunyaInvoiceURL = invoice.url;
       await transaction.save();
 
       console.log('✅ Payment invoice created successfully');
       console.log('Invoice URL:', invoice.url);
 
-      res.status(200).json({
+      return {
         success: true,
-        message: "Paiement initié avec succès",
         invoiceURL: invoice.url,
         token: invoice.token
-      });
+      };
     } else {
-      // Vérifier si c'est une erreur de transaction existante
-      if (invoice.responseText && invoice.responseText.includes('Transaction Found')) {
-        console.log('🔄 Transaction déjà existante, tentative avec de nouveaux paramètres...');
-        
-        // Réessayer avec de nouveaux paramètres uniques
-        return this.initiatePayment(req, res);
-      }
-      
       // Marquer la transaction comme échouée
       transaction.status = 'failed';
       await transaction.save();
 
       console.error('❌ Échec de la création de la facture:', invoice.responseText);
       
-      res.status(500).json({
+      // Vérifier si c'est une erreur de transaction existante et si on peut réessayer
+      if (invoice.responseText && invoice.responseText.includes('Transaction Found') && attempt < MAX_ATTEMPTS) {
+        console.log('🔄 Transaction déjà existante, nouvelle tentative...');
+        return null; // Indiquer qu'il faut réessayer
+      }
+      
+      throw new Error(invoice.responseText || 'Erreur inconnue de PayDunya');
+    }
+  };
+
+  try {
+    console.log('=== DÉBUT INITIATION PAIEMENT ===');
+    
+    const user = req.user;
+
+    // Vérifier si l'utilisateur a déjà un abonnement actif
+    if (user.isPremium && user.premiumExpiresAt > new Date()) {
+      return res.status(400).json({
         success: false,
-        message: "Erreur lors de la création de la facture de paiement",
-        error: invoice.responseText
+        message: 'Vous avez déjà un abonnement premium actif'
       });
+    }
+
+    let result;
+    while (attempt < MAX_ATTEMPTS) {
+      result = await tryCreateInvoice();
+      if (result) break; // Sortir de la boucle si réussite
+      
+      // Attendre un peu avant de réessayer
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    if (result && result.success) {
+      res.status(200).json({
+        success: true,
+        message: "Paiement initié avec succès",
+        invoiceURL: result.invoiceURL,
+        token: result.token
+      });
+    } else {
+      throw new Error(`Échec après ${MAX_ATTEMPTS} tentatives`);
     }
   } catch (error) {
     console.error('❌ Erreur dans initiatePayment:', error);
-    
-    // Marquer la transaction comme échouée en cas d'erreur
-    if (transaction) {
-      transaction.status = 'failed';
-      await transaction.save();
-    }
     
     res.status(500).json({
       success: false,
