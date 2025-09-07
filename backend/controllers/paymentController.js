@@ -239,16 +239,7 @@ exports.handleCallback = async (req, res) => {
     console.error('❌ Erreur dans handleCallback:', error);
     res.status(500).send('Erreur de traitement du webhook');
   }
-  // Après avoir généré le code d'accès, ajoutez:
-console.log('=== CODE D\'ACCÈS POUR DÉBOGAGE ===');
-console.log('Code:', accessCode);
-console.log('Email:', customerEmail);
-console.log('Expiration:', newAccessCode.expiresAt);
-console.log('=== FIN CODE D\'ACCÈS ===');
-
-// Et stockez aussi le code dans la transaction pour référence
-transaction.accessCode = accessCode;
-await transaction.save();
+  
 };
 
 exports.validateAccessCode = async (req, res) => {

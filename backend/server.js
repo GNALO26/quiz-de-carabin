@@ -47,9 +47,6 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .catch(err => console.error('Could not connect to MongoDB', err));
 
-// Après la connexion à MongoDB
-const cleanupAccessCodes = require('./scripts/cleanupAccessCodes');
-cleanupAccessCodes();
 
 // Routes API
 app.use('/api/auth', authRoutes);
