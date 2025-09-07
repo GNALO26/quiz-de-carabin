@@ -8,6 +8,151 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
+<!-- Ajoutez ce code juste avant la balise </body> -->
+<div id="protection-overlay" style="display: none;">
+    <div class="protection-alert">
+        <h2>Capture d'écran détectée!</h2>
+        <p>La capture d'écran n'est pas autorisée sur ce site.</p>
+    </div>
+</div>
+
+<style>
+    /* Styles pour la protection contre les captures */
+    #protection-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: Arial, sans-serif;
+    }
+    
+    .protection-alert {
+        text-align: center;
+        background: #e74c3c;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        max-width: 80%;
+    }
+    
+    .protection-alert h2 {
+        margin-top: 0;
+        font-size: 24px;
+    }
+    
+    .protection-alert p {
+        margin-bottom: 0;
+        font-size: 18px;
+    }
+    
+    .blur-effect {
+        animation: blurAnimation 0.5s;
+    }
+    
+    @keyframes blurAnimation {
+        0% { filter: blur(0); }
+        50% { filter: blur(5px); }
+        100% { filter: blur(0); }
+    }
+    
+    /* Protection supplémentaire pour le contenu sensible */
+    .sensitive-content {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Éléments de protection
+        const overlay = document.getElementById('protection-overlay');
+        let protectionEnabled = true;
+        
+        // Détection de la touche Impr écran
+        document.addEventListener('keydown', function(e) {
+            if (!protectionEnabled) return;
+            
+            // Bloquer Impr écran
+            if (e.key === 'PrintScreen') {
+                e.preventDefault();
+                showProtectionAlert();
+                return false;
+            }
+            
+            // Bloquer les combinaisons de touches courantes pour les captures
+            if ((e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === '3' || e.key === '4')) ||
+                (e.metaKey && e.shiftKey && (e.key === 'S' || e.key === '3' || e.key === '4'))) {
+                e.preventDefault();
+                showProtectionAlert();
+                return false;
+            }
+        });
+        
+        // Empêcher le menu contextuel (clic droit)
+        document.addEventListener('contextmenu', function(e) {
+            if (!protectionEnabled) return;
+            e.preventDefault();
+            showProtectionAlert();
+            return false;
+        });
+        
+        // Empêcher le glisser-déposer d'images
+        document.addEventListener('dragstart', function(e) {
+            if (!protectionEnabled) return;
+            if (e.target.tagName === 'IMG') {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        // Fonction pour afficher l'alerte de protection
+        function showProtectionAlert() {
+            // Ajouter un effet de flou
+            document.body.classList.add('blur-effect');
+            
+            // Afficher l'overlay
+            overlay.style.display = 'flex';
+            
+            // Cacher l'overlay après 2 secondes
+            setTimeout(function() {
+                overlay.style.display = 'none';
+                document.body.classList.remove('blur-effect');
+            }, 2000);
+        }
+        
+        // Détection des outils de développement (approximation)
+        let devToolsOpen = false;
+        
+        setInterval(function() {
+            if (!protectionEnabled) return;
+            
+            const widthThreshold = window.outerWidth - window.innerWidth > 160;
+            const heightThreshold = window.outerHeight - window.innerHeight > 160;
+            
+            if (!devToolsOpen && (widthThreshold || heightThreshold)) {
+                devToolsOpen = true;
+                showProtectionAlert();
+            } else if (devToolsOpen && !widthThreshold && !heightThreshold) {
+                devToolsOpen = false;
+            }
+        }, 1000);
+        
+        // Ajouter la classe de protection au contenu sensible
+        const sensitiveElements = document.querySelectorAll('.sensitive-data, .quiz-container, .results-container');
+        sensitiveElements.forEach(el => {
+            el.classList.add('sensitive-content');
+        });
+    });
+</script>
 <body>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light sticky-top">
