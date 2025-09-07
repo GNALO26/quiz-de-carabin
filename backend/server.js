@@ -40,10 +40,10 @@ mongoose.connect(process.env.MONGODB_URI, {
   console.log('Connected to MongoDB');
   
   // Démarrer le nettoyage des transactions après la connexion DB
-  cleanupTransactions();
+ //cleanupTransactions();
   
   // Planifier le nettoyage toutes les heures (3600000 ms = 1 heure)
-  setInterval(cleanupTransactions, 60 * 60 * 1000);
+//  setInterval(cleanupTransactions, 60 * 60 * 1000);
 })
 .catch(err => console.error('Could not connect to MongoDB', err));
 
