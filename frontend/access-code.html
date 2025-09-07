@@ -8,6 +8,21 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <script>
+    // Vérifier si l'utilisateur est connecté
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = localStorage.getItem('quizToken');
+        const user = JSON.parse(localStorage.getItem('quizUser') || 'null');
+        
+        if (!token || !user) {
+            alert('Vous devez être connecté pour accéder à cette page. Redirection vers la page de connexion.');
+            window.location.href = 'index.html';
+            return;
+        }
+        
+        console.log('Utilisateur connecté:', user.email);
+    });
+</script>
     <div class="container mt-5">
         <div class="row justify-content-center">
             <div class="col-md-6">

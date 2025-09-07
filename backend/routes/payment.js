@@ -43,6 +43,32 @@ router.get('/debug/transactions', async (req, res) => {
     });
   }
 });
+// Dans backend/routes/payment.js, ajoutez:
+router.get('/last-access-code', auth, async (req, res) => {
+  try {
+    const transaction = await Transaction.findOne({
+      userId: req.user._id,
+      status: 'completed'
+    }).sort({ createdAt: -1 });
+    
+    if (!transaction || !transaction.accessCode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Aucun code d\'accès trouvé'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      accessCode: transaction.accessCode
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+});
 
 // Dans routes/payment.js, ajoutez ce middleware
 router.use((req, res, next) => {
