@@ -1,22 +1,39 @@
-const transporter = require('../config/email');
+const mongoose = require('mongoose');
 
-const sendEmail = async ({ to, subject, text, html }) => {
-  try {
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to,
-      subject,
-      text,
-      html,
-    };
-    
-    await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully to:', to);
-    return true;
-  } catch (error) {
-    console.error('Error sending email:', error);
-    return false;
+const AccessCodeSchema = new mongoose.Schema({
+  code: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  email: {
+    type: String,
+    required: true
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  expiresAt: {
+    type: Date,
+    required: true,
+    default: () => new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+  },
+  used: {
+    type: Boolean,
+    default: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
-};
+});
 
-module.exports = { sendEmail };
+// Index pour l'expiration automatique
+AccessCodeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+// Index pour les recherches par code et utilisateur
+AccessCodeSchema.index({ code: 1, userId: 1 });
+
+module.exports = mongoose.model('AccessCode', AccessCodeSchema);

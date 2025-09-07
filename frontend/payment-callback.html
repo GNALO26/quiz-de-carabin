@@ -19,12 +19,12 @@
         </div>
     </div>
 
-    <script>
-        // Cette page est appelée en callback par Paydunya
-        // Le traitement est fait côté serveur, on attend quelques secondes puis on redirige
-        setTimeout(() => {
-            window.location.href = 'https://quiz-de-carabin.netlify.app';
-        }, 3000);
-    </script>
+    <!-- Ajoutez ce script à la fin du body -->
+<script>
+    // Après 3 secondes, rediriger vers la page de validation de code
+    setTimeout(() => {
+        window.location.href = 'access-code.html';
+    }, 3000);
+</script>
 </body>
 </html>

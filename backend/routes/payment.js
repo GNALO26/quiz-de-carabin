@@ -7,12 +7,12 @@ const auth = require('../middleware/auth');
 router.post('/initiate', auth, paymentController.initiatePayment);
 
 // Route pour valider un code d'accès
-router.post('/validate-code', paymentController.validateAccessCode);
+router.post('/validate-access-code', auth, paymentController.validateAccessCode);
 
 // Route pour vérifier le statut d'un paiement
 router.get('/status/:paymentId', auth, paymentController.checkPaymentStatus);
 
-// Route pour les webhooks PayDunya - CORRIGÉE pour correspondre à votre IPN
+// Route pour les webhooks PayDunya
 router.post('/callback', paymentController.handleCallback);
 
 // Route de diagnostic des transactions

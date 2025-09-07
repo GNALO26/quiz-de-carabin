@@ -24,76 +24,75 @@ export class Auth {
     }
 
     async login() {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
 
-    if (!email || !password) {
-        this.showAlert('Veuillez remplir tous les champs', 'danger');
-        return;
-    }
+        if (!email || !password) {
+            this.showAlert('Veuillez remplir tous les champs', 'danger');
+            return;
+        }
 
-    try {
-        const API_BASE_URL = await this.getActiveAPIUrl();
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password }),
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorData;
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
             
-            try {
-                errorData = JSON.parse(errorText);
-            } catch {
-                throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorData;
+                
+                try {
+                    errorData = JSON.parse(errorText);
+                } catch {
+                    throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+                }
+                
+                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
             }
-            
-            // CORRECTION: Utilisation correcte du message d'erreur
-            throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
-        }
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (data.success) {
-            this.token = data.token;
-            this.user = data.user;
-            
-            localStorage.setItem('quizToken', this.token);
-            localStorage.setItem('quizUser', JSON.stringify(this.user));
-            
-            this.updateUI();
-            this.hideModals();
-            this.showAlert('Connexion réussie!', 'success');
-            
-            if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-                window.quiz.loadQuizzes();
+            if (data.success) {
+                this.token = data.token;
+                this.user = data.user;
+                
+                localStorage.setItem('quizToken', this.token);
+                localStorage.setItem('quizUser', JSON.stringify(this.user));
+                
+                this.updateUI();
+                this.hideModals();
+                this.showAlert('Connexion réussie!', 'success');
+                
+                if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                    window.quiz.loadQuizzes();
+                }
+            } else {
+                this.showAlert(data.message, 'danger');
             }
-        } else {
-            this.showAlert(data.message, 'danger');
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        
-        if (error.name === 'AbortError') {
-            this.showAlert('Le serveur ne répond pas. Veuillez réessayer plus tard.', 'danger');
-        } else if (error.message.includes('Failed to fetch')) {
-            this.showAlert('Impossible de se connecter au serveur. Vérifiez votre connexion internet.', 'danger');
-        } else {
-            this.showAlert('Erreur de connexion: ' + error.message, 'danger');
+        } catch (error) {
+            console.error('Login error:', error);
+            
+            if (error.name === 'AbortError') {
+                this.showAlert('Le serveur ne répond pas. Veuillez réessayer plus tard.', 'danger');
+            } else if (error.message.includes('Failed to fetch')) {
+                this.showAlert('Impossible de se connecter au serveur. Vérifiez votre connexion internet.', 'danger');
+            } else {
+                this.showAlert('Erreur de connexion: ' + error.message, 'danger');
+            }
         }
     }
-}
 
     async register() {
         const name = document.getElementById('registerName').value;
@@ -112,7 +111,6 @@ export class Auth {
         }
 
         try {
-            // Obtenir l'URL active
             const API_BASE_URL = await this.getActiveAPIUrl();
             
             const controller = new AbortController();
@@ -168,7 +166,6 @@ export class Auth {
     }
 
     async getActiveAPIUrl() {
-        // Test de la connexion à l'URL principale
         try {
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
                 method: 'GET',
@@ -182,7 +179,6 @@ export class Auth {
             console.warn('URL principale inaccessible, tentative avec URL de secours:', error);
         }
         
-        // Fallback sur l'URL de secours
         return CONFIG.API_BACKUP_URL;
     }
 
@@ -191,6 +187,8 @@ export class Auth {
         this.user = null;
         localStorage.removeItem('quizToken');
         localStorage.removeItem('quizUser');
+        localStorage.removeItem('userIsPremium');
+        localStorage.removeItem('premiumExpiresAt');
         this.updateUI();
         this.showAlert('Déconnexion réussie', 'success');
         
@@ -203,11 +201,21 @@ export class Auth {
         const authButtons = document.getElementById('auth-buttons');
         const userMenu = document.getElementById('user-menu');
         const userName = document.getElementById('user-name');
+        const premiumBadge = document.getElementById('premium-badge');
 
         if (this.user && authButtons && userMenu && userName) {
             authButtons.style.display = 'none';
             userMenu.style.display = 'block';
             userName.textContent = this.user.name;
+            
+            // Afficher le badge premium si l'utilisateur est premium
+            if (premiumBadge) {
+                if (this.isPremium() || localStorage.getItem('userIsPremium') === 'true') {
+                    premiumBadge.style.display = 'inline';
+                } else {
+                    premiumBadge.style.display = 'none';
+                }
+            }
         } else if (authButtons && userMenu) {
             authButtons.style.display = 'flex';
             userMenu.style.display = 'none';
@@ -223,10 +231,8 @@ export class Auth {
     }
 
     showAlert(message, type) {
-        // Remove existing alerts
         document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
         
-        // Create alert element
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${type} alert-dismissible fade show global-alert`;
         alertDiv.style.position = 'fixed';
@@ -239,10 +245,8 @@ export class Auth {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         
-        // Add to page
         document.body.appendChild(alertDiv);
         
-        // Auto remove after 5 seconds
         setTimeout(() => {
             if (alertDiv.parentNode) {
                 alertDiv.parentNode.removeChild(alertDiv);
@@ -255,7 +259,7 @@ export class Auth {
     }
 
     isPremium() {
-        return this.user && this.user.isPremium;
+        return (this.user && this.user.isPremium) || localStorage.getItem('userIsPremium') === 'true';
     }
 
     getToken() {
@@ -274,3 +278,36 @@ export class Auth {
         }
     }
 }
+
+// Fonction pour vérifier le statut premium
+async function checkPremiumStatus() {
+    try {
+        const auth = new Auth();
+        const token = auth.getToken();
+        if (!token) return false;
+        
+        const API_BASE_URL = await auth.getActiveAPIUrl();
+        
+        const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data.isPremium) {
+                localStorage.setItem('userIsPremium', 'true');
+                localStorage.setItem('premiumExpiresAt', new Date(data.data.premiumExpiresAt).toISOString());
+                return true;
+            }
+        }
+        return false;
+    } catch (error) {
+        console.error('Error checking premium status:', error);
+        return false;
+    }
+}
+
+// Ajouter à l'objet global window
+window.checkPremiumStatus = checkPremiumStatus;

@@ -1,5 +1,7 @@
 const Paydunya = require('paydunya');
 const User = require('../models/User');
+const AccessCode = require('../models/AccessCode');
+const generateCode = require('../utils/generateCode');
 const Transaction = require('../models/Transaction');
 const crypto = require('crypto');
 const { sendEmail } = require('../utils/email');
@@ -149,7 +151,6 @@ exports.handleCallback = async (req, res) => {
   try {
     console.log('📨 Webhook reçu de PayDunya:', JSON.stringify(req.body, null, 2));
     
-    // PayDunya envoie les données dans un champ "data"
     const data = req.body.data;
     
     if (!data) {
@@ -157,7 +158,6 @@ exports.handleCallback = async (req, res) => {
       return res.status(400).send('Données manquantes');
     }
     
-    // Récupérer le token depuis la bonne structure de données
     const token = data.invoice?.token;
     
     if (!token) {
@@ -165,7 +165,6 @@ exports.handleCallback = async (req, res) => {
       return res.status(400).send('Token manquant');
     }
     
-    // Trouver la transaction par le token
     const transaction = await Transaction.findOne({ paydunyaInvoiceToken: token });
     
     if (!transaction) {
@@ -175,32 +174,43 @@ exports.handleCallback = async (req, res) => {
     
     console.log('📊 Statut reçu du webhook:', data.status);
     
-    // Mettre à jour le statut de la transaction
     if (data.status === 'completed') {
       transaction.status = 'completed';
       await transaction.save();
       
-      // Mettre à jour le statut premium de l'utilisateur
       const user = await User.findById(transaction.userId);
       if (user) {
-        user.isPremium = true;
-        user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
-        await user.save();
+        // Générer un code d'accès unique
+        const accessCode = generateCode();
         
-        console.log('✅ Utilisateur mis à jour vers premium:', user.email);
+        // Enregistrer le code d'accès
+        const newAccessCode = new AccessCode({
+          code: accessCode,
+          email: user.email,
+          userId: user._id,
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+        });
         
-        // Envoyer un email de confirmation
+        await newAccessCode.save();
+        
+        console.log('✅ Code d\'accès généré:', accessCode);
+        
+        // Envoyer l'email avec le code d'accès
+        const customerEmail = data.customer?.email || user.email;
         const emailSent = await sendEmail({
-          to: user.email,
-          subject: 'Confirmation d\'abonnement Premium - Quiz de Carabin',
-          text: `Félicitations! Votre abonnement premium a été activé avec succès. Vous avez maintenant accès à tous les quizzes premium.`,
+          to: customerEmail,
+          subject: 'Votre Code d\'Accès Premium - Quiz de Carabin',
+          text: `Votre code d'accès premium est: ${accessCode}. Ce code expire dans 30 minutes.`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #4CAF50;">Félicitations!</h2>
               <p>Votre abonnement premium a été activé avec succès.</p>
-              <p>Vous avez maintenant accès à tous les quizzes premium sur <strong>Quiz de Carabin</strong>.</p>
-              <p>Montant payé: <strong>5,000 XOF</strong></p>
-              <p>Date d'expiration: <strong>${new Date(user.premiumExpiresAt).toLocaleDateString('fr-FR')}</strong></p>
+              <p>Voici votre code d'accès unique:</p>
+              <div style="text-align: center; margin: 20px 0;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #4CAF50;">${accessCode}</span>
+              </div>
+              <p>Ce code expire dans <strong>30 minutes</strong>.</p>
+              <p>Utilisez-le pour accéder à tous les quizzes premium.</p>
               <br>
               <p>Merci pour votre confiance!</p>
               <p>L'équipe Quiz de Carabin</p>
@@ -209,12 +219,10 @@ exports.handleCallback = async (req, res) => {
         });
         
         if (emailSent) {
-          console.log('✅ Email de confirmation envoyé à:', user.email);
+          console.log('✅ Email avec code d\'accès envoyé à:', customerEmail);
         } else {
-          console.error('❌ Échec de l\'envoi de l\'email à:', user.email);
+          console.error('❌ Échec de l\'envoi de l\'email à:', customerEmail);
         }
-      } else {
-        console.error('❌ Utilisateur non trouvé pour ID:', transaction.userId);
       }
       
       console.log('✅ Paiement confirmé pour la transaction:', transaction.transactionId);
@@ -232,100 +240,63 @@ exports.handleCallback = async (req, res) => {
     res.status(500).send('Erreur de traitement du webhook');
   }
 };
-
-// ... autres fonctions (validateAccessCode, checkPaymentStatus)
 
 exports.validateAccessCode = async (req, res) => {
   try {
-    const { code, email } = req.body;
+    const { code } = req.body;
+    const userId = req.user._id;
 
-    // Code de validation (exemple)
-    const validCode = "CARABIN2024";
-    
-    if (code === validCode) {
-      res.status(200).json({
-        success: true,
-        message: "Code validé avec succès. Votre compte a été mis à jour vers Premium."
-      });
-    } else {
-      res.status(400).json({
+    if (!code) {
+      return res.status(400).json({
         success: false,
-        message: "Code d'accès invalide"
+        message: "Le code d'accès est requis"
       });
     }
+
+    // Rechercher le code d'accès
+    const accessCode = await AccessCode.findOne({
+      code: code,
+      userId: userId,
+      used: false,
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!accessCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Code d'accès invalide, expiré ou déjà utilisé"
+      });
+    }
+
+    // Marquer le code comme utilisé
+    accessCode.used = true;
+    await accessCode.save();
+
+    // Activer le statut premium de l'utilisateur
+    const user = await User.findById(userId);
+    user.isPremium = true;
+    user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
+    await user.save();
+
+    console.log('✅ Code d\'accès validé pour l\'utilisateur:', user.email);
+
+    res.status(200).json({
+      success: true,
+      message: "Code validé avec succès. Votre compte est maintenant premium!",
+      premium: true,
+      premiumExpiresAt: user.premiumExpiresAt
+    });
+
   } catch (error) {
-    console.error('Error in validateAccessCode:', error);
+    console.error('❌ Erreur dans validateAccessCode:', error);
     res.status(500).json({
       success: false,
-      message: "Erreur serveur lors de la validation du code",
-      error: error.message
+      message: "Erreur serveur lors de la validation du code"
     });
   }
 };
-// Gestionnaire de webhook pour PayDunya
-exports.handleCallback = async (req, res) => {
-  try {
-    console.log('📨 Webhook reçu de PayDunya:', JSON.stringify(req.body, null, 2));
-    
-    // PayDunya envoie les données dans un champ "data"
-    const data = req.body.data;
-    
-    if (!data) {
-      console.error('❌ Données manquantes dans le webhook');
-      return res.status(400).send('Données manquantes');
-    }
-    
-    // Récupérer le token depuis la bonne structure de données
-    const token = data.invoice?.token;
-    
-    if (!token) {
-      console.error('❌ Token manquant dans le webhook:', data);
-      return res.status(400).send('Token manquant');
-    }
-    
-    // Trouver la transaction par le token
-    const transaction = await Transaction.findOne({ paydunyaInvoiceToken: token });
-    
-    if (!transaction) {
-      console.error('Transaction non trouvée pour le token:', token);
-      return res.status(404).send('Transaction non trouvée');
-    }
-    
-    console.log('📊 Statut reçu du webhook:', data.status);
-    console.log('📊 Données complètes:', data);
-    
-    // Mettre à jour le statut de la transaction
-    if (data.status === 'completed') {
-      transaction.status = 'completed';
-      await transaction.save();
-      
-      // Mettre à jour le statut premium de l'utilisateur
-      const user = await User.findById(transaction.userId);
-      if (user) {
-        user.isPremium = true;
-        user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
-        await user.save();
-        console.log('✅ Utilisateur mis à jour vers premium:', user.email);
-      } else {
-        console.error('❌ Utilisateur non trouvé pour ID:', transaction.userId);
-      }
-      
-      console.log('✅ Paiement confirmé pour la transaction:', transaction.transactionId);
-    } else if (data.status === 'failed') {
-      transaction.status = 'failed';
-      await transaction.save();
-      console.log('❌ Paiement échoué pour la transaction:', transaction.transactionId);
-    } else {
-      console.log('📊 Statut non traité:', data.status);
-    }
-    
-    res.status(200).send('Webhook traité avec succès');
-  } catch (error) {
-    console.error('❌ Erreur dans handleCallback:', error);
-    res.status(500).send('Erreur de traitement du webhook');
-  }
-};
 
+// Fonctions supplémentaires (keep them at the end)
 exports.checkPaymentStatus = async (req, res) => {
   try {
     const { paymentId } = req.params;
