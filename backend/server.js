@@ -41,15 +41,15 @@ mongoose.connect(process.env.MONGODB_URI, {
   
   // Démarrer le nettoyage des transactions après la connexion DB
   cleanupTransactions();
-
-  // Après la connexion à MongoDB
-const cleanupAccessCodes = require('./scripts/cleanupAccessCodes');
-cleanupAccessCodes();
   
   // Planifier le nettoyage toutes les heures (3600000 ms = 1 heure)
   setInterval(cleanupTransactions, 60 * 60 * 1000);
 })
 .catch(err => console.error('Could not connect to MongoDB', err));
+
+// Après la connexion à MongoDB
+const cleanupAccessCodes = require('./scripts/cleanupAccessCodes');
+cleanupAccessCodes();
 
 // Routes API
 app.use('/api/auth', authRoutes);
