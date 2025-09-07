@@ -8,7 +8,7 @@ const authRoutes = require('./routes/auth');
 const quizRoutes = require('./routes/quiz');
 const paymentRoutes = require('./routes/payment');
 const userRoutes = require('./routes/user');
-const cleanupTransactions = require('./scripts/cleanupTransactions');
+//const cleanupTransactions = require('./scripts/cleanupTransactions');
 
 const app = express();
 

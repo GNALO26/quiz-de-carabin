@@ -5,67 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Validation du Code d'Accès - Quiz de Carabin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .container {
+            max-width: 500px;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
-    <script>
-    // Vérifier si l'utilisateur est connecté
-    document.addEventListener('DOMContentLoaded', function() {
-        const token = localStorage.getItem('quizToken');
-        const user = JSON.parse(localStorage.getItem('quizUser') || 'null');
-        
-        if (!token || !user) {
-            alert('Vous devez être connecté pour accéder à cette page. Redirection vers la page de connexion.');
-            window.location.href = 'index.html';
-            return;
-        }
-        
-        console.log('Utilisateur connecté:', user.email);
-    });
-</script>
     <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="text-center">Validation du Code d'Accès</h3>
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-center">Validation du Code d'Accès</h3>
+            </div>
+            <div class="card-body">
+                <div id="message" class="alert d-none"></div>
+                
+                <form id="accessCodeForm">
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Code d'accès reçu par email</label>
+                        <input type="text" class="form-control" id="code" required 
+                               placeholder="Entrez votre code à 6 chiffres" maxlength="6">
+                        <div class="form-text">Le code expire 30 minutes après l'envoi</div>
                     </div>
-                    <div class="card-body">
-                        <div id="message" class="alert d-none"></div>
-                        <form id="accessCodeForm">
-                            <div class="mb-3">
-                                <label for="code" class="form-label">Code d'accès reçu par email</label>
-                                <input type="text" class="form-control" id="code" required 
-                                       placeholder="Entrez votre code à 6 chiffres" maxlength="6">
-                                <div class="form-text">Le code expire 30 minutes après l'envoi</div>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">Valider le code</button>
-                        </form>
-                        <div class="mt-3 text-center">
-                            <a href="index.html" class="btn btn-secondary">Retour à l'accueil</a>
-                        </div>
-                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Valider le code</button>
+                </form>
+                
+                <div class="mt-3 text-center">
+                    <a href="index.html" class="btn btn-secondary">Retour à l'accueil</a>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="js/auth.js"></script>
     <script>
+        const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
+        
         document.getElementById('accessCodeForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const code = document.getElementById('code').value;
             const messageDiv = document.getElementById('message');
+            const submitButton = document.getElementById('accessCodeForm').querySelector('button');
             
             // Réinitialiser le message
             messageDiv.className = 'alert d-none';
             messageDiv.textContent = '';
             
+            // Désactiver le bouton pendant le traitement
+            submitButton.disabled = true;
+            submitButton.textContent = 'Validation en cours...';
+            
             try {
-                const token = localStorage.getItem('token');
+                const token = localStorage.getItem('quizToken');
                 if (!token) {
-                    showMessage('Vous devez être connecté pour valider un code', 'danger');
+                    showMessage('Vous devez être connecté pour valider un code.', 'danger');
                     return;
                 }
                 
@@ -83,7 +79,7 @@
                 if (data.success) {
                     showMessage(data.message, 'success');
                     
-                    // Mettre à jour le statut local
+                    // Mettre à jour le statut premium localement
                     localStorage.setItem('userIsPremium', 'true');
                     localStorage.setItem('premiumExpiresAt', new Date(data.premiumExpiresAt).toISOString());
                     
@@ -95,8 +91,12 @@
                     showMessage(data.message, 'danger');
                 }
             } catch (error) {
-                showMessage('Erreur lors de la validation du code', 'danger');
+                showMessage('Erreur lors de la validation du code: ' + error.message, 'danger');
                 console.error('Error:', error);
+            } finally {
+                // Réactiver le bouton
+                submitButton.disabled = false;
+                submitButton.textContent = 'Valider le code';
             }
         });
         
@@ -105,14 +105,6 @@
             messageDiv.textContent = message;
             messageDiv.className = `alert alert-${type}`;
         }
-        
-        // Vérifier si l'utilisateur est déjà premium
-        window.addEventListener('load', () => {
-            const isPremium = localStorage.getItem('userIsPremium') === 'true';
-            if (isPremium) {
-                showMessage('Vous êtes déjà premium!', 'info');
-            }
-        });
     </script>
 </body>
 </html>

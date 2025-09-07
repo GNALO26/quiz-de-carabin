@@ -3,9 +3,18 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const auth = require('../middleware/auth');
 
+const { register, login, logout } = require('../controllers/authController');
+
 // Routes publiques
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/logout', authController.logout);
+
+// Nouvelles routes pour la réinitialisation de mot de passe
+router.post('/forgot-password', authController.requestPasswordReset);
+router.post('/verify-reset-code', authController.verifyResetCode);
+router.post('/reset-password', authController.resetPassword);
+
 
 // Route protégée (nécessite un token)
 router.get('/me', auth, async (req, res) => {

@@ -15,34 +15,42 @@ router.get('/status/:paymentId', auth, paymentController.checkPaymentStatus);
 // Route pour les webhooks PayDunya
 router.post('/callback', paymentController.handleCallback);
 
-// Route de diagnostic des transactions
-router.get('/debug/transactions', async (req, res) => {
+// Route pour récupérer le code d'accès d'une transaction
+router.get('/transaction/:transactionId/access-code', auth, async (req, res) => {
   try {
-    const Transaction = require('../models/Transaction');
-    const transactions = await Transaction.find()
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate('userId', 'email name');
+    const { transactionId } = req.params;
+    
+    const transaction = await Transaction.findOne({
+      transactionId,
+      userId: req.user._id
+    });
+    
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: "Transaction non trouvée"
+      });
+    }
+    
+    if (!transaction.accessCode) {
+      return res.status(404).json({
+        success: false,
+        message: "Aucun code d'accès trouvé pour cette transaction"
+      });
+    }
     
     res.status(200).json({
       success: true,
-      count: transactions.length,
-      transactions: transactions.map(t => ({
-        id: t._id,
-        transactionId: t.transactionId,
-        status: t.status,
-        amount: t.amount,
-        createdAt: t.createdAt,
-        user: t.userId ? t.userId.email : 'N/A'
-      }))
+      accessCode: transaction.accessCode
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      message: "Erreur serveur"
     });
   }
 });
+/*
 // Dans backend/routes/payment.js, ajoutez:
 router.get('/last-access-code', auth, async (req, res) => {
   try {
@@ -68,7 +76,7 @@ router.get('/last-access-code', auth, async (req, res) => {
       message: 'Erreur serveur'
     });
   }
-});
+});*/
 
 // Dans routes/payment.js, ajoutez ce middleware
 router.use((req, res, next) => {
