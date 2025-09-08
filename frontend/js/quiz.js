@@ -346,7 +346,7 @@ export class Quiz {
             `;
 
             if (!isCorrect) {
-                resultsHTML += <p class="correct"><strong>Réponse correcte:</strong> ${correctAnswerText}</p>;
+                resultsHTML += `<p class="correct"><strong>Réponse correcte:</strong> ${correctAnswerText}</p>;`
             }
 
             resultsHTML += `
