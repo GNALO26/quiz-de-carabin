@@ -280,3 +280,40 @@ exports.validateAccessCode = async (req, res) => {
     });
   }
 };
+
+// Vérifier le statut d'un paiement
+exports.checkPaymentStatus = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+
+    const transaction = await Transaction.findOne({ 
+      transactionId: paymentId,
+      userId: req.user._id 
+    });
+
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: "Transaction non trouvée"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      status: transaction.status,
+      transactionId: transaction.transactionId,
+      amount: transaction.amount,
+      createdAt: transaction.createdAt,
+      accessCode: transaction.accessCode
+    });
+  } catch (error) {
+    console.error('❌ Erreur dans checkPaymentStatus:', error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors de la vérification du statut"
+    });
+  }
+};
+
+// Ajoutez cette ligne à la fin du fichier pour exporter toutes les fonctions
+module.exports = exports;

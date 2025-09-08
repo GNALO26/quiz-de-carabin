@@ -1,133 +1,126 @@
 const User = require('../models/User');
-const jwt = require('jsonwebtoken');
 const PasswordReset = require('../models/PasswordReset');
-const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const transporter = require('../config/email');
 const generateCode = require('../utils/generateCode');
 
-
-const signToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
-};
-
+// Fonction d'enregistrement
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
-    // Validation des champs requis
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Veuillez fournir un nom, un email et un mot de passe.',
-      });
-    }
-
+    
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Un utilisateur avec cet email existe déjà.',
+        message: "Un utilisateur avec cet email existe déjà"
       });
     }
 
-    // Créer un nouvel utilisateur
-    const newUser = await User.create({
+    // Hasher le mot de passe
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Créer l'utilisateur
+    const user = new User({
       name,
       email,
-      password,
+      password: hashedPassword
     });
 
+    await user.save();
+
     // Générer le token JWT
-    const token = signToken(newUser._id);
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
     res.status(201).json({
       success: true,
-      token,
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        isPremium: newUser.isPremium,
-      },
-    });
-  } catch (error) {
-    console.error('Register error:', error);
-    
-    // Gestion des erreurs de validation Mongoose
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Données invalides',
-        errors: errors
-      });
-    }
-    
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la création du compte.',
-    });
-  }
-};
-
-exports.login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Vérifier si l'email et le mot de passe sont fournis
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Veuillez fournir un email et un mot de passe.',
-      });
-    }
-
-    // Vérifier si l'utilisateur existe
-    const user = await User.findOne({ email }).select('+password');
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email ou mot de passe incorrect.',
-      });
-    }
-
-    // Vérifier le mot de passe avec bcrypt
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email ou mot de passe incorrect.',
-      });
-    }
-
-    // Mettre à jour la date de dernière connexion
-    user.lastLogin = new Date();
-    await user.save({ validateBeforeSave: false });
-
-    // Générer le token JWT
-    const token = signToken(user._id);
-
-    res.status(200).json({
-      success: true,
+      message: "Compte créé avec succès",
       token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        isPremium: user.isPremium,
-      },
+        isPremium: user.isPremium
+      }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Erreur register:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur lors de la connexion.',
+      message: "Erreur serveur lors de la création du compte"
+    });
+  }
+};
+
+// Fonction de connexion
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Vérifier si l'utilisateur existe
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Email ou mot de passe incorrect"
+      });
+    }
+
+    // Vérifier le mot de passe
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Email ou mot de passe incorrect"
+      });
+    }
+
+    // Générer le token JWT
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Connexion réussie",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isPremium: user.isPremium
+      }
+    });
+  } catch (error) {
+    console.error('Erreur login:', error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors de la connexion"
+    });
+  }
+};
+
+// Fonction de déconnexion
+exports.logout = async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      message: "Déconnexion réussie"
+    });
+  } catch (error) {
+    console.error('Erreur logout:', error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors de la déconnexion"
     });
   }
 };
