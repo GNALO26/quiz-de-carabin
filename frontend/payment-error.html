@@ -5,19 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Erreur de paiement - Quiz de Carabin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px 0;
+        }
+        
+        .error-container {
+            text-align: center;
+            padding: 3rem;
+            margin: 2rem auto;
+            max-width: 600px;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .error-icon {
+            color: #dc3545;
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .support-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="alert alert-danger text-center">
-                    <h4>Erreur de paiement</h4>
-                    <p>Une erreur s'est produite lors du traitement de votre paiement.</p>
-                    <p>Veuillez réessayer ou contacter le support si le problème persiste.</p>
-                    <a href="/" class="btn btn-primary">Retour à l'accueil</a>
-                </div>
+    <div class="container">
+        <div class="error-container">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <h1 class="text-danger">Erreur de Paiement</h1>
+            <p class="lead">Une erreur s'est produite lors du traitement de votre paiement.</p>
+            
+            <div class="support-info">
+                <p><strong>Cause possible :</strong></p>
+                <ul class="text-start">
+                    <li>Problème de connexion internet</li>
+                    <li>Fonds insuffisants sur votre compte</li>
+                    <li>Erreur technique temporaire</li>
+                </ul>
+            </div>
+            
+            <div class="mt-4">
+                <a href="quiz.html" class="btn btn-primary me-2">
+                    <i class="fas fa-credit-card me-1"></i>Réessayer le paiement
+                </a>
+                <a href="index.html" class="btn btn-outline-secondary">
+                    <i class="fas fa-home me-1"></i>Retour à l'accueil
+                </a>
+            </div>
+            
+            <div class="mt-4">
+                <p class="text-muted">Besoin d'aide ? Contactez notre support :</p>
+                <p>
+                    <i class="fas fa-envelope me-1"></i>support@quizdecarabin.bj<br>
+                    <i class="fab fa-whatsapp me-1"></i>+229 53 91 46 48
+                </p>
             </div>
         </div>
     </div>
+
+    <script>
+        // Afficher les détails de l'erreur si disponibles
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const error = urlParams.get('error');
+            
+            if (error) {
+                const errorDetails = document.createElement('div');
+                errorDetails.className = 'alert alert-info mt-3';
+                errorDetails.innerHTML = `
+                    <strong>Détails de l'erreur :</strong><br>
+                    ${decodeURIComponent(error)}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.support-info').after(errorDetails);
+            }
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

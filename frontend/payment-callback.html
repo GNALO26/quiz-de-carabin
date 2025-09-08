@@ -4,22 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paiement Réussi - Quiz de Carabin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
     <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px 0;
+        }
+        
         .success-container {
             text-align: center;
-            padding: 2rem;
+            padding: 3rem;
             margin: 2rem auto;
             max-width: 600px;
-            border: 1px solid #28a745;
-            border-radius: 8px;
-            background-color: #f8fff9;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
+        
         .success-icon {
             color: #28a745;
             font-size: 4rem;
             margin-bottom: 1rem;
         }
+        
         .loader {
             border: 5px solid #f3f3f3;
             border-top: 5px solid #3498db;
@@ -29,34 +41,83 @@
             animation: spin 2s linear infinite;
             margin: 20px auto;
         }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .transaction-details {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
+    <div class="container">
         <div class="success-container">
-            <div class="success-icon">✓</div>
-            <h1>Paiement Réussi!</h1>
-            <p>Votre paiement a été traité avec succès.</p>
-            <p>Vous allez recevoir un code d'accès par email.</p>
-            <p>Redirection vers la validation du code...</p>
-            <div class="loader"></div>
-            <p id="countdown">Redirection dans 5 secondes</p>
-            <a href="access-code.html" class="btn btn-primary mt-3">Valider le code maintenant</a>
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h1 class="text-success">Paiement Réussi!</h1>
+            <p class="lead">Votre paiement a été traité avec succès.</p>
+            
+            <div class="transaction-details">
+                <p><strong>Un code d'accès a été envoyé à votre adresse email.</strong></p>
+                <p class="text-muted">Vérifiez votre boîte de réception et vos spams.</p>
+            </div>
+            
+            <div class="loader" id="loader"></div>
+            <p id="countdown" class="text-muted">Redirection automatique dans <span id="countdown-value">5</span> secondes</p>
+            
+            <div class="mt-4">
+                <a href="access-code.html" class="btn btn-success me-2">
+                    <i class="fas fa-key me-1"></i>Valider mon code maintenant
+                </a>
+                <a href="index.html" class="btn btn-outline-secondary">
+                    <i class="fas fa-home me-1"></i>Retour à l'accueil
+                </a>
+            </div>
         </div>
     </div>
 
     <script>
+        // Fonction pour valider le token JWT
+        function validateToken(token) {
+            try {
+                if (!token || typeof token !== 'string') {
+                    return false;
+                }
+                
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    return false;
+                }
+                
+                try {
+                    parts.forEach(part => {
+                        const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+                        window.atob(base64);
+                    });
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            } catch (error) {
+                console.error('Token validation error:', error);
+                return false;
+            }
+        }
+        
         // Vérifier et restaurer la session utilisateur
         function restoreUserSession() {
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
             const userData = urlParams.get('user');
             
-            if (token) {
+            if (token && validateToken(token)) {
                 localStorage.setItem('quizToken', token);
                 console.log('Token restauré depuis URL');
             }
@@ -73,8 +134,8 @@
             
             // Vérifier si l'utilisateur est connecté
             const storedToken = localStorage.getItem('quizToken');
-            if (!storedToken) {
-                console.warn('Aucun token trouvé, redirection vers login');
+            if (!storedToken || !validateToken(storedToken)) {
+                console.warn('Aucun token valide trouvé, redirection vers login');
                 window.location.href = 'index.html?message=Veuillez vous reconnecter après votre paiement';
                 return false;
             }
@@ -83,20 +144,25 @@
         }
         
         // Restaurer la session au chargement
-        if (restoreUserSession()) {
-            // Redirection après 5 secondes
-            let seconds = 5;
-            const countdownElement = document.getElementById('countdown');
-            const countdownInterval = setInterval(() => {
-                seconds--;
-                countdownElement.textContent = `Redirection dans ${seconds} secondes`;
-                
-                if (seconds <= 0) {
-                    clearInterval(countdownInterval);
-                    window.location.href = 'access-code.html';
-                }
-            }, 1000);
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            if (restoreUserSession()) {
+                // Démarrer le compte à rebours
+                let seconds = 5;
+                const countdownElement = document.getElementById('countdown-value');
+                const countdownInterval = setInterval(() => {
+                    seconds--;
+                    countdownElement.textContent = seconds;
+                    
+                    if (seconds <= 0) {
+                        clearInterval(countdownInterval);
+                        document.getElementById('loader').style.display = 'none';
+                        window.location.href = 'access-code.html';
+                    }
+                }, 1000);
+            }
+        });
     </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
