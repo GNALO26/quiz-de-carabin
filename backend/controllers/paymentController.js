@@ -39,20 +39,20 @@ const sendAccessCodeEmail = async (email, accessCode) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: 'Votre code d\'accès Premium - Quiz de Carabin',
+      subject: 'Votre code d\'accès Premium - 🩺 Quiz de Carabin',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #4CAF50;">Félicitations!</h2>
+          <h2 style="color: #13a718ff;">Félicitations!</h2>
           <p>Votre abonnement premium a été activé avec succès.</p>
           <p>Voici votre code d'accès unique:</p>
           <div style="text-align: center; margin: 20px 0;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #4CAF50;">${accessCode}</span>
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #1e53a2ff;">${accessCode}</span>
           </div>
           <p>Ce code expire dans <strong>30 minutes</strong>.</p>
           <p>Utilisez-le sur la page de validation pour activer votre compte premium.</p>
           <br>
           <p>Merci pour votre confiance!</p>
-          <p>L'équipe Quiz de Carabin</p>
+          <p>L'équipe 🩺 Quiz de Carabin 🩺</p>
         </div>
       `
     };
