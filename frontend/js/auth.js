@@ -7,21 +7,89 @@ export class Auth {
         this.init();
     }
 
+    // AJOUTEZ CETTE MÉTHODE POUR VALIDER LE TOKEN
+    validateToken(token) {
+        try {
+            if (!token || typeof token !== 'string') {
+                return false;
+            }
+            
+            // Vérifier la structure JWT (3 parties séparées par des points)
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                return false;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Token validation error:', error);
+            return false;
+        }
+    }
+
+    // MODIFIEZ getToken POUR INCLURE LA VALIDATION
+    getToken() {
+        const token = localStorage.getItem('quizToken');
+        if (!this.validateToken(token)) {
+            console.warn('Token invalide, déconnexion...');
+            this.logout();
+            return null;
+        }
+        return token;
+    }
+
+    // RENFORCEZ LA MÉTHODE logout
+    logout() {
+        try {
+            // Supprimez tous les éléments de stockage
+            localStorage.removeItem('quizToken');
+            localStorage.removeItem('quizUser');
+            localStorage.removeItem('userIsPremium');
+            localStorage.removeItem('premiumExpiresAt');
+            
+            // Réinitialisez les variables
+            this.token = null;
+            this.user = null;
+            
+            // Mettez à jour l'interface
+            this.updateUI();
+            
+            // Affichez un message
+            this.showAlert('Déconnexion réussie', 'success');
+            
+            // Rechargez la page après 1 seconde
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Logout error:', error);
+            this.showAlert('Erreur lors de la déconnexion', 'danger');
+        }
+    }
     init() {
         this.updateUI();
         this.setupEventListeners();
     }
 
     setupEventListeners() {
-        // Login
-        document.getElementById('login-btn')?.addEventListener('click', () => this.login());
-        
-        // Register
-        document.getElementById('register-btn')?.addEventListener('click', () => this.register());
-        
-        // Logout
-        document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
-    }
+    // Login
+    document.getElementById('login-btn')?.addEventListener('click', () => this.login());
+    
+    // Register
+    document.getElementById('register-btn')?.addEventListener('click', () => this.register());
+    
+    // Logout - UTILISEZ 'click' AU LIEU DE 'click'
+    document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
+    
+    // Ajoutez aussi un écouteur pour le bouton de déconnexion dans le dropdown
+    document.querySelectorAll('#logout-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.logout();
+        });
+    });
+}
 
     async login() {
         const email = document.getElementById('loginEmail').value;

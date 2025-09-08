@@ -8,6 +8,152 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
+</head>
+<!-- Ajoutez ce code juste avant la balise </body> -->
+<div id="protection-overlay" style="display: none;">
+    <div class="protection-alert">
+        <h2>Capture d'écran détectée!</h2>
+        <p>La capture d'écran n'est pas autorisée sur ce site.</p>
+    </div>
+</div>
+
+<style>
+    /* Styles pour la protection contre les captures */
+    #protection-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: Arial, sans-serif;
+    }
+    
+    .protection-alert {
+        text-align: center;
+        background: #e74c3c;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        max-width: 80%;
+    }
+    
+    .protection-alert h2 {
+        margin-top: 0;
+        font-size: 24px;
+    }
+    
+    .protection-alert p {
+        margin-bottom: 0;
+        font-size: 18px;
+    }
+    
+    .blur-effect {
+        animation: blurAnimation 0.5s;
+    }
+    
+    @keyframes blurAnimation {
+        0% { filter: blur(0); }
+        50% { filter: blur(5px); }
+        100% { filter: blur(0); }
+    }
+    
+    /* Protection supplémentaire pour le contenu sensible */
+    .sensitive-content {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Éléments de protection
+        const overlay = document.getElementById('protection-overlay');
+        let protectionEnabled = true;
+        
+        // Détection de la touche Impr écran
+        document.addEventListener('keydown', function(e) {
+            if (!protectionEnabled) return;
+            
+            // Bloquer Impr écran
+            if (e.key === 'PrintScreen') {
+                e.preventDefault();
+                showProtectionAlert();
+                return false;
+            }
+            
+            // Bloquer les combinaisons de touches courantes pour les captures
+            if ((e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === '3' || e.key === '4')) ||
+                (e.metaKey && e.shiftKey && (e.key === 'S' || e.key === '3' || e.key === '4'))) {
+                e.preventDefault();
+                showProtectionAlert();
+                return false;
+            }
+        });
+        
+        // Empêcher le menu contextuel (clic droit)
+        document.addEventListener('contextmenu', function(e) {
+            if (!protectionEnabled) return;
+            e.preventDefault();
+            showProtectionAlert();
+            return false;
+        });
+        
+        // Empêcher le glisser-déposer d'images
+        document.addEventListener('dragstart', function(e) {
+            if (!protectionEnabled) return;
+            if (e.target.tagName === 'IMG') {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        // Fonction pour afficher l'alerte de protection
+        function showProtectionAlert() {
+            // Ajouter un effet de flou
+            document.body.classList.add('blur-effect');
+            
+            // Afficher l'overlay
+            overlay.style.display = 'flex';
+            
+            // Cacher l'overlay après 2 secondes
+            setTimeout(function() {
+                overlay.style.display = 'none';
+                document.body.classList.remove('blur-effect');
+            }, 2000);
+        }
+        
+        // Détection des outils de développement (approximation)
+        let devToolsOpen = false;
+        
+        setInterval(function() {
+            if (!protectionEnabled) return;
+            
+            const widthThreshold = window.outerWidth - window.innerWidth > 160;
+            const heightThreshold = window.outerHeight - window.innerHeight > 160;
+            
+            if (!devToolsOpen && (widthThreshold || heightThreshold)) {
+                devToolsOpen = true;
+                showProtectionAlert();
+            } else if (devToolsOpen && !widthThreshold && !heightThreshold) {
+                devToolsOpen = false;
+            }
+        }, 1000);
+        
+        // Ajouter la classe de protection au contenu sensible
+        const sensitiveElements = document.querySelectorAll('.sensitive-data, .quiz-container, .results-container');
+        sensitiveElements.forEach(el => {
+            el.classList.add('sensitive-content');
+        });
+    });
+</script>
 <body>
     <!-- Navigation (identique à index.html) -->
     <nav class="navbar navbar-expand-lg navbar-light sticky-top">
@@ -50,21 +196,6 @@
             </div>
         </div>
     </nav>
-
-    <!-- Quiz Section -->
-    <section class="py-5 bg-light">
-        <div class="container">
-            <div class="row text-center mb-5">
-                <div class="col">
-                    <h2 class="fw-bold">Nos Quiz</h2>
-                    <p class="lead">Testez vos connaissances dès maintenant</p>
-                </div>
-            </div>
-            <div class="row" id="quiz-list">
-                <!-- Les quiz seront chargés dynamiquement ici -->
-            </div>
-        </div>
-    </section>
 
     <!-- Quiz Interface -->
     <section id="quiz-interface" class="py-5" style="display: none;">
@@ -184,10 +315,195 @@
             </div>
         </div>
     </div>
+    <!-- Quiz Section -->
+    <section id="quiz-section" class="py-5 bg-light">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col">
+                    <h2 class="fw-bold">Nos Quiz</h2>
+                    <p class="lead">Testez vos connaissances dès maintenant</p>
+                </div>
+            </div>
+            <div class="row" id="quiz-list">
+                <!-- Les quiz seront chargés dynamiquement ici -->
+            </div>
+        </div>
+    </section>
 
-    <!-- Footer (identique à index.html) -->
-    <footer class="footer">
-       <div class="container">
+    <!-- Pricing Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col">
+                    <h2 class="fw-bold">Abonnement Premium</h2>
+                    <p class="lead">Accédez à tous les quiz pendant 30 jours</p>
+                </div>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-header bg-primary text-white text-center py-4">
+                            <h3 class="my-0">Accès Complet</h3>
+                        </div>
+                        <div class="card-body p-5">
+                            <div class="text-center">
+                                <span class="display-4 fw-bold">5.000</span>
+                                <span class="h4">XOF</span>
+                                <span class="text-muted">/ 30 jours</span>
+                            </div>
+                            <ul class="list-unstyled my-4">
+                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Accès à tous les quiz premium</li>
+                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Tableau de bord détaillé</li>
+                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Historique de progression</li>
+                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Certificats de réussite</li>
+                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Support technique prioritaire</li>
+                            </ul>
+                            <button class="btn btn-primary btn-lg w-100" id="subscribe-btn">S'abonner maintenant</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Enter Code Modal -->
+    <div class="modal fade" id="codeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Entrer le code d'accès</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Veuillez saisir le code à 6 chiffres reçu par email après votre paiement.</p>
+                    <div class="mb-3">
+                        <label for="accessCode" class="form-label">Code d'accès</label>
+                        <input type="text" class="form-control" id="accessCode" placeholder="XXXXXX" maxlength="6">
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Ce code est valable pendant 30 minutes et à usage unique.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="button" class="btn btn-primary" id="validate-code">Valider le code</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Connexion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="loginEmail" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="loginEmail" placeholder="votre@email.com">
+                </div>
+                <div class="mb-3">
+                    <label for="loginPassword" class="form-label">Mot de passe</label>
+                    <input type="password" class="form-control" id="loginPassword" placeholder="Votre mot de passe">
+                </div>
+                <!-- Ajout du lien "Mot de passe oublié" -->
+                <div class="mb-3 text-end">
+                    <a href="forgot-password.html" class="text-decoration-none" 
+                       onclick="closeLoginModal()">
+                        Mot de passe oublié ?
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" id="login-btn">Se connecter</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Fonction pour fermer le modal de connexion
+function closeLoginModal() {
+    const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+    if (loginModal) {
+        loginModal.hide();
+    }
+}
+</script>
+
+    <!-- Register Modal -->
+    <div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Créer un compte</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="registerName" class="form-label">Nom complet</label>
+                        <input type="text" class="form-control" id="registerName" placeholder="Votre nom">
+                    </div>
+                    <div class="mb-3">
+                        <label for="registerEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="registerEmail" placeholder="votre@email.com">
+                    </div>
+                    <div class="mb-3">
+                        <label for="registerPassword" class="form-label">Mot de passe</label>
+                        <input type="password" class="form-control" id="registerPassword" placeholder="Créez un mot de passe">
+                    </div>
+                    <div class="mb-3">
+                        <label for="registerConfirmPassword" class="form-label">Confirmer le mot de passe</label>
+                        <input type="password" class="form-control" id="registerConfirmPassword" placeholder="Confirmez votre mot de passe">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="button" class="btn btn-primary" id="register-btn">Créer le compte</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Interface (hidden by default) -->
+    <section id="quiz-interface" class="py-5" style="display: none;">
+        <div class="container">
+            <div class="quiz-container">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 id="quiz-title">Titre du Quiz</h3>
+                    <div class="timer" id="quiz-timer">20:00</div>
+                </div>
+                
+                <div id="question-container">
+                    <!-- Questions will be loaded here -->
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button class="btn btn-secondary" id="prev-btn" disabled>Précédent</button>
+                    <button class="btn btn-primary" id="next-btn">Suivant</button>
+                    <button class="btn btn-success" id="submit-quiz" style="display: none;">Soumettre</button>
+                </div>
+            </div>
+            
+            <div class="results-container" id="results-container" style="display: none;">
+                <h3 class="text-center mb-4">Résultats du Quiz</h3>
+                <div id="results-content">
+                    <!-- Results will be displayed here -->
+                </div>
+                <div class="text-center mt-4">
+                    <button class="btn btn-primary me-2" id="review-btn">Revoir les réponses</button>
+                    <button class="btn btn-outline-secondary" id="back-to-quizzes">Retour aux quiz</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+     <footer class="footer" id="about">
+        <div class="container">
             <div class="row">
                 <div class="col-lg-4 mb-4 mb-lg-0">
                     <h4 class="text-uppercase mb-4">Quiz de Carabin</h4>
@@ -196,13 +512,14 @@
                 <div class="col-lg-4 mb-4 mb-lg-0">
                     <h4 class="text-uppercase mb-4">Contact</h4>
                     <p><i class="fas fa-phone me-2"></i> +229 01 56 03 58 88</p>
-                    <p><i class="fas fa-phone me-2"></i> +229 01 41 99 64 52</p>
-                    <p><i class="fas fa-phone me-2"></i> +229 01 41 99 64 52</p>
+                    <p><i class="fas fa-phone me-2"></i> +229 01 97 59 46 66</p>
+                    <p><i class="fas fa-phone me-2"></i> +229 01 57 17 41 09</p>
                 </div>
                 <div class="col-lg-4">
                     <h4 class="text-uppercase mb-4">Email</h4>
                     <p><i class="fas fa-envelope me-2"></i> contact@quizdecarabin.bj</p>
-                    <p><i class="fas fa-envelope me-2"></i> support@quizdecarabin.bj</p>
+                    <p><i class="fas fa-envelope me-2"></i> quizdecarabin4@gmail.com</p>
+                    <p><a href="https://wa.me/22953914648" style="text-decoration: none;" class="text-white"><i class="fab fa-whatsapp"> </i> <span style="text-decoration: none;">Whatsapp</span></a></p>
                 </div>
             </div>
             <hr class="my-4">
@@ -221,6 +538,6 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module" src="js/quiz.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

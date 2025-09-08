@@ -154,11 +154,11 @@
     });
 </script>
 <body>
-    <!-- Navigation -->
+   <!-- Navigation (identique à index.html) -->
     <nav class="navbar navbar-expand-lg navbar-light sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-brain me-2"></i>🩺Quiz de Carabin
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-brain me-2"></i>Quiz de Carabin
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -166,13 +166,13 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="#home">Accueil</a>
+                        <a class="nav-link" href="index.html">Accueil</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#quiz-section">Quiz</a>
+                        <a class="nav-link" href="quiz.html">Quiz</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#about">À propos</a>
+                        <a class="nav-link active" href="about.html">À propos</a>
                     </li>
                 </ul>
                 <div class="d-flex" id="auth-buttons">
@@ -195,19 +195,6 @@
             </div>
         </div>
     </nav>
-
-    <!-- Hero Section -->
-    <section id="home" class="hero-section">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-8 mx-auto">
-                    <h1 class="display-4 fw-bold mb-4">Testez vos connaissances médicales</h1>
-                    <p class="lead mb-4">Une plateforme interactive de quiz spécialement conçue pour les étudiants en médecine</p>
-                    <a href="#quiz-section" class="btn btn-lg btn-success">Commencer un quiz</a>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <!-- Features Section -->
     <section class="py-5">
@@ -360,15 +347,6 @@
     </div>
 </div>
 
-<script>
-// Fonction pour fermer le modal de connexion
-function closeLoginModal() {
-    const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-    if (loginModal) {
-        loginModal.hide();
-    }
-}
-</script>
 
     <!-- Register Modal -->
     <div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
@@ -475,6 +453,15 @@ function closeLoginModal() {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="js/app.js"></script>
+    <script>
+// Fonction pour fermer le modal de connexion
+function closeLoginModal() {
+    const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+    if (loginModal) {
+        loginModal.hide();
+    }
+}
+</script>
 </body>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -643,4 +630,5 @@ function closeLoginModal() {
             });
         });
     </script>
+    
 </html>

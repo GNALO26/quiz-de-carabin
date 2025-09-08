@@ -99,7 +99,7 @@ async function seedFromDocx() {
       {
         path: path.join(__dirname, '../uploads/physiologie-renale.docx'),
         category: 'physiologie-renale',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-epithelial1.docx'),
@@ -109,62 +109,62 @@ async function seedFromDocx() {
       {
         path: path.join(__dirname, '../uploads/tissu-epithelial2.docx'),
         category: 'tissu-epithelial2',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-conjonctif1.docx'),
         category: 'tissu-conjonctif1',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-conjonctif2.docx'),
         category: 'tissu-conjonctif2',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-cartilagineux.docx'),
         category: 'tissu-cartilagineux',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/echange.docx'),
         category: 'echange',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-musculaire1.docx'),
         category: 'tissu-musculaire1',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-musculaire2.docx'),
         category: 'tissu-musculaire2',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-nerveux1.docx'),
         category: 'tissu-nerveux1',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-nerveux2.docx'),
         category: 'tissu-nerveux2',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-osseux1.docx'),
         category: 'tissu-osseux1',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/tissu-osseux2.docx'),
         category: 'tissu-osseux2',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/physiologie-musculaire.docx'),
         category: 'physiologie-musculaire',
-        free: true
+        free: false
       },
       {
         path: path.join(__dirname, '../uploads/physiologie-respiratoire.docx'),

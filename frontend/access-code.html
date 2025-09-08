@@ -68,55 +68,65 @@
             submitButton.disabled = true;
             submitButton.textContent = 'Validation en cours...';
             
-            try {
-                const token = localStorage.getItem('quizToken');
-                if (!token) {
-                    showMessage('Vous devez être connecté pour valider un code. Veuillez vous reconnecter.', 'danger');
-                    setTimeout(() => window.location.href = 'index.html', 3000);
-                    return;
-                }
-                
-                const response = await fetch(`${API_BASE_URL}/api/payment/validate-access-code`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ code })
-                });
-                
-                // Vérifier le statut HTTP avant de parser
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Erreur serveur: ${response.status} - ${errorText}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    
-                    // Mettre à jour le statut premium localement
-                    localStorage.setItem('userIsPremium', 'true');
-                    if (data.premiumExpiresAt) {
-                        localStorage.setItem('premiumExpiresAt', data.premiumExpiresAt);
-                    }
-                    
-                    // Redirection après 3 secondes
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 3000);
-                } else {
-                    showMessage(data.message, 'danger');
-                }
-            } catch (error) {
-                console.error('Erreur détaillée:', error);
-                showMessage('Erreur lors de la validation du code. Veuillez réessayer.', 'danger');
-            } finally {
-                // Réactiver le bouton
-                submitButton.disabled = false;
-                submitButton.textContent = 'Valider le code';
-            }
+           try {
+    const token = localStorage.getItem('quizToken');
+    if (!token) {
+        showMessage('Vous devez être connecté pour valider un code. Redirection...', 'danger');
+        setTimeout(() => window.location.href = 'index.html', 2000);
+        return;
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/api/payment/validate-access-code`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code })
+    });
+    
+    // GESTION SPÉCIFIQUE DES ERREURS 401
+    if (response.status === 401) {
+        showMessage('Session expirée. Veuillez vous reconnecter.', 'danger');
+        // Nettoyer le storage et rediriger
+        localStorage.removeItem('quizToken');
+        localStorage.removeItem('quizUser');
+        setTimeout(() => window.location.href = 'index.html', 2000);
+        return;
+    }
+    
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erreur serveur: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.success) {
+        showMessage(data.message, 'success');
+        
+        // Mettre à jour le statut premium localement
+        localStorage.setItem('userIsPremium', 'true');
+        if (data.premiumExpiresAt) {
+            localStorage.setItem('premiumExpiresAt', data.premiumExpiresAt);
+        }
+        
+        // Redirection après 3 secondes
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 3000);
+    } else {
+        showMessage(data.message, 'danger');
+    }
+} catch (error) {
+    console.error('Erreur détaillée:', error);
+    if (error.message.includes('401')) {
+        showMessage('Session expirée. Veuillez vous reconnecter.', 'danger');
+        setTimeout(() => window.location.href = 'index.html', 2000);
+    } else {
+        showMessage('Erreur lors de la validation du code. Veuillez réessayer.', 'danger');
+    }
+}
         });
         
         // Option pour renvoyer le code
