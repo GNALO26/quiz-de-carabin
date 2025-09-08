@@ -158,7 +158,7 @@
     <nav class="navbar navbar-expand-lg navbar-light sticky-top">
         <div class="container">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-brain me-2"></i>Quiz de Carabin
+                <i class="fas fa-brain me-2"></i>🩺Quiz de Carabin
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -328,30 +328,47 @@
     </div>
 
     <!-- Login Modal -->
-    <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Connexion</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Connexion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="loginEmail" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="loginEmail" placeholder="votre@email.com">
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="loginEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="loginEmail" placeholder="votre@email.com">
-                    </div>
-                    <div class="mb-3">
-                        <label for="loginPassword" class="form-label">Mot de passe</label>
-                        <input type="password" class="form-control" id="loginPassword" placeholder="Votre mot de passe">
-                    </div>
+                <div class="mb-3">
+                    <label for="loginPassword" class="form-label">Mot de passe</label>
+                    <input type="password" class="form-control" id="loginPassword" placeholder="Votre mot de passe">
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                    <button type="button" class="btn btn-primary" id="login-btn">Se connecter</button>
+                <!-- Ajout du lien "Mot de passe oublié" -->
+                <div class="mb-3 text-end">
+                    <a href="forgot-password.html" class="text-decoration-none" 
+                       onclick="closeLoginModal()">
+                        Mot de passe oublié ?
+                    </a>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" id="login-btn">Se connecter</button>
             </div>
         </div>
     </div>
+</div>
+
+<script>
+// Fonction pour fermer le modal de connexion
+function closeLoginModal() {
+    const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+    if (loginModal) {
+        loginModal.hide();
+    }
+}
+</script>
 
     <!-- Register Modal -->
     <div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
@@ -431,13 +448,14 @@
                 <div class="col-lg-4 mb-4 mb-lg-0">
                     <h4 class="text-uppercase mb-4">Contact</h4>
                     <p><i class="fas fa-phone me-2"></i> +229 01 56 03 58 88</p>
-                    <p><i class="fas fa-phone me-2"></i> +229 01 41 99 64 52</p>
-                    <p><i class="fas fa-phone me-2"></i> +229 01 41 99 64 52</p>
+                    <p><i class="fas fa-phone me-2"></i> +229 01 97 59 46 66</p>
+                    <p><i class="fas fa-phone me-2"></i> +229 01 57 17 41 09</p>
                 </div>
                 <div class="col-lg-4">
                     <h4 class="text-uppercase mb-4">Email</h4>
                     <p><i class="fas fa-envelope me-2"></i> contact@quizdecarabin.bj</p>
-                    <p><i class="fas fa-envelope me-2"></i> support@quizdecarabin.bj</p>
+                    <p><i class="fas fa-envelope me-2"></i> quizdecarabin4@gmail.com</p>
+                    <p><a href="https://wa.me/22953914648" style="text-decoration: none;" class="text-white"><i class="fab fa-whatsapp"> </i> <span style="text-decoration: none;">Whatsapp</span></a></p>
                 </div>
             </div>
             <hr class="my-4">
@@ -458,4 +476,171 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.getElementById('protectionOverlay');
+            const qcmViewer = document.getElementById('qcmViewer');
+            const qcmViewerClose = document.getElementById('qcmViewerClose');
+            const qcmViewerContent = document.getElementById('qcmViewerContent');
+            const qcmViewerTitle = document.getElementById('qcmViewerTitle');
+            const qcmWatermark = document.getElementById('qcmWatermark');
+            
+            let protectionEnabled = false;
+            let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            // Fonction pour afficher un QCM (à appeler depuis votre code existant)
+            window.showProtectedQCM = function(qcmData) {
+                // Mettre à jour le titre
+                qcmViewerTitle.textContent = qcmData.title;
+                
+                // Générer le contenu du QCM
+                let contentHtml = '';
+                qcmData.questions.forEach((question, index) => {
+                    contentHtml += `
+                        <div class="qcm-question">
+                            <div class="qcm-question-text">${index + 1}. ${question.text}</div>
+                            <ul class="qcm-options">
+                    `;
+                    
+                    question.options.forEach(option => {
+                        const correctClass = option.correct ? 'qcm-correct' : '';
+                        contentHtml += <li class="qcm-option ${correctClass}">${option.text}</li>;
+                    });
+                    
+                    contentHtml += `
+                            </ul>
+                        </div>
+                    `;
+                });
+                
+                qcmViewerContent.innerHTML = contentHtml;
+                
+                // Afficher le visualiseur
+                qcmViewer.style.display = 'block';
+                
+                // Activer la protection
+                protectionEnabled = true;
+                
+                // Ajouter le filigrane avec le nom d'utilisateur si disponible
+                const userName = document.getElementById('user-name').textContent || 'Utilisateur';
+                qcmWatermark.textContent = userName;
+            };
+            
+            // Fermer le visualiseur
+            qcmViewerClose.addEventListener('click', function() {
+                qcmViewer.style.display = 'none';
+                protectionEnabled = false;
+            });
+            
+            // Détection de la touche Impr écran (desktop)
+            document.addEventListener('keydown', function(e) {
+                if (!protectionEnabled) return;
+                
+                if (e.key === 'PrintScreen') {
+                    e.preventDefault();
+                    showProtectionAlert();
+                    return false;
+                }
+                
+                if ((e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === '3' || e.key === '4')) ||
+                    (e.metaKey && e.shiftKey && (e.key === 'S' || e.key === '3' || e.key === '4'))) {
+                    e.preventDefault();
+                    showProtectionAlert();
+                    return false;
+                }
+                
+                if (e.key === 'Escape') {
+                    qcmViewer.style.display = 'none';
+                    protectionEnabled = false;
+                }
+            });
+            
+            // Empêcher le menu contextuel
+            document.addEventListener('contextmenu', function(e) {
+                if (!protectionEnabled) return;
+                e.preventDefault();
+                showProtectionAlert();
+                return false;
+            });
+            
+            // Empêcher le glisser-déposer
+            document.addEventListener('dragstart', function(e) {
+                if (!protectionEnabled) return;
+                e.preventDefault();
+                return false;
+            });
+            
+            // Empêcher la copie
+            document.addEventListener('copy', function(e) {
+                if (!protectionEnabled) return;
+                e.preventDefault();
+                showProtectionAlert();
+                return false;
+            });
+            
+            // Détection des outils de développement
+            let devToolsOpen = false;
+            
+            setInterval(function() {
+                if (!protectionEnabled) return;
+                
+                const widthThreshold = window.outerWidth - window.innerWidth > 160;
+                const heightThreshold = window.outerHeight - window.innerHeight > 160;
+                
+                if (!devToolsOpen && (widthThreshold || heightThreshold)) {
+                    devToolsOpen = true;
+                    showProtectionAlert();
+                } else if (devToolsOpen && !widthThreshold && !heightThreshold) {
+                    devToolsOpen = false;
+                }
+            }, 1000);
+            
+            // Détection spécifique pour mobile
+            if (isMobile) {
+                // Détection du changement d'application (pagehide et visibilitychange)
+                document.addEventListener('visibilitychange', function() {
+                    if (!protectionEnabled) return;
+                    
+                    if (document.hidden) {
+                        showProtectionAlert();
+                    }
+                });
+                
+                document.addEventListener('pagehide', function() {
+                    if (!protectionEnabled) return;
+                    showProtectionAlert();
+                });
+                
+                // Détection du basculement entre applications (blur/focus)
+                window.addEventListener('blur', function() {
+                    if (!protectionEnabled) return;
+                    showProtectionAlert();
+                });
+            }
+            
+            // Fonction pour afficher l'alerte de protection
+            function showProtectionAlert() {
+                // Ajouter un effet de flou
+                document.body.classList.add('blur-effect');
+                
+                // Afficher l'overlay
+                overlay.style.opacity = "1";
+                overlay.style.pointerEvents = "auto";
+                
+                // Cacher l'overlay après 3 secondes
+                setTimeout(function() {
+                    overlay.style.opacity = "0";
+                    overlay.style.pointerEvents = "none";
+                    document.body.classList.remove('blur-effect');
+                }, 3000);
+            }
+            
+            // Ajouter la protection de sélection de texte
+            const sensitiveElements = document.querySelectorAll('.qcm-viewer-container, .qcm-question, .qcm-option');
+            sensitiveElements.forEach(el => {
+                el.classList.add('sensitive-content');
+            });
+        });
+    </script>
 </html>

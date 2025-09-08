@@ -62,27 +62,29 @@ export class Payment {
 
 
     async validateAccessCode(code, email) {
-        try {
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            
-            const response = await fetch(`${API_BASE_URL}/api/payment/validate-code`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ code, email })
-            });
+    try {
+        const API_BASE_URL = await this.getActiveAPIUrl();
+        const token = this.auth.getToken(); // ✅ Récupère le token
+        
+        const response = await fetch(`${API_BASE_URL}/api/payment/validate-access-code`, { // ✅ Correction du endpoint
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // ✅ Ajout du token
+            },
+            body: JSON.stringify({ code }) // ✅ Seul le code est nécessaire
+        });
 
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Error validating access code:', error);
-            return { 
-                success: false, 
-                message: 'Erreur lors de la validation du code' 
-            };
-        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error validating access code:', error);
+        return { 
+            success: false, 
+            message: 'Erreur lors de la validation du code' 
+        };
     }
+}
 
     async getActiveAPIUrl() {
         // Test de la connexion à l'URL principale
