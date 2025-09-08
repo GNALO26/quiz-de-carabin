@@ -7,7 +7,23 @@ export class Auth {
         this.init();
     }
 
-    // AJOUTEZ CETTE MÉTHODE POUR VALIDER LE TOKEN
+    init() {
+        this.updateUI();
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        // Login
+        document.getElementById('login-btn')?.addEventListener('click', () => this.login());
+        
+        // Register
+        document.getElementById('register-btn')?.addEventListener('click', () => this.register());
+        
+        // Logout
+        document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
+    }
+
+    // AJOUT: Méthode pour valider le token JWT
     validateToken(token) {
         try {
             if (!token || typeof token !== 'string') {
@@ -20,76 +36,22 @@ export class Auth {
                 return false;
             }
             
-            return true;
+            // Vérifier que chaque partie est une string base64 valide
+            try {
+                parts.forEach(part => {
+                    // Remplacer les caractères URL-safe et padding
+                    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+                    window.atob(base64);
+                });
+                return true;
+            } catch (e) {
+                return false;
+            }
         } catch (error) {
             console.error('Token validation error:', error);
             return false;
         }
     }
-
-    // MODIFIEZ getToken POUR INCLURE LA VALIDATION
-    getToken() {
-        const token = localStorage.getItem('quizToken');
-        if (!this.validateToken(token)) {
-            console.warn('Token invalide, déconnexion...');
-            this.logout();
-            return null;
-        }
-        return token;
-    }
-
-    // RENFORCEZ LA MÉTHODE logout
-    logout() {
-        try {
-            // Supprimez tous les éléments de stockage
-            localStorage.removeItem('quizToken');
-            localStorage.removeItem('quizUser');
-            localStorage.removeItem('userIsPremium');
-            localStorage.removeItem('premiumExpiresAt');
-            
-            // Réinitialisez les variables
-            this.token = null;
-            this.user = null;
-            
-            // Mettez à jour l'interface
-            this.updateUI();
-            
-            // Affichez un message
-            this.showAlert('Déconnexion réussie', 'success');
-            
-            // Rechargez la page après 1 seconde
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-            
-        } catch (error) {
-            console.error('Logout error:', error);
-            this.showAlert('Erreur lors de la déconnexion', 'danger');
-        }
-    }
-    init() {
-        this.updateUI();
-        this.setupEventListeners();
-    }
-
-    setupEventListeners() {
-    // Login
-    document.getElementById('login-btn')?.addEventListener('click', () => this.login());
-    
-    // Register
-    document.getElementById('register-btn')?.addEventListener('click', () => this.register());
-    
-    // Logout - UTILISEZ 'click' AU LIEU DE 'click'
-    document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
-    
-    // Ajoutez aussi un écouteur pour le bouton de déconnexion dans le dropdown
-    document.querySelectorAll('#logout-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.logout();
-        });
-    });
-}
 
     async login() {
         const email = document.getElementById('loginEmail').value;
@@ -133,11 +95,17 @@ export class Auth {
             const data = await response.json();
 
             if (data.success) {
+                // VALIDATION DU TOKEN AVANT STOCKAGE
+                if (!this.validateToken(data.token)) {
+                    this.showAlert('Erreur: Token de connexion invalide', 'danger');
+                    return;
+                }
+
                 this.token = data.token;
                 this.user = data.user;
                 
-                localStorage.setItem('quizToken', this.token);
-                localStorage.setItem('quizUser', JSON.stringify(this.user));
+                localStorage.setItem('quizToken', data.token);
+                localStorage.setItem('quizUser', JSON.stringify(data.user));
                 
                 this.updateUI();
                 this.hideModals();
@@ -250,19 +218,50 @@ export class Auth {
         return CONFIG.API_BACKUP_URL;
     }
 
+    // MODIFICATION: Renforcement de la déconnexion
     logout() {
-        this.token = null;
-        this.user = null;
-        localStorage.removeItem('quizToken');
-        localStorage.removeItem('quizUser');
-        localStorage.removeItem('userIsPremium');
-        localStorage.removeItem('premiumExpiresAt');
-        this.updateUI();
-        this.showAlert('Déconnexion réussie', 'success');
-        
-        if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-            window.quiz.loadQuizzes();
+        try {
+            // Supprimer tous les éléments du localStorage
+            localStorage.removeItem('quizToken');
+            localStorage.removeItem('quizUser');
+            localStorage.removeItem('userIsPremium');
+            localStorage.removeItem('premiumExpiresAt');
+            
+            // Réinitialiser les variables
+            this.token = null;
+            this.user = null;
+            
+            // Mettre à jour l'interface
+            this.updateUI();
+            
+            // Afficher un message
+            this.showAlert('Déconnexion réussie', 'success');
+            
+            // Recharger les quizs si nécessaire
+            if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                window.quiz.loadQuizzes();
+            }
+            
+            // Rediriger vers la page d'accueil après 1 seconde
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Logout error:', error);
+            this.showAlert('Erreur lors de la déconnexion', 'danger');
         }
+    }
+
+    // MODIFICATION: getToken avec validation
+    getToken() {
+        const token = localStorage.getItem('quizToken');
+        if (!this.validateToken(token)) {
+            console.warn('Token JWT invalide, déconnexion automatique');
+            this.logout();
+            return null;
+        }
+        return token;
     }
 
     updateUI() {
@@ -328,10 +327,6 @@ export class Auth {
 
     isPremium() {
         return (this.user && this.user.isPremium) || localStorage.getItem('userIsPremium') === 'true';
-    }
-
-    getToken() {
-        return this.token;
     }
 
     getUser() {

@@ -60,51 +60,52 @@ export class Payment {
         }
     }
 
-
-    async validateAccessCode(code) { // RETIREZ LE PARAMÈTRE EMAIL
-    try {
-        const API_BASE_URL = await this.getActiveAPIUrl();
-        const token = this.auth.getToken();
-        
-        if (!token) {
-            return {
-                success: false,
-                message: 'Token invalide. Veuillez vous reconnecter.'
-            };
-        }
-        
-        const response = await fetch(`${API_BASE_URL}/api/payment/validate-access-code`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ code })
-        });
-
-        // VÉRIFIEZ LE STATUT HTTP AVANT DE PARSER
-        if (!response.ok) {
-            if (response.status === 401) {
-                // Token expiré ou invalide
-                this.auth.logout();
+    // MODIFICATION: La méthode ne prend plus que le code
+    async validateAccessCode(code) {
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const token = this.auth.getToken();
+            
+            if (!token) {
                 return {
                     success: false,
-                    message: 'Session expirée. Veuillez vous reconnecter.'
+                    message: 'Token invalide. Veuillez vous reconnecter.'
                 };
             }
-            throw new Error(`HTTP error ${response.status}`);
-        }
+            
+            const response = await fetch(`${API_BASE_URL}/api/payment/validate-access-code`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ code })
+            });
 
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error validating access code:', error);
-        return { 
-            success: false, 
-            message: 'Erreur lors de la validation du code. Veuillez réessayer.' 
-        };
+            // Vérifier le statut HTTP avant de parser
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // Token expiré ou invalide
+                    this.auth.logout();
+                    return {
+                        success: false,
+                        message: 'Session expirée. Veuillez vous reconnecter.'
+                    };
+                }
+                throw new Error(`HTTP error ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error validating access code:', error);
+            return { 
+                success: false, 
+                message: 'Erreur lors de la validation du code. Veuillez réessayer.' 
+            };
+        }
     }
-}
+
     async getActiveAPIUrl() {
         // Test de la connexion à l'URL principale
         try {

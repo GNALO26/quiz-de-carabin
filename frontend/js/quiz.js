@@ -11,62 +11,81 @@ export class Quiz {
     }
 
     async loadQuizzes() {
-    try {
-        const token = window.auth.getToken();
-        
-        if (!token) {
-            this.showLoginPrompt();
-            return;
-        }
-
-        const headers = { 'Authorization': `Bearer ${token}` };
+        try {
+            const token = window.auth.getToken();
             
-        const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz`, { headers });
-        
-        // GESTION SPÉCIFIQUE DES ERREURS 401
-        if (response.status === 401) {
-            console.warn('Token expiré, déconnexion...');
-            window.auth.logout();
-            this.showLoginPrompt();
-            return;
-        }
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error ${response.status}`);
-        }
+            if (!token) {
+                this.showLoginPrompt();
+                return;
+            }
 
-        const data = await response.json();
+            const headers = { 'Authorization': `Bearer ${token}` };
+                
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz`, { headers });
+            
+            // GESTION SPÉCIFIQUE DES ERREURS 401
+            if (response.status === 401) {
+                console.warn('Token expiré, déconnexion...');
+                window.auth.logout();
+                this.showLoginPrompt();
+                return;
+            }
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
 
-        if (data.success) {
-            this.quizzes = data.quizzes;
-            this.renderQuizzes();
-        } else {
-            console.error('Failed to load quizzes:', data.message);
-            this.showError('Erreur lors du chargement des quizzes: ' + data.message);
+            const data = await response.json();
+
+            if (data.success) {
+                this.quizzes = data.quizzes;
+                this.renderQuizzes();
+            } else {
+                console.error('Failed to load quizzes:', data.message);
+                this.showError('Erreur lors du chargement des quizzes: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error loading quizzes:', error);
+            this.showError('Erreur lors du chargement des quizzes');
         }
-    } catch (error) {
-        console.error('Error loading quizzes:', error);
-        this.showError('Erreur lors du chargement des quizzes');
     }
-}
 
-// AJOUTEZ CETTE MÉTHODE POUR AFFICHER LES ERREURS
-showError(message) {
-    const quizList = document.getElementById('quiz-list');
-    if (!quizList) return;
-    
-    quizList.innerHTML = `
-        <div class="col-12 text-center">
-            <div class="alert alert-danger">
-                ${message}
-                <br>
-                <button class="btn btn-primary mt-2" onclick="window.location.reload()">
-                    Actualiser la page
-                </button>
+    showLoginPrompt() {
+        const quizList = document.getElementById('quiz-list');
+        if (!quizList) return;
+        
+        quizList.innerHTML = `
+            <div class="col-12 text-center">
+                <p>Veuillez vous connecter pour accéder aux quizzes.</p>
+                <button class="btn btn-primary" id="quiz-login-button">Se connecter</button>
             </div>
-        </div>
-    `;
-}
+        `;
+        
+        document.getElementById('quiz-login-button').addEventListener('click', () => {
+            if (window.auth && typeof window.auth.showLoginModal === 'function') {
+                window.auth.showLoginModal();
+            }
+        });
+    }
+
+    // AJOUT: Méthode pour afficher les erreurs
+    showError(message) {
+        const quizList = document.getElementById('quiz-list');
+        if (!quizList) return;
+        
+        quizList.innerHTML = `
+            <div class="col-12 text-center">
+                <div class="alert alert-danger">
+                    ${message}
+                    <br>
+                    <button class="btn btn-primary mt-2" onclick="window.location.reload()">
+                        Actualiser la page
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
 
 showLoginPrompt() {
     const quizList = document.getElementById('quiz-list');
