@@ -4,13 +4,30 @@ import { Auth } from './auth.js';
 export class Payment {
     constructor() {
         this.auth = new Auth();
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        // Bouton d'abonnement
+        document.getElementById('subscribe-btn')?.addEventListener('click', () => {
+            this.initiatePayment();
+        });
+        
+        // Validation du code d'accès
+        document.getElementById('validate-code')?.addEventListener('click', () => {
+            this.validateAccessCode();
+        });
+        
+        // Renvoi du code
+        document.getElementById('resend-code')?.addEventListener('click', () => {
+            this.resendAccessCode();
+        });
     }
 
     async initiatePayment() {
         try {
             console.log('Initialisation du paiement...');
             
-            // Vérifier si l'utilisateur est connecté
             if (!this.auth.isAuthenticated()) {
                 this.auth.showLoginModal();
                 this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
@@ -42,7 +59,6 @@ export class Payment {
             } else {
                 console.error('Erreur du serveur:', data);
                 
-                // Gestion spécifique de l'erreur "Transaction Found"
                 if (data.error && data.error.includes('Transaction Found')) {
                     this.showAlert('Une transaction est déjà en cours. Veuillez réessayer dans quelques instants.', 'warning');
                 } else {
@@ -60,20 +76,32 @@ export class Payment {
         }
     }
 
-    // MODIFICATION: La méthode ne prend plus que le code
-    async validateAccessCode(code) {
+    async validateAccessCode() {
         try {
+            const codeInput = document.getElementById('accessCode');
+            const code = codeInput.value.trim();
+            
+            if (!code || code.length !== 6) {
+                this.showAlert('Veuillez entrer un code à 6 chiffres valide', 'warning');
+                return;
+            }
+
             const API_BASE_URL = await this.getActiveAPIUrl();
             const token = this.auth.getToken();
             
             if (!token) {
-                return {
-                    success: false,
-                    message: 'Token invalide. Veuillez vous reconnecter.'
-                };
+                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
+                this.auth.logout();
+                return;
             }
             
-            const response = await fetch(`${API_BASE_URL}/api/payment/validate-access-code`, {
+            // Afficher l'indicateur de chargement
+            const validateButton = document.getElementById('validate-code');
+            const originalText = validateButton.innerHTML;
+            validateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Validation...';
+            validateButton.disabled = true;
+
+            const response = await fetch(`${API_BASE_URL}/api/access-code/validate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -82,32 +110,106 @@ export class Payment {
                 body: JSON.stringify({ code })
             });
 
-            // Vérifier le statut HTTP avant de parser
+            // Réinitialiser le bouton
+            validateButton.innerHTML = originalText;
+            validateButton.disabled = false;
+
+            if (response.status === 401) {
+                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
+                this.auth.logout();
+                return;
+            }
+
             if (!response.ok) {
-                if (response.status === 401) {
-                    // Token expiré ou invalide
-                    this.auth.logout();
-                    return {
-                        success: false,
-                        message: 'Session expirée. Veuillez vous reconnecter.'
-                    };
-                }
                 throw new Error(`HTTP error ${response.status}`);
             }
 
             const data = await response.json();
-            return data;
+
+            if (data.success) {
+                this.showAlert(data.message, 'success');
+                
+                // Mettre à jour les informations utilisateur
+                if (data.user) {
+                    localStorage.setItem('quizUser', JSON.stringify(data.user));
+                    this.auth.user = data.user;
+                    this.auth.updateUI();
+                }
+                
+                // Fermer le modal après 2 secondes
+                setTimeout(() => {
+                    const codeModal = bootstrap.Modal.getInstance(document.getElementById('codeModal'));
+                    if (codeModal) {
+                        codeModal.hide();
+                    }
+                    
+                    // Recharger les quiz pour afficher les quiz premium
+                    if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                        window.quiz.loadQuizzes();
+                    }
+                }, 2000);
+            } else {
+                this.showAlert(data.message, 'danger');
+            }
         } catch (error) {
             console.error('Error validating access code:', error);
-            return { 
-                success: false, 
-                message: 'Erreur lors de la validation du code. Veuillez réessayer.' 
-            };
+            this.showAlert('Erreur lors de la validation du code. Veuillez réessayer.', 'danger');
+        }
+    }
+
+    async resendAccessCode() {
+        try {
+            const token = this.auth.getToken();
+            
+            if (!token) {
+                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
+                this.auth.logout();
+                return;
+            }
+            
+            const resendBtn = document.getElementById('resend-code');
+            const originalText = resendBtn.innerHTML;
+            resendBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Envoi...';
+            resendBtn.disabled = true;
+
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            
+            const response = await fetch(`${API_BASE_URL}/api/access-code/resend`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            // Réinitialiser le bouton
+            resendBtn.innerHTML = originalText;
+            resendBtn.disabled = false;
+
+            if (response.status === 401) {
+                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
+                this.auth.logout();
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.showAlert('Un nouveau code a été envoyé à votre adresse email.', 'success');
+            } else {
+                this.showAlert(data.message || 'Erreur lors de l\'envoi du code', 'danger');
+            }
+        } catch (error) {
+            console.error('Error resending access code:', error);
+            this.showAlert('Erreur lors de l\'envoi du code. Veuillez réessayer.', 'danger');
         }
     }
 
     async getActiveAPIUrl() {
-        // Test de la connexion à l'URL principale
         try {
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
                 method: 'GET',
@@ -121,15 +223,12 @@ export class Payment {
             console.warn('URL principale inaccessible, tentative avec URL de secours:', error);
         }
         
-        // Fallback sur l'URL de secours
         return CONFIG.API_BACKUP_URL;
     }
 
     showAlert(message, type) {
-        // Remove existing alerts
         document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
         
-        // Create alert element
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${type} alert-dismissible fade show global-alert`;
         alertDiv.style.position = 'fixed';
@@ -142,10 +241,8 @@ export class Payment {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         
-        // Add to page
         document.body.appendChild(alertDiv);
         
-        // Auto remove after 5 seconds
         setTimeout(() => {
             if (alertDiv.parentNode) {
                 alertDiv.parentNode.removeChild(alertDiv);
@@ -153,3 +250,8 @@ export class Payment {
         }, 5000);
     }
 }
+
+// Initialisation automatique quand le DOM est chargé
+document.addEventListener('DOMContentLoaded', function() {
+    window.payment = new Payment();
+});

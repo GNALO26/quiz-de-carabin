@@ -51,6 +51,12 @@ body {
     text-align: center;
 }
 
+.about-hero, .quiz-hero {
+    background: linear-gradient(rgba(44, 110, 181, 0.8), rgba(44, 110, 181, 0.9)), url('https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');
+    background-size: cover;
+    background-position: center;
+}
+
 .quiz-card {
     transition: transform 0.3s, box-shadow 0.3s;
     border-radius: 10px;
@@ -160,179 +166,176 @@ body {
     font-style: italic;
 }
 
-
-
-
 .protection-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-        }
-        
-        .protection-alert {
-            background: #e74c3c;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            max-width: 80%;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-        }
-        
-        .protection-alert h3 {
-            margin-top: 0;
-            font-size: 24px;
-        }
-        
-        .protection-alert p {
-            margin-bottom: 0;
-            font-size: 18px;
-        }
-        
-        .blur-effect {
-            animation: blurAnimation 0.5s;
-        }
-        
-        @keyframes blurAnimation {
-            0% { filter: blur(0); }
-            50% { filter: blur(5px); }
-            100% { filter: blur(0); }
-        }
-        
-        .sensitive-content {
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-        }
-        
-        /* Styles pour le visualiseur de QCM */
-        .qcm-viewer-container {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: white;
-            z-index: 1000;
-            overflow-y: auto;
-            padding: 20px;
-        }
-        
-        .qcm-viewer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #3498db;
-        }
-        
-        .qcm-viewer-header h2 {
-            margin: 0;
-            color: #2c3e50;
-        }
-        
-        .qcm-viewer-close {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-        
-        .qcm-question {
-            margin-bottom: 25px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            border-left: 4px solid #3498db;
-        }
-        
-        .qcm-question-text {
-            font-weight: 600;
-            margin-bottom: 15px;
-            font-size: 18px;
-        }
-        
-        .qcm-options {
-            list-style: none;
-            padding: 0;
-        }
-        
-        .qcm-option {
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
-        }
-        
-        .qcm-correct {
-            background: #d4edda;
-            border-color: #c3e6cb;
-        }
-        
-        .qcm-watermark {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            opacity: 0.1;
-            font-size: 60px;
-            font-weight: bold;
-            color: #e74c3c;
-            pointer-events: none;
-            z-index: 1001;
-            transform: rotate(-30deg);
-            user-select: none;
-        }
-        
-        /* Styles spécifiques pour mobile */
-        @media (max-width: 768px) {
-            .qcm-viewer-container {
-                padding: 15px;
-            }
-            
-            .qcm-viewer-header {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .qcm-viewer-close {
-                margin-top: 15px;
-            }
-            
-            .protection-alert {
-                padding: 20px;
-            }
-            
-            .protection-alert h3 {
-                font-size: 20px;
-            }
-            
-            .protection-alert p {
-                font-size: 16px;
-            }
-            
-            .qcm-watermark {
-                font-size: 40px;
-                bottom: 10px;
-                right: 10px;
-            }
-        }
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.protection-alert {
+    background: #e74c3c;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    max-width: 80%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.protection-alert h3 {
+    margin-top: 0;
+    font-size: 24px;
+}
+
+.protection-alert p {
+    margin-bottom: 0;
+    font-size: 18px;
+}
+
+.blur-effect {
+    animation: blurAnimation 0.5s;
+}
+
+@keyframes blurAnimation {
+    0% { filter: blur(0); }
+    50% { filter: blur(5px); }
+    100% { filter: blur(0); }
+}
+
+.sensitive-content {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Styles pour le visualiseur de QCM */
+.qcm-viewer-container {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: white;
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.qcm-viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #3498db;
+}
+
+.qcm-viewer-header h2 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.qcm-viewer-close {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.qcm-question {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid #3498db;
+}
+
+.qcm-question-text {
+    font-weight: 600;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.qcm-options {
+    list-style: none;
+    padding: 0;
+}
+
+.qcm-option {
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.qcm-correct {
+    background: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.qcm-watermark {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    opacity: 0.1;
+    font-size: 60px;
+    font-weight: bold;
+    color: #e74c3c;
+    pointer-events: none;
+    z-index: 1001;
+    transform: rotate(-30deg);
+    user-select: none;
+}
+
+/* Styles spécifiques pour mobile */
+@media (max-width: 768px) {
+    .qcm-viewer-container {
+        padding: 15px;
+    }
+    
+    .qcm-viewer-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .qcm-viewer-close {
+        margin-top: 15px;
+    }
+    
+    .protection-alert {
+        padding: 20px;
+    }
+    
+    .protection-alert h3 {
+        font-size: 20px;
+    }
+    
+    .protection-alert p {
+        font-size: 16px;
+    }
+    
+    .qcm-watermark {
+        font-size: 40px;
+        bottom: 10px;
+        right: 10px;
+    }
+}

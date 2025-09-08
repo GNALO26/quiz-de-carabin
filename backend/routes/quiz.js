@@ -88,4 +88,23 @@ router.post('/:id/submit', auth, async (req, res) => {
   }
 });
 
+// Get user's quiz history
+router.get('/history/user', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).populate('quizHistory.quizId');
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé.' });
+    }
+    
+    res.json({
+      success: true,
+      history: user.quizHistory
+    });
+  } catch (error) {
+    console.error('Get quiz history error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
 module.exports = router;

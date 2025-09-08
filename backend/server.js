@@ -8,7 +8,7 @@ const authRoutes = require('./routes/auth');
 const quizRoutes = require('./routes/quiz');
 const paymentRoutes = require('./routes/payment');
 const userRoutes = require('./routes/user');
-//const cleanupTransactions = require('./scripts/cleanupTransactions');
+const accessCodeRoutes = require('./routes/accessCode');
 
 const app = express();
 
@@ -31,28 +31,22 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// UNE SEULE CONNEXION À MONGODB
+// Connexion à MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => {
   console.log('Connected to MongoDB');
-  
-  // Démarrer le nettoyage des transactions après la connexion DB
- //cleanupTransactions();
-  
-  // Planifier le nettoyage toutes les heures (3600000 ms = 1 heure)
-//  setInterval(cleanupTransactions, 60 * 60 * 1000);
 })
 .catch(err => console.error('Could not connect to MongoDB', err));
-
 
 // Routes API
 app.use('/api/auth', authRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/access-code', accessCodeRoutes);
 
 // Route de santé
 app.get('/api/health', (req, res) => {

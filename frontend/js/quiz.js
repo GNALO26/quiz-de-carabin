@@ -8,91 +8,69 @@ export class Quiz {
         this.timerInterval = null;
         this.timeLeft = 0;
         this.quizzes = [];
+        this.init();
+    }
+
+    init() {
+        this.setupEventListeners();
+        
+        // Charger les quiz si on est sur la page quiz
+        if (window.location.pathname.includes('quiz.html')) {
+            this.loadQuizzes();
+        }
+    }
+
+    setupEventListeners() {
+        // Bouton de retour aux quiz
+        document.getElementById('back-to-quizzes')?.addEventListener('click', () => {
+            this.showQuizList();
+        });
+        
+        // Bouton de révision
+        document.getElementById('review-btn')?.addEventListener('click', () => {
+            this.showQuestion(0);
+        });
     }
 
     async loadQuizzes() {
-    try {
-        const token = window.auth.getToken();
-        
-        if (!token) {
-            this.showLoginPrompt();
-            return;
-        }
-
-        const headers = { 'Authorization': `Bearer ${token}` };
+        try {
+            const token = window.auth.getToken();
             
-        const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz`, { headers });
-        
-        // GESTION SPÉCIFIQUE DES ERREURS 401
-        if (response.status === 401) {
-            console.warn('Token expiré, déconnexion...');
-            window.auth.logout();
-            this.showLoginPrompt();
-            return;
-        }
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error ${response.status}`);
-        }
+            if (!token) {
+                this.showLoginPrompt();
+                return;
+            }
 
-        const data = await response.json();
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const headers = { 'Authorization': `Bearer ${token}` };
+            
+            const response = await fetch(`${API_BASE_URL}/api/quiz`, { headers });
+            
+            if (response.status === 401) {
+                console.warn('Token expiré, déconnexion...');
+                window.auth.logout();
+                this.showLoginPrompt();
+                return;
+            }
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
 
-        if (data.success) {
-            this.quizzes = data.quizzes;
-            this.renderQuizzes();
-        } else {
-            console.error('Failed to load quizzes:', data.message);
-            this.showError('Erreur lors du chargement des quizzes: ' + data.message);
+            const data = await response.json();
+
+            if (data.success) {
+                this.quizzes = data.quizzes;
+                this.renderQuizzes();
+            } else {
+                console.error('Failed to load quizzes:', data.message);
+                this.showError('Erreur lors du chargement des quizzes: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error loading quizzes:', error);
+            this.showError('Erreur lors du chargement des quizzes');
         }
-    } catch (error) {
-        console.error('Error loading quizzes:', error);
-        this.showError('Erreur lors du chargement des quizzes');
     }
-}
-
-// AJOUTEZ CETTE MÉTHODE POUR AFFICHER LES ERREURS
-showError(message) {
-    const quizList = document.getElementById('quiz-list');
-    if (!quizList) return;
-    
-    quizList.innerHTML = `
-        <div class="col-12 text-center">
-            <div class="alert alert-danger">
-                ${message}
-                <br>
-                <button class="btn btn-primary mt-2" onclick="window.location.reload()">
-                    Actualiser la page
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-showLoginPrompt() {
-    const quizList = document.getElementById('quiz-list');
-    if (!quizList) return;
-    
-    quizList.innerHTML = `
-        <div class="col-12 text-center">
-            <p>Veuillez vous connecter pour accéder aux quizzes.</p>
-            <button class="btn btn-primary" id="quiz-login-button">Se connecter</button>
-        </div>
-    `;
-    
-    document.getElementById('quiz-login-button').addEventListener('click', () => {
-        // Ouvrir la modale de connexion
-        if (window.auth && typeof window.auth.showLoginModal === 'function') {
-            window.auth.showLoginModal();
-        }
-    });
-}
-
-showError(message) {
-    const quizList = document.getElementById('quiz-list');
-    if (!quizList) return;
-    
-    quizList.innerHTML =`<div class="col-12 text-center text-danger">${message}</div>`;
-}
 
     renderQuizzes() {
         const quizList = document.getElementById('quiz-list');
@@ -100,8 +78,21 @@ showError(message) {
         
         quizList.innerHTML = '';
 
+        if (this.quizzes.length === 0) {
+            quizList.innerHTML = `
+                <div class="col-12 text-center">
+                    <div class="alert alert-info">
+                        Aucun quiz disponible pour le moment.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
         this.quizzes.forEach(quiz => {
             const isFree = quiz.free;
+            const hasAccess = isFree || window.auth.isPremium();
+            
             const quizCard = document.createElement('div');
             quizCard.className = 'col-md-6 mb-4';
             quizCard.innerHTML = `
@@ -119,16 +110,18 @@ showError(message) {
                     </div>
                     <div class="card-footer bg-white">
                         <button class="btn ${isFree ? 'btn-outline-primary' : 'btn-primary'} w-100 start-quiz" 
-                                data-quiz-id="${quiz._id}">
-                            ${isFree ? 'Commencer le quiz' : 'Accéder (5.000 XOF)'}
+                                data-quiz-id="${quiz._id}" ${!hasAccess && !isFree ? 'disabled' : ''}>
+                            ${isFree ? 'Commencer le quiz' : (hasAccess ? 'Commencer le quiz' : 'Accéder (5.000 XOF)')}
                         </button>
+                        ${!hasAccess && !isFree ? `
+                            <small class="text-muted d-block mt-2">Abonnement premium requis</small>
+                        ` : ''}
                     </div>
                 </div>
             `;
             quizList.appendChild(quizCard);
         });
 
-        // Ajout des écouteurs d'événements
         this.addQuizEventListeners();
     }
 
@@ -136,7 +129,14 @@ showError(message) {
         document.querySelectorAll('.start-quiz').forEach(button => {
             button.addEventListener('click', (e) => {
                 const quizId = e.target.getAttribute('data-quiz-id');
-                this.startQuiz(quizId);
+                const quiz = this.quizzes.find(q => q._id === quizId);
+                
+                if (!quiz.free && !window.auth.isPremium()) {
+                    // Rediriger vers l'abonnement
+                    window.payment.initiatePayment();
+                } else {
+                    this.startQuiz(quizId);
+                }
             });
         });
     }
@@ -150,7 +150,9 @@ showError(message) {
                 return;
             }
 
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz/${quizId}`, {
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            
+            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -281,8 +283,9 @@ showError(message) {
         
         try {
             const token = window.auth.getToken();
+            const API_BASE_URL = await this.getActiveAPIUrl();
             
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz/${this.currentQuiz._id}/submit`, {
+            const response = await fetch(`${API_BASE_URL}/api/quiz/${this.currentQuiz._id}/submit`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -305,59 +308,125 @@ showError(message) {
     }
 
     showResults(data) {
-    const resultsContent = document.getElementById('results-content');
-    const results = data;
-    
-    // Construction du HTML des résultats
-    let resultsHTML = `
-        <div class="text-center mb-4">
-            <h4>Votre score: ${results.score}/${results.totalQuestions}</h4>
-            <div class="progress mb-3" style="height: 30px;">
-                <div class="progress-bar" role="progressbar" 
-                     style="width: ${(results.score/results.totalQuestions)*100}%;" 
-                     aria-valuenow="${(results.score/results.totalQuestions)*100}" 
-                     aria-valuemin="0" aria-valuemax="100">
-                    ${Math.round((results.score/results.totalQuestions)*100)}%
+        const resultsContent = document.getElementById('results-content');
+        const results = data;
+        
+        // Construction du HTML des résultats
+        let resultsHTML = `
+            <div class="text-center mb-4">
+                <h4>Votre score: ${results.score}/${results.totalQuestions}</h4>
+                <div class="progress mb-3" style="height: 30px;">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: ${(results.score/results.totalQuestions)*100}%;" 
+                         aria-valuenow="${(results.score/results.totalQuestions)*100}" 
+                         aria-valuemin="0" aria-valuemax="100">
+                        ${Math.round((results.score/results.totalQuestions)*100)}%
+                    </div>
                 </div>
             </div>
-        </div>
-    `;
-
-    // Détails des résultats pour chaque question
-    this.currentQuiz.questions.forEach((question, index) => {
-        const userAnswer = this.userAnswers[index];
-        const correctAnswers = question.correctAnswers;
-        const isCorrect = userAnswer.length === correctAnswers.length && 
-                         userAnswer.every(val => correctAnswers.includes(val));
-
-        let userAnswerText = userAnswer.map(a => question.options[a]).join(', ') || 'Aucune réponse';
-        let correctAnswerText = correctAnswers.map(a => question.options[a]).join(', ');
-
-        resultsHTML += `
-            <div class="mb-4 p-3 ${isCorrect ? 'border-success' : 'border-danger'} border rounded">
-                <h5>Question ${index + 1}: ${question.text}</h5>
-                <p class="${isCorrect ? 'correct' : 'incorrect'}">
-                    <strong>Votre réponse:</strong> ${userAnswerText}
-                    ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
-                </p>
         `;
 
-        if (!isCorrect) {
-            resultsHTML += `<p class="correct"><strong>Réponse correcte:</strong> ${correctAnswerText}</p>`;
+        // Détails des résultats pour chaque question
+        this.currentQuiz.questions.forEach((question, index) => {
+            const userAnswer = this.userAnswers[index];
+            const correctAnswers = question.correctAnswers;
+            const isCorrect = userAnswer.length === correctAnswers.length && 
+                             userAnswer.every(val => correctAnswers.includes(val));
+
+            let userAnswerText = userAnswer.map(a => question.options[a]).join(', ') || 'Aucune réponse';
+            let correctAnswerText = correctAnswers.map(a => question.options[a]).join(', ');
+
+            resultsHTML += `
+                <div class="mb-4 p-3 ${isCorrect ? 'border-success' : 'border-danger'} border rounded">
+                    <h5>Question ${index + 1}: ${question.text}</h5>
+                    <p class="${isCorrect ? 'correct' : 'incorrect'}">
+                        <strong>Votre réponse:</strong> ${userAnswerText}
+                        ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
+                    </p>
+            `;
+
+            if (!isCorrect) {
+                resultsHTML += <p class="correct"><strong>Réponse correcte:</strong> ${correctAnswerText}</p>;
+            }
+
+            resultsHTML += `
+                    <div class="justification">
+                        <strong>Explication:</strong> ${question.justification}
+                    </div>
+                </div>
+            `;
+        });
+
+        resultsContent.innerHTML = resultsHTML;
+
+        // Afficher les résultats
+        document.getElementById('question-container').style.display = 'none';
+        document.getElementById('results-container').style.display = 'block';
+    }
+
+    showQuizList() {
+        document.getElementById('quiz-interface').style.display = 'none';
+        document.getElementById('quiz-section').style.display = 'block';
+        document.getElementById('results-container').style.display = 'none';
+        
+        // Recharger les quiz pour mettre à jour les statuts
+        this.loadQuizzes();
+    }
+
+    showLoginPrompt() {
+        const quizList = document.getElementById('quiz-list');
+        if (!quizList) return;
+        
+        quizList.innerHTML = `
+            <div class="col-12 text-center">
+                <p>Veuillez vous connecter pour accéder aux quizzes.</p>
+                <button class="btn btn-primary" id="quiz-login-button">Se connecter</button>
+            </div>
+        `;
+        
+        document.getElementById('quiz-login-button').addEventListener('click', () => {
+            if (window.auth && typeof window.auth.showLoginModal === 'function') {
+                window.auth.showLoginModal();
+            }
+        });
+    }
+
+    showError(message) {
+        const quizList = document.getElementById('quiz-list');
+        if (!quizList) return;
+        
+        quizList.innerHTML = `
+            <div class="col-12 text-center">
+                <div class="alert alert-danger">
+                    ${message}
+                    <br>
+                    <button class="btn btn-primary mt-2" onclick="window.location.reload()">
+                        Actualiser la page
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    async getActiveAPIUrl() {
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
+                method: 'GET',
+                cache: 'no-cache'
+            });
+            
+            if (response.ok) {
+                return CONFIG.API_BASE_URL;
+            }
+        } catch (error) {
+            console.warn('URL principale inaccessible, tentative avec URL de secours:', error);
         }
-
-        resultsHTML += `
-                <div class="justification">
-                    <strong>Explication:</strong> ${question.justification}
-                </div>
-            </div>
-        `;
-    });
-
-    resultsContent.innerHTML = resultsHTML;
-
-    // Afficher les résultats
-    document.getElementById('question-container').style.display = 'none';
-    document.getElementById('results-container').style.display = 'block';
+        
+        return CONFIG.API_BACKUP_URL;
+    }
 }
-}
+
+// Initialisation automatique quand le DOM est chargé
+document.addEventListener('DOMContentLoaded', function() {
+    window.quiz = new Quiz();
+});

@@ -21,25 +21,30 @@ export class Auth {
         
         // Logout
         document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
+        
+        // Redirection vers la page de mot de passe oublié
+        document.querySelectorAll('.forgot-password-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.redirectToForgotPassword();
+            });
+        });
     }
 
-    // AJOUT: Méthode pour valider le token JWT
+    // Validation du token JWT
     validateToken(token) {
         try {
             if (!token || typeof token !== 'string') {
                 return false;
             }
             
-            // Vérifier la structure JWT (3 parties séparées par des points)
             const parts = token.split('.');
             if (parts.length !== 3) {
                 return false;
             }
             
-            // Vérifier que chaque partie est une string base64 valide
             try {
                 parts.forEach(part => {
-                    // Remplacer les caractères URL-safe et padding
                     const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
                     window.atob(base64);
                 });
@@ -95,7 +100,6 @@ export class Auth {
             const data = await response.json();
 
             if (data.success) {
-                // VALIDATION DU TOKEN AVANT STOCKAGE
                 if (!this.validateToken(data.token)) {
                     this.showAlert('Erreur: Token de connexion invalide', 'danger');
                     return;
@@ -111,8 +115,16 @@ export class Auth {
                 this.hideModals();
                 this.showAlert('Connexion réussie!', 'success');
                 
-                if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                // Recharger les quiz si on est sur la page quiz
+                if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
                     window.quiz.loadQuizzes();
+                }
+                
+                // Rediriger vers la page quiz si on était sur index
+                if (window.location.pathname.includes('index.html')) {
+                    setTimeout(() => {
+                        window.location.href = CONFIG.PAGES.QUIZ;
+                    }, 1000);
                 }
             } else {
                 this.showAlert(data.message, 'danger');
@@ -218,33 +230,25 @@ export class Auth {
         return CONFIG.API_BACKUP_URL;
     }
 
-    // MODIFICATION: Renforcement de la déconnexion
     logout() {
         try {
-            // Supprimer tous les éléments du localStorage
             localStorage.removeItem('quizToken');
             localStorage.removeItem('quizUser');
             localStorage.removeItem('userIsPremium');
             localStorage.removeItem('premiumExpiresAt');
             
-            // Réinitialiser les variables
             this.token = null;
             this.user = null;
             
-            // Mettre à jour l'interface
             this.updateUI();
-            
-            // Afficher un message
             this.showAlert('Déconnexion réussie', 'success');
             
-            // Recharger les quizs si nécessaire
             if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
                 window.quiz.loadQuizzes();
             }
             
-            // Rediriger vers la page d'accueil après 1 seconde
             setTimeout(() => {
-                window.location.href = 'index.html';
+                window.location.href = CONFIG.PAGES.INDEX;
             }, 1000);
             
         } catch (error) {
@@ -253,7 +257,6 @@ export class Auth {
         }
     }
 
-    // MODIFICATION: getToken avec validation
     getToken() {
         const token = localStorage.getItem('quizToken');
         if (!this.validateToken(token)) {
@@ -275,7 +278,6 @@ export class Auth {
             userMenu.style.display = 'block';
             userName.textContent = this.user.name;
             
-            // Afficher le badge premium si l'utilisateur est premium
             if (premiumBadge) {
                 if (this.isPremium() || localStorage.getItem('userIsPremium') === 'true') {
                     premiumBadge.style.display = 'inline';
@@ -340,37 +342,17 @@ export class Auth {
             loginModal.show();
         }
     }
-}
-
-// Fonction pour vérifier le statut premium
-async function checkPremiumStatus() {
-    try {
-        const auth = new Auth();
-        const token = auth.getToken();
-        if (!token) return false;
-        
-        const API_BASE_URL = await auth.getActiveAPIUrl();
-        
-        const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.data.isPremium) {
-                localStorage.setItem('userIsPremium', 'true');
-                localStorage.setItem('premiumExpiresAt', new Date(data.data.premiumExpiresAt).toISOString());
-                return true;
-            }
+    
+    redirectToForgotPassword() {
+        const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+        if (loginModal) {
+            loginModal.hide();
         }
-        return false;
-    } catch (error) {
-        console.error('Error checking premium status:', error);
-        return false;
+        window.location.href = CONFIG.PAGES.FORGOT_PASSWORD;
     }
 }
 
-// Ajouter à l'objet global window
-window.checkPremiumStatus = checkPremiumStatus;
+// Initialisation automatique quand le DOM est chargé
+document.addEventListener('DOMContentLoaded', function() {
+    window.auth = new Auth();
+});

@@ -11,22 +11,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    lowercase: true
+    lowercase: true,
+    index: true
   },
   password: {
     type: String,
     required: true,
     minlength: 6
   },
-  // Dans models/User.js, ajoutez ces champs au schéma:
-accessCode: {
-  type: String,
-  default: null
-},
-accessCodeCreatedAt: {
-  type: Date,
-  default: null
-},
   isPremium: {
     type: Boolean,
     default: false
@@ -39,6 +31,10 @@ accessCodeCreatedAt: {
     type: String,
     default: null
   },
+  accessCodeCreatedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -47,22 +43,19 @@ accessCodeCreatedAt: {
     type: Date,
     default: Date.now
   },
-    quizHistory: {
-    type: [{
-      quizId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Quiz'
-      },
-      score: Number,
-      totalQuestions: Number,
-      correctAnswers: Number,
-      completedAt: {
-        type: Date,
-        default: Date.now
-      }
-    }],
-    default: [] // Initialiser avec un tableau vide
-  }
+  quizHistory: [{
+    quizId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Quiz'
+    },
+    score: Number,
+    totalQuestions: Number,
+    correctAnswers: Number,
+    completedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 });
 
 // Middleware pour hasher le mot de passe avant sauvegarde

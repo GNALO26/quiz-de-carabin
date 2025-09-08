@@ -39,7 +39,7 @@ const QuizSchema = new mongoose.Schema({
   questions: [QuestionSchema],
   duration: {
     type: Number, // en minutes
-    default: 5
+    default: 20
   },
   createdAt: {
     type: Date,

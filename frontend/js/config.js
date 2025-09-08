@@ -1,33 +1,33 @@
-// Configuration centrale de l'application
+// Configuration de l'application
 export const CONFIG = {
-    // URL principale
-    API_BASE_URL: "https://quiz-de-carabin-backend.onrender.com",
+    API_BASE_URL: 'https://quiz-de-carabin-backend.onrender.com',
+    API_BACKUP_URL: 'https://quiz-de-carabin-backend.onrender.com',
     
-    // URL de secours (pour développement)
-    API_BACKUP_URL: "http://localhost:5000",
+    // URLs des pages
+    PAGES: {
+        INDEX: 'index.html',
+        QUIZ: 'quiz.html',
+        ABOUT: 'about.html',
+        FORGOT_PASSWORD: 'forgot-password.html',
+        RESET_PASSWORD: 'reset-password.html',
+        ACCESS_CODE: 'access-code.html',
+        PAYMENT_CALLBACK: 'payment-callback.html',
+        PAYMENT_ERROR: 'payment-error.html'
+    },
     
-    FRONTEND_URL: "https://quiz-de-carabin.netlify.app",
+    // Messages d'erreur
+    ERROR_MESSAGES: {
+        NETWORK_ERROR: 'Erreur de connexion. Veuillez vérifier votre connexion internet.',
+        SERVER_ERROR: 'Erreur du serveur. Veuillez réessayer plus tard.',
+        SESSION_EXPIRED: 'Session expirée. Veuillez vous reconnecter.',
+        INVALID_TOKEN: 'Token invalide. Veuillez vous reconnecter.',
+        ACCESS_DENIED: 'Accès refusé. Abonnement premium requis.'
+    },
     
-    // Méthode pour obtenir l'URL active
-    getAPIBaseURL: function() {
-        // Teste la connexion à l'URL principale
-        return testConnection(this.API_BASE_URL) 
-            ? this.API_BASE_URL 
-            : this.API_BACKUP_URL;
+    // Paramètres des quiz
+    QUIZ_SETTINGS: {
+        MAX_TIME_MINUTES: 30,
+        SHOW_EXPLANATIONS: true,
+        ALLOW_SKIP: false
     }
 };
-
-// Fonction pour tester la connexion
-async function testConnection(url) {
-    try {
-        const response = await fetch(`${url}/api/health`, {
-            method: 'GET',
-            mode: 'cors',
-            cache: 'no-cache'
-        });
-        return response.ok;
-    } catch (error) {
-        console.error(`Connection test failed for ${url}:`, error);
-        return false;
-    }
-}
