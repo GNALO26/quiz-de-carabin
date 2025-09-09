@@ -6,11 +6,464 @@
     <title>Quiz - Quiz de Carabin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        :root {
+            --primary: #1a4b8c;
+            --secondary: #4a90e2;
+            --accent: #e63946;
+            --light: #f8f9fa;
+            --dark: #1d3557;
+            --success: #2a9d8f;
+            --warning: #f4a261;
+            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            --gradient-secondary: linear-gradient(135deg, var(--secondary) 0%, #6ba2e7 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* Navigation améliorée */
+        .navbar {
+            background: var(--gradient-primary);
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            padding: 0.8rem 0;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: white !important;
+        }
+        
+        .navbar-brand i {
+            color: var(--secondary);
+        }
+        
+        .nav-link {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            margin: 0 0.2rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            color: white !important;
+            background-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline-primary {
+            border-color: var(--secondary);
+            color: var(--secondary);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--secondary);
+            border-color: var(--secondary);
+        }
+        
+        /* Hero Section améliorée */
+        .quiz-hero {
+            background: var(--gradient-primary), url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') no-repeat center center/cover;
+            padding: 6rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .quiz-hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(to top, #f8f9fa, transparent);
+            z-index: 1;
+        }
+        
+        .quiz-hero h1 {
+            font-weight: 800;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 1.5rem;
+        }
+        
+        .quiz-hero .lead {
+            font-size: 1.3rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        /* Sections générales */
+        section {
+            padding: 5rem 0;
+            position: relative;
+        }
+        
+        .section-title {
+            position: relative;
+            margin-bottom: 3rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: var(--gradient-secondary);
+            border-radius: 2px;
+        }
+        
+        /* Quiz Cards */
+        .quiz-card {
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            height: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .quiz-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+        
+        .quiz-card-header {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .quiz-card-body {
+            padding: 1.5rem;
+        }
+        
+        .quiz-card-footer {
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+        
+        .quiz-difficulty {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .difficulty-easy {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .difficulty-medium {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+        
+        .difficulty-hard {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .quiz-tags {
+            margin-top: 1rem;
+        }
+        
+        .quiz-tag {
+            display: inline-block;
+            background: #f1f5fd;
+            color: var(--primary);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Premium Section améliorée */
+        .premium-card {
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .premium-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .premium-card-header {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .premium-card-body {
+            padding: 2rem;
+        }
+        
+        .premium-feature {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .premium-feature i {
+            color: var(--secondary);
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        /* Quiz Interface améliorée */
+        .quiz-container {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .timer {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .question-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .option-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .option-item:hover {
+            border-color: var(--secondary);
+            background: #f1f5fd;
+        }
+        
+        .option-item.selected {
+            border-color: var(--secondary);
+            background: #f1f5fd;
+        }
+        
+        .option-item.correct {
+            border-color: var(--success);
+            background: #e8f5e9;
+        }
+        
+        .option-item.incorrect {
+            border-color: var(--accent);
+            background: #ffebee;
+        }
+        
+        /* Results Container */
+        .results-container {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            font-size: 2.5rem;
+            font-weight: 700;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Footer amélioré */
+        .footer {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 4rem 0 1.5rem;
+        }
+        
+        .footer h4 {
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            position: relative;
+            padding-bottom: 0.8rem;
+        }
+        
+        .footer h4::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background: var(--secondary);
+        }
+        
+        .footer a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .footer a:hover {
+            color: white;
+            padding-left: 5px;
+        }
+        
+        .footer-social a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            margin-right: 0.8rem;
+            transition: all 0.3s ease;
+        }
+        
+        .footer-social a:hover {
+            background: var(--secondary);
+            transform: translateY(-3px);
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fadeInUp {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+        
+        .delay-100 {
+            animation-delay: 0.1s;
+        }
+        
+        .delay-200 {
+            animation-delay: 0.2s;
+        }
+        
+        .delay-300 {
+            animation-delay: 0.3s;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .navbar-collapse {
+                background: var(--dark);
+                padding: 1rem;
+                border-radius: 10px;
+                margin-top: 1rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .quiz-hero {
+                padding: 4rem 0;
+            }
+            
+            .quiz-hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            section {
+                padding: 3rem 0;
+            }
+            
+            .score-circle {
+                width: 120px;
+                height: 120px;
+                font-size: 2rem;
+            }
+        }
+        
+        /* Loader personnalisé */
+        .quiz-loader {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 200px;
+        }
+        
+        .quiz-loader .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: var(--primary);
+        }
+        
+        /* Badge Premium */
+        .premium-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--gradient-secondary);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            z-index: 1;
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation (identique à index.html) -->
-    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+    <!-- Navigation améliorée -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container">
             <a class="navbar-brand" href="index.html">
                 <i class="fas fa-brain me-2"></i>Quiz de Carabin
@@ -18,8 +471,8 @@
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav" style="margin-left: 20%;">
-                <ul class="navbar-nav me-auto">
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="index.html">Accueil</a>
                     </li>
@@ -30,13 +483,13 @@
                         <a class="nav-link" href="about.html">À propos</a>
                     </li>
                 </ul>
-                <div class="d-flex" id="auth-buttons">
-                    <a href="#" class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Se connecter</a>
+                <div class="d-flex ms-3" id="auth-buttons">
+                    <a href="#" class="btn btn-outline-light me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Se connecter</a>
                     <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">Créer un compte</a>
                 </div>
                 <div id="user-menu" style="display: none;">
                     <div class="dropdown">
-                        <button class="btn btn-outline-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
                             <i class="fas fa-user me-1"></i> <span id="user-name"></span>
                             <span id="premium-badge" class="badge bg-warning ms-1" style="display: none;">Premium</span>
                         </button>
@@ -52,11 +505,11 @@
         </div>
     </nav>
 
-    <!-- Quiz Hero Section -->
-    <section class="quiz-hero bg-primary text-white py-5">
-        <div class="container">
+    <!-- Quiz Hero Section améliorée -->
+    <section class="quiz-hero text-white">
+        <div class="container position-relative z-2">
             <div class="row">
-                <div class="col-lg-8 mx-auto text-center">
+                <div class="col-lg-8 mx-auto text-center animate-fadeInUp">
                     <h1 class="display-4 fw-bold mb-4">Quiz de Carabin</h1>
                     <p class="lead mb-4">Testez vos connaissances médicales avec nos quiz spécialisés</p>
                 </div>
@@ -64,56 +517,73 @@
         </div>
     </section>
 
-    <!-- Quiz List Section -->
+    <!-- Quiz List Section améliorée -->
     <section class="py-5">
         <div class="container">
             <div class="row mb-4">
                 <div class="col">
-                    <h2 class="fw-bold">Tous les quiz</h2>
-                    <p class="lead">Choisissez un quiz pour commencer</p>
+                    <h2 class="fw-bold section-title">Tous les quiz</h2>
+                    <p class="lead text-center">Choisissez un quiz pour commencer</p>
                 </div>
             </div>
             <div class="row" id="quiz-list">
                 <!-- Les quiz seront chargés dynamiquement ici -->
-                <div class="col-12 text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
+                <div class="col-12">
+                    <div class="quiz-loader">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="mt-3">Chargement des quiz...</p>
                     </div>
-                    <p class="mt-3">Chargement des quiz...</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Premium Section -->
+    <!-- Premium Section améliorée -->
     <section class="py-5 bg-light">
         <div class="container">
             <div class="row text-center mb-5">
                 <div class="col">
-                    <h2 class="fw-bold">Accédez à tous les quiz premium</h2>
+                    <h2 class="fw-bold section-title">Accédez à tous les quiz premium</h2>
                     <p class="lead">Débloquez l'intégralité de notre contenu avec un abonnement</p>
                 </div>
             </div>
             <div class="row justify-content-center">
-                <div class="col-md-6">
-                    <div class="card border-0 shadow-lg">
-                        <div class="card-header bg-primary text-white text-center py-4">
+                <div class="col-md-8 col-lg-6">
+                    <div class="premium-card">
+                        <div class="premium-card-header">
                             <h3 class="my-0">Accès Complet</h3>
                         </div>
-                        <div class="card-body p-5">
-                            <div class="text-center">
+                        <div class="premium-card-body">
+                            <div class="text-center mb-4">
                                 <span class="display-4 fw-bold">5.000</span>
                                 <span class="h4">XOF</span>
                                 <span class="text-muted">/ 30 jours</span>
                             </div>
-                            <ul class="list-unstyled my-4">
-                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Accès à tous les quiz premium</li>
-                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Tableau de bord détaillé</li>
-                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Historique de progression</li>
-                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Certificats de réussite</li>
-                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Support technique prioritaire</li>
-                            </ul>
-                            <button class="btn btn-primary btn-lg w-100" id="subscribe-btn">S'abonner maintenant</button>
+                            <div class="premium-features mb-4">
+                                <div class="premium-feature">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Accès à tous les quiz premium</span>
+                                </div>
+                                <div class="premium-feature">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Tableau de bord détaillé</span>
+                                </div>
+                                <div class="premium-feature">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Historique de progression</span>
+                                </div>
+                                <div class="premium-feature">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Certificats de réussite</span>
+                                </div>
+                                <div class="premium-feature">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Support technique prioritaire</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary btn-lg w-100 py-3" id="subscribe-btn">S'abonner maintenant</button>
                         </div>
                     </div>
                 </div>
@@ -121,7 +591,7 @@
         </div>
     </section>
 
-    <!-- Quiz Interface (hidden by default) -->
+    <!-- Quiz Interface améliorée -->
     <section id="quiz-interface" class="py-5" style="display: none;">
         <div class="container">
             <div class="quiz-container">
@@ -130,10 +600,13 @@
                     <div class="timer" id="quiz-timer">20:00</div>
                 </div>
                 
+                <div class="progress mb-4" style="height: 8px;">
+                    <div id="quiz-progress" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                
                 <div id="question-container">
                     <!-- Questions will be loaded here -->
                 </div>
-                
                 <div class="d-flex justify-content-between mt-4">
                     <button class="btn btn-secondary" id="prev-btn" disabled>Précédent</button>
                     <button class="btn btn-primary" id="next-btn">Suivant</button>
@@ -141,8 +614,15 @@
                 </div>
             </div>
             
-            <div class="results-container" id="results-container" style="display: none;">
+            <div class="results-container mt-5" id="results-container" style="display: none;">
                 <h3 class="text-center mb-4">Résultats du Quiz</h3>
+                <div class="text-center mb-4">
+                    <div class="score-circle mb-3">
+                        <span id="score-value">0</span>%
+                    </div>
+                    <h4 id="score-text">Bravo!</h4>
+                    <p id="score-description">Vous avez bien répondu aux questions</p>
+                </div>
                 <div id="results-content">
                     <!-- Results will be displayed here -->
                 </div>
@@ -154,25 +634,39 @@
         </div>
     </section>
 
-    <!-- Footer (identique à index.html) -->
+    <!-- Footer amélioré -->
     <footer class="footer">
         <div class="container">
             <div class="row">
                 <div class="col-lg-4 mb-4 mb-lg-0">
-                    <h4 class="text-uppercase mb-4">Quiz de Carabin</h4>
-                    <p>La plateforme interactive de quiz spécialement conçue pour les étudiants en médecine.</p>
+                    <h4>Quiz de Carabin</h4>
+                    <p class="mt-3">La plateforme interactive de quiz spécialement conçue pour les étudiants en médecine.</p>
+                    <div class="footer-social mt-4">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
                 </div>
                 <div class="col-lg-4 mb-4 mb-lg-0">
-                    <h4 class="text-uppercase mb-4">Contact</h4>
-                    <p><i class="fas fa-phone me-2"></i> +229 01 56 03 58 88</p>
-                    <p><i class="fas fa-phone me-2"></i> +229 01 97 59 46 66</p>
-                    <p><i class="fas fa-phone me-2"></i> +229 01 57 17 41 09</p>
+                    <h4>Contact</h4>
+                    <ul class="list-unstyled mt-3">
+                        <li class="mb-2"><i class="fas fa-phone me-2"></i> +229 01 56 03 58 88</li>
+                        <li class="mb-2"><i class="fas fa-phone me-2"></i> +229 01 97 59 46 66</li>
+                        <li class="mb-2"><i class="fas fa-phone me-2"></i> +229 01 57 17 41 09</li>
+                    </ul>
                 </div>
                 <div class="col-lg-4">
-                    <h4 class="text-uppercase mb-4">Email</h4>
-                    <p><i class="fas fa-envelope me-2"></i> contact@quizdecarabin.bj</p>
-                    <p><i class="fas fa-envelope me-2"></i> quizdecarabin4@gmail.com</p>
-                    <p><a href="https://wa.me/22953914648" style="text-decoration: none;" class="text-white"><i class="fab fa-whatsapp"> </i> <span style="text-decoration: none;">Whatsapp</span></a></p>
+                    <h4>Email</h4>
+                    <ul class="list-unstyled mt-3">
+                        <li class="mb-2"><i class="fas fa-envelope me-2"></i> contact@quizdecarabin.bj</li>
+                        <li class="mb-2"><i class="fas fa-envelope me-2"></i> quizdecarabin4@gmail.com</li>
+                        <li class="mb-2">
+                            <a href="https://wa.me/22953914648" class="d-inline-block mt-2">
+                                <i class="fab fa-whatsapp me-2"></i>Whatsapp
+                            </a>
+                        </li>
+                    </ul>
                 </div>
             </div>
             <hr class="my-4">
@@ -181,16 +675,14 @@
                     <p class="mb-0">&copy; 2023 Quiz de Carabin. Tous droits réservés.</p>
                 </div>
                 <div class="col-md-6 text-md-end">
-                    <a href="#" class="text-white me-3"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="text-white me-3"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="text-white me-3"><i class="fab fa-instagram"></i></a>
-                    <a href="#" class="text-white"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="text-white me-3">Politique de confidentialité</a>
+                    <a href="#" class="text-white">Conditions d'utilisation</a>
                 </div>
             </div>
         </div>
     </footer>
 
-    <!-- Modals (identique à index.html) -->
+    <!-- Modals -->
     <!-- Login Modal -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
         <!-- Contenu du modal de connexion -->
@@ -213,21 +705,21 @@
     <script type="module" src="js/quiz.js"></script>
     <script type="module" src="js/app.js"></script>
     <script>
-// Code de débogage temporaire
-console.log("État de l'authentification:", {
-    authExists: !!window.auth,
-    isAuthenticated: window.auth ? window.auth.isAuthenticated() : false,
-    token: window.auth ? window.auth.getToken() : null,
-    user: window.auth ? window.auth.getUser() : null
-});
+        // Code de débogage temporaire
+        console.log("État de l'authentification:", {
+            authExists: !!window.auth,
+            isAuthenticated: window.auth ? window.auth.isAuthenticated() : false,
+            token: window.auth ? window.auth.getToken() : null,
+            user: window.auth ? window.auth.getUser() : null
+        });
 
-// Vérification périodique de l'état
-setInterval(() => {
-    if (window.quiz && !document.querySelector('.quiz-card')) {
-        console.log("Aucun quiz affiché, tentative de rechargement");
-        window.quiz.loadQuizzes();
-    }
-}, 2000);
-</script>
+        // Vérification périodique de l'état
+        setInterval(() => {
+            if (window.quiz && !document.querySelector('.quiz-card')) {
+                console.log("Aucun quiz affiché, tentative de rechargement");
+                window.quiz.loadQuizzes();
+            }
+        }, 2000);
+    </script>
 </body>
 </html>
