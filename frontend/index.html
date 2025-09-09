@@ -11,8 +11,8 @@
 <!-- Ajoutez ce code juste avant la balise </body> -->
 <div id="protection-overlay" style="display: none;">
     <div class="protection-alert">
-        <h2>Capture d'écran détectée!</h2>
-        <p>La capture d'écran n'est pas autorisée sur ce site.</p>
+        <h2>Copie de texte détectée!</h2>
+        <p>La copie de texte n'est pas autorisée sur ce site.</p>
     </div>
 </div>
 
@@ -263,6 +263,38 @@
             </div>
         </div>
     </section>
+    <!-- Quiz Interface (hidden by default) -->
+    <section id="quiz-interface" class="py-5" style="display: none;">
+        <div class="container">
+            <div class="quiz-container">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 id="quiz-title">Titre du Quiz</h3>
+                    <div class="timer" id="quiz-timer">20:00</div>
+                </div>
+                
+                <div id="question-container">
+                    <!-- Questions will be loaded here -->
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button class="btn btn-secondary" id="prev-btn" disabled>Précédent</button>
+                    <button class="btn btn-primary" id="next-btn">Suivant</button>
+                    <button class="btn btn-success" id="submit-quiz" style="display: none;">Soumettre</button>
+                </div>
+            </div>
+            
+            <div class="results-container" id="results-container" style="display: none;">
+                <h3 class="text-center mb-4">Résultats du Quiz</h3>
+                <div id="results-content">
+                    <!-- Results will be displayed here -->
+                </div>
+                <div class="text-center mt-4">
+                    <button class="btn btn-primary me-2" id="review-btn">Revoir les réponses</button>
+                    <button class="btn btn-outline-secondary" id="back-to-quizzes">Retour aux quiz</button>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Pricing Section -->
     <section class="py-5">
@@ -393,40 +425,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Quiz Interface (hidden by default) -->
-    <section id="quiz-interface" class="py-5" style="display: none;">
-        <div class="container">
-            <div class="quiz-container">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 id="quiz-title">Titre du Quiz</h3>
-                    <div class="timer" id="quiz-timer">20:00</div>
-                </div>
-                
-                <div id="question-container">
-                    <!-- Questions will be loaded here -->
-                </div>
-                
-                <div class="d-flex justify-content-between mt-4">
-                    <button class="btn btn-secondary" id="prev-btn" disabled>Précédent</button>
-                    <button class="btn btn-primary" id="next-btn">Suivant</button>
-                    <button class="btn btn-success" id="submit-quiz" style="display: none;">Soumettre</button>
-                </div>
-            </div>
-            
-            <div class="results-container" id="results-container" style="display: none;">
-                <h3 class="text-center mb-4">Résultats du Quiz</h3>
-                <div id="results-content">
-                    <!-- Results will be displayed here -->
-                </div>
-                <div class="text-center mt-4">
-                    <button class="btn btn-primary me-2" id="review-btn">Revoir les réponses</button>
-                    <button class="btn btn-outline-secondary" id="back-to-quizzes">Retour aux quiz</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- Footer -->
     <footer class="footer" id="about">
         <div class="container">
@@ -479,7 +477,7 @@ function closeLoginModal() {
 }
 </script>
 <script>
-// Code de débogage temporaire
+/* Code de débogage temporaire
 console.log("État de l'authentification:", {
     authExists: !!window.auth,
     isAuthenticated: window.auth ? window.auth.isAuthenticated() : false,
@@ -493,7 +491,7 @@ setInterval(() => {
         console.log("Aucun quiz affiché, tentative de rechargement");
         window.quiz.loadQuizzes();
     }
-}, 2000);
+}, 2000);*/
 </script>
 </body>
 </html>

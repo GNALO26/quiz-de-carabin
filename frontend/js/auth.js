@@ -71,14 +71,35 @@ export class Auth {
         }
     }
 
-    getToken() {
-        const token = localStorage.getItem('quizToken');
-        if (!this.validateToken(token)) {
-            console.warn('Token JWT invalide');
+   getToken() {
+    const token = localStorage.getItem('quizToken');
+    if (!token) {
+        return null;
+    }
+    
+    // Validation basique du token sans déconnexion automatique
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+            console.warn('Token JWT invalide: structure incorrecte');
+            return null;
+        }
+        
+        // Vérifier l'expiration du token
+        const payload = JSON.parse(atob(parts[1]));
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+        if (payload.exp && payload.exp < currentTime) {
+            console.warn('Token expiré');
+            // Ne pas déconnecter automatiquement, laisser l'UI gérer
             return null;
         }
         return token;
+    } catch (error) {
+        console.error('Token validation error:', error);
+        return null;
     }
+}
 
     async login() {
         const email = document.getElementById('loginEmail').value;

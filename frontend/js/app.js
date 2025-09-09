@@ -7,7 +7,13 @@ import { Quiz } from './quiz.js';
 class App {
     constructor() {
         this.auth = new Auth();
-        
+        this.payment = null;
+        this.quiz = null;
+        this.init();
+    }
+
+    init() {
+        // Initialiser les modules en fonction de la page
         if (window.location.pathname.includes('quiz.html') || 
             window.location.pathname.includes('index.html')) {
             this.payment = new Payment();
@@ -18,11 +24,15 @@ class App {
         }
         
         this.checkAuthenticationStatus();
+        
+        // CORRECTION: Exposer l'application globalement
+        window.app = this;
+        console.log('Application initialisée avec succès');
     }
 
     checkAuthenticationStatus() {
         if (this.auth.isAuthenticated()) {
-            console.log('Utilisateur authentifié');
+            console.log('Utilisateur authentifié:', this.auth.getUser()?.email);
         } else {
             console.log('Utilisateur non authentifié');
         }
@@ -31,5 +41,5 @@ class App {
 
 // Démarrer l'application quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    window.app = new App();
+    new App();
 });

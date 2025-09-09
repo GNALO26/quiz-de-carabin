@@ -26,6 +26,16 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+   loginHistory: [{
+    timestamp: Date,
+    deviceId: String,
+    deviceInfo: Object,
+    ipAddress: String,
+    location: String,
+    success: Boolean,
+    reason: String
+  }],
+
   quizHistory: [{
     quizId: {
       type: mongoose.Schema.Types.ObjectId,

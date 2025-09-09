@@ -157,6 +157,10 @@ async function addLoginHistory(req, email, success, reason) {
   try {
     const user = await User.findOne({ email });
     if (!user) return;
+    //INITIALISER loginHistory
+    if(!user.loginHistory) {
+      user.loginHistory = [];
+    }
     
     // Obtenir les informations de localisation à partir de l'IP
     const geo = geoip.lookup(req.clientIp);

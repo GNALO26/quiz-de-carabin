@@ -1,13 +1,15 @@
 import { CONFIG } from './config.js';
+import { Auth } from '.auth.js';
 
 export class Quiz {
     constructor() {
+        this.auth = window.app ? window.app.auth : new AuthenticatorAssertionResponse();
+        this.quizzes = [];
         this.currentQuiz = null;
         this.currentQuestionIndex = 0;
         this.userAnswers = [];
         this.timerInterval = null;
         this.timeLeft = 0;
-        this.quizzes = [];
         
         // Initialisation différée pour s'assurer que l'authentification est chargée
         setTimeout(() => this.init(), 100);
@@ -36,71 +38,52 @@ export class Quiz {
         });
     }
 
+        // ... le reste du code reste inchangé ...
+
     async loadQuizzes() {
+        console.log('Début du chargement des quizs');
+        
+        // CORRECTION: Vérifier si l'authentification est disponible
+        if (!this.auth || !this.auth.isAuthenticated) {
+            console.log('Module d\'authentification non disponible');
+            return;
+        }
+        
+        // Vérifier si l'utilisateur est authentifié
+        if (!this.auth.isAuthenticated()) {
+            console.log('Utilisateur non authentifié, affichage du modal de connexion');
+            this.auth.showLoginModal();
+            return;
+        }
+
         try {
-            console.log("Début du chargement des quizs");
-            
-            // Vérifier si l'auth est chargé
-            if (!window.auth) {
-                console.error("Module d'authentification non chargé");
-                this.showError("Erreur d'authentification. Veuillez actualiser la page.");
-                return;
-            }
-            
-            const token = window.auth.getToken();
-            
+            const token = this.auth.getToken();
             if (!token) {
-                console.log("Utilisateur non authentifié, affichage de l'invite de connexion");
-                this.showLoginPrompt();
+                console.log('Token non disponible');
                 return;
             }
 
-            console.log("Token JWT trouvé, tentative de chargement des quizs");
-            
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            console.log("URL de l'API:", API_BASE_URL);
-            
+            const API_BASE_URL = await this.auth.getActiveAPIUrl();
             const response = await fetch(`${API_BASE_URL}/api/quiz`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+                    'Authorization': `Bearer ${token}`
                 }
             });
-            
-            console.log("Réponse du serveur:", response.status, response.statusText);
-            
-            // Gestion spécifique des erreurs 401
-            if (response.status === 401) {
-                console.warn('Token expiré ou invalide, déconnexion...');
-                if (window.auth && typeof window.auth.logout === 'function') {
-                    window.auth.logout();
-                }
-                this.showLoginPrompt();
-                return;
-            }
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Erreur serveur:', response.status, errorText);
-                throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
-            }
 
-            const data = await response.json();
-            console.log("Données reçues:", data);
-
-            if (data.success) {
-                console.log("Quizs chargés avec succès:", data.quizzes.length, "quizs trouvés");
-                this.quizzes = data.quizzes;
-                this.renderQuizzes();
+            if (response.ok) {
+                const data = await response.json();
+                this.quizzes = data.quizzes || [];
+                this.displayQuizzes();
+            } else if (response.status === 401) {
+                console.log('Token invalide ou expiré');
+                // Ne pas déconnecter automatiquement
             } else {
-                console.error('Erreur dans la réponse:', data.message);
-                this.showError('Erreur lors du chargement des quizzes: ' + data.message);
+                console.error('Erreur lors du chargement des quizs:', response.status);
             }
         } catch (error) {
             console.error('Erreur lors du chargement des quizs:', error);
-            this.showError('Erreur de connexion au serveur. Veuillez réessayer.');
-        }
-    }
+        }
+    }
 
     renderQuizzes() {
         const quizList = document.getElementById('quiz-list');
