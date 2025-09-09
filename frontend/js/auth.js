@@ -12,80 +12,39 @@ export class Auth {
         this.setupEventListeners();
     }
 
-   //la méthode setupEventListeners
-setupEventListeners() {
-    // Login
-    document.getElementById('login-btn')?.addEventListener('click', () => this.login());
-    
-    // Register
-    document.getElementById('register-btn')?.addEventListener('click', () => this.register());
-    
-    // Logout - Gestion améliorée
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        // Supprimer les anciens écouteurs pour éviter les doublons
-        logoutBtn.replaceWith(logoutBtn.cloneNode(true));
-        document.getElementById('logout-btn').addEventListener('click', (e) => {
+    setupEventListeners() {
+        // Login
+        document.getElementById('login-btn')?.addEventListener('click', () => this.login());
+        
+        // Register
+        document.getElementById('register-btn')?.addEventListener('click', () => this.register());
+        
+        // Logout
+        document.getElementById('logout-btn')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.logout();
         });
-    }
-    
-    // History button
-    const historyBtn = document.getElementById('history-btn');
-    if (historyBtn) {
-        historyBtn.replaceWith(historyBtn.cloneNode(true));
-        document.getElementById('history-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            this.showHistory();
-        });
-    }
-    
-    // Redirection vers la page de mot de passe oublié
-    document.querySelectorAll('.forgot-password-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.redirectToForgotPassword();
-        });
-    });
-    
-    // Initialisation des menus déroulants Bootstrap
-    this.initDropdowns();
-}
-
-// Ajoutez cette méthode pour initialiser les menus déroulants
-initDropdowns() {
-    // Initialiser tous les menus déroulants Bootstrap
-    const dropdowns = document.querySelectorAll('.dropdown-toggle');
-    dropdowns.forEach(dropdown => {
-        dropdown.addEventListener('click', function(e) {
-            e.preventDefault();
-            const dropdownMenu = this.nextElementSibling;
-            dropdownMenu.classList.toggle('show');
-        });
-    });
-    
-    // Fermer les menus déroulants en cliquant à l'extérieur
-    document.addEventListener('click', (e) => {
-        if (!e.target.matches('.dropdown-toggle') && !e.target.closest('.dropdown-menu')) {
-            document.querySelectorAll('.dropdown-menu').forEach(menu => {
-                menu.classList.remove('show');
+        
+        // Gestion simplifiée du dropdown utilisateur
+        const userDropdown = document.getElementById('userDropdown');
+        if (userDropdown) {
+            userDropdown.addEventListener('click', (e) => {
+                e.preventDefault();
+                const dropdownMenu = userDropdown.nextElementSibling;
+                dropdownMenu.classList.toggle('show');
             });
         }
-    });
-}
+        
+        // Fermer le dropdown en cliquant ailleurs
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+    }
 
-// Ajoutez cette méthode pour afficher l'historique
-showHistory() {
-    console.log('Affichage de l\'historique');
-    // Pour l'instant, affichons une alerte en attendant l'implémentation complète
-    alert('Fonctionnalité d\'historique à venir bientôt!');
-    
-    // Redirection vers une page d'historique si elle existe
-     window.location.href = 'history.html';
-}
-
-    // Validation du token JWT
     validateToken(token) {
         try {
             if (!token || typeof token !== 'string') {
@@ -97,253 +56,74 @@ showHistory() {
                 return false;
             }
             
-            try {
-                parts.forEach(part => {
-                    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
-                    window.atob(base64);
-                });
-                return true;
-            } catch (e) {
+            // Vérifier l'expiration du token
+            const payload = JSON.parse(atob(parts[1]));
+            const currentTime = Math.floor(Date.now() / 1000);
+            
+            if (payload.exp && payload.exp < currentTime) {
+                console.warn('Token expiré');
                 return false;
             }
+            return true;
         } catch (error) {
             console.error('Token validation error:', error);
             return false;
         }
     }
-    // Méthode pour vérifier et renouveler le token si nécessaire
-async checkAndRenewToken() {
-  try {
-    const token = this.getToken();
-    if (!token) return false;
-    
-    const API_BASE_URL = await this.getActiveAPIUrl();
-    const response = await fetch(`${API_BASE_URL}/api/auth/verify-token`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (response.ok) {
-      const renewedToken = response.headers.get('X-Renewed-Token');
-      if (renewedToken) {
-        console.log('Token renouvelé automatiquement');
-        this.token = renewedToken;
-        localStorage.setItem('quizToken', renewedToken);
-        return true;
-      }
-    }
-    
-    return false;
-  } catch (error) {
-    console.error('Erreur lors du renouvellement du token:', error);
-    return false;
-  }
-}
 
-// Modifiez la méthode getToken pour gérer le renouvellement
-getToken() {
-  const token = localStorage.getItem('quizToken');
-  
-  // Vérifier la structure de base du token
-  if (!token || typeof token !== 'string' || token.split('.').length !== 3) {
-    console.warn('Token JWT invalide, déconnexion automatique');
-    this.logout();
-    return null;
-  }
-  
-  return token;
-}
-
-// Ajoutez cette méthode pour vérifier périodiquement le token
-startTokenMonitor() {
-  // Vérifier le token toutes les 5 minutes
-  this.tokenMonitorInterval = setInterval(async () => {
-    if (this.isAuthenticated()) {
-      await this.checkAndRenewToken();
-    }
-  }, 5 * 60 * 1000); // 5 minutes
-}
-
-// N'oubliez pas de nettoyer l'intervalle lors de la déconnexion
-logout() {
-  try {
-    // Arrêter le monitoring du token
-    if (this.tokenMonitorInterval) {
-      clearInterval(this.tokenMonitorInterval);
-    }
-    
-    // Supprimer tous les éléments du localStorage
-    localStorage.removeItem('quizToken');
-    localStorage.removeItem('quizUser');
-    localStorage.removeItem('userIsPremium');
-    localStorage.removeItem('premiumExpiresAt');
-    
-    // Réinitialiser les variables
-    this.token = null;
-    this.user = null;
-    
-    // Mettre à jour l'interface
-    this.updateUI();
-    
-    // Afficher un message
-    this.showAlert('Déconnexion réussie', 'success');
-    
-    // Rediriger vers la page d'accueil après 1 seconde
-    setTimeout(() => {
-      window.location.href = 'index.html';
-    }, 1000);
-    
-  } catch (error) {
-    console.error('Logout error:', error);
-    this.showAlert('Erreur lors de la déconnexion', 'danger');
-  }
-}
-
-   // Méthode pour générer un ID d'appareil unique
-getDeviceId() {
-    let deviceId = localStorage.getItem('deviceId');
-    
-    if (!deviceId) {
-        // Créer un hash basé sur les caractéristiques du navigateur et de l'appareil
-        const navigatorInfo = navigator.userAgent + 
-                             navigator.language + 
-                             navigator.hardwareConcurrency + 
-                             (navigator.plugins ? navigator.plugins.length : '') +
-                             (screen ? screen.width + screen.height : '');
-        
-        // Générer un hash simple
-        let hash = 0;
-        for (let i = 0; i < navigatorInfo.length; i++) {
-            const char = navigatorInfo.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convertir en 32-bit integer
+    getToken() {
+        const token = localStorage.getItem('quizToken');
+        if (!this.validateToken(token)) {
+            console.warn('Token JWT invalide');
+            return null;
         }
-        
-        deviceId = 'device_' + Math.abs(hash).toString(16);
-        localStorage.setItem('deviceId', deviceId);
-        
-        console.log('Nouvel appareil détecté, ID généré:', deviceId);
-    }
-    
-    return deviceId;
-}
-
-// Méthode pour obtenir les informations détaillées de l'appareil
-getDeviceInfo() {
-    return {
-        userAgent: navigator.userAgent,
-        language: navigator.language,
-        platform: navigator.platform,
-        hardwareConcurrency: navigator.hardwareConcurrency,
-        deviceMemory: navigator.deviceMemory || 'non disponible',
-        screenResolution: `${screen.width}x${screen.height}`,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        cookiesEnabled: navigator.cookieEnabled,
-        // Ajoutez d'autres informations utiles si nécessaire
-    };
-}
-
-// Modifiez la méthode login pour inclure les informations de l'appareil
-async login() {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-
-    if (!email || !password) {
-        this.showAlert('Veuillez remplir tous les champs', 'danger');
-        return;
+        return token;
     }
 
-    try {
-        const API_BASE_URL = await this.getActiveAPIUrl();
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+    async login() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
 
-        // Préparer les données avec informations de l'appareil
-        const requestData = {
-            email, 
-            password,
-            deviceId: this.getDeviceId(),
-            deviceInfo: this.getDeviceInfo()
-        };
-
-        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestData),
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.status === 429) {
-            this.showAlert('Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.', 'warning');
+        if (!email || !password) {
+            this.showAlert('Veuillez remplir tous les champs', 'danger');
             return;
         }
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorData;
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
             
-            try {
-                errorData = JSON.parse(errorText);
-            } catch {
-                throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
-            }
-            
-            throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
-        }
+            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password })
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (data.success) {
-            if (!this.validateToken(data.token)) {
-                this.showAlert('Erreur: Token de connexion invalide', 'danger');
-                return;
+            if (data.success) {
+                this.token = data.token;
+                this.user = data.user;
+                
+                localStorage.setItem('quizToken', data.token);
+                localStorage.setItem('quizUser', JSON.stringify(data.user));
+                
+                this.updateUI();
+                this.hideModals();
+                this.showAlert('Connexion réussie!', 'success');
+                
+                if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                    window.quiz.loadQuizzes();
+                }
+            } else {
+                this.showAlert(data.message, 'danger');
             }
-
-            this.token = data.token;
-            this.user = data.user;
-            
-            // Stocker les informations de session
-            localStorage.setItem('quizToken', data.token);
-            localStorage.setItem('quizUser', JSON.stringify(data.user));
-            sessionStorage.setItem('quizSessionActive', 'true');
-            
-            // Enregistrer la session actuelle
-            localStorage.setItem('currentSession', JSON.stringify({
-                deviceId: this.getDeviceId(),
-                loginTime: new Date().toISOString()
-            }));
-            
-            this.updateUI();
-            this.hideModals();
-            this.showAlert('Connexion réussie!', 'success');
-            
-            // Démarrer le monitoring du token
-            this.startTokenMonitor();
-            
-            if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-                window.quiz.loadQuizzes();
-            }
-        } else {
-            this.showAlert(data.message, 'danger');
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        
-        if (error.name === 'AbortError') {
-            this.showAlert('Le serveur ne répond pas. Veuillez réessayer plus tard.', 'danger');
-        } else if (error.message.includes('Failed to fetch')) {
-            this.showAlert('Impossible de se connecter au serveur. Vérifiez votre connexion internet.', 'danger');
-        } else {
-            this.showAlert('Erreur de connexion: ' + error.message, 'danger');
+        } catch (error) {
+            console.error('Login error:', error);
+            this.showAlert('Erreur de connexion. Veuillez réessayer.', 'danger');
         }
     }
-}
 
     async register() {
         const name = document.getElementById('registerName').value;
@@ -364,55 +144,38 @@ async login() {
         try {
             const API_BASE_URL = await this.getActiveAPIUrl();
             
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-
             const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ name, email, password }),
-                signal: controller.signal
+                body: JSON.stringify({ name, email, password })
             });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorData;
-                
-                try {
-                    errorData = JSON.parse(errorText);
-                } catch {
-                    throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
-                }
-                
-                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
-            }
 
             const data = await response.json();
 
             if (data.success) {
-                this.showAlert('Compte créé avec succès! Vous pouvez maintenant vous connecter.', 'success');
-                const registerModal = bootstrap.Modal.getInstance(document.getElementById('registerModal'));
-                if (registerModal) registerModal.hide();
+                // Connexion automatique après inscription
+                this.token = data.token;
+                this.user = data.user;
                 
-                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-                loginModal.show();
+                localStorage.setItem('quizToken', data.token);
+                localStorage.setItem('quizUser', JSON.stringify(data.user));
+                
+                this.updateUI();
+                this.hideModals();
+                this.showAlert('Compte créé avec succès! Vous êtes maintenant connecté.', 'success');
+                
+                // Recharger les quiz
+                if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                    window.quiz.loadQuizzes();
+                }
             } else {
-                this.showAlert(data.message, 'danger');
+                this.showAlert(data.message || 'Erreur lors de la création du compte', 'danger');
             }
         } catch (error) {
             console.error('Register error:', error);
-            
-            if (error.name === 'AbortError') {
-                this.showAlert('Le serveur ne répond pas. Veuillez réessayer plus tard.', 'danger');
-            } else if (error.message.includes('Failed to fetch')) {
-                this.showAlert('Impossible de se connecter au serveur. Vérifiez votre connexion internet.', 'danger');
-            } else {
-                this.showAlert('Erreur lors de la création du compte: ' + error.message, 'danger');
-            }
+            this.showAlert('Erreur lors de la création du compte. Veuillez réessayer.', 'danger');
         }
     }
 
@@ -460,71 +223,45 @@ async login() {
         }
     }
 
-    getToken() {
-        const token = localStorage.getItem('quizToken');
-        if (!this.validateToken(token)) {
-            console.warn('Token JWT invalide, déconnexion automatique');
-            this.logout();
-            return null;
-        }
-        return token;
-    }
+    updateUI() {
+        const authButtons = document.getElementById('auth-buttons');
+        const userMenu = document.getElementById('user-menu');
+        const userName = document.getElementById('user-name');
+        const premiumBadge = document.getElementById('premium-badge');
 
-   // méthode updateUI
-updateUI() {
-    const authButtons = document.getElementById('auth-buttons');
-    const userMenu = document.getElementById('user-menu');
-    const userName = document.getElementById('user-name');
-    const premiumBadge = document.getElementById('premium-badge');
-    const historyBtn = document.getElementById('history-btn'); // Nouvelle ligne
+        console.log('Mise à jour de l\'UI - Utilisateur:', this.user);
 
-    console.log('Mise à jour de l\'UI - Utilisateur:', this.user);
-
-    if (this.user && authButtons && userMenu && userName) {
-        authButtons.style.display = 'none';
-        userMenu.style.display = 'block';
-        userName.textContent = this.user.name;
-        
-        // Afficher ou masquer le bouton d'historique selon l'authentification
-        if (historyBtn) {
-            historyBtn.style.display = 'block';
-        }
-        
-        // Afficher le badge premium si l'utilisateur est premium
-        if (premiumBadge) {
-            if (this.isPremium()) {
-                premiumBadge.style.display = 'inline';
-                premiumBadge.textContent = 'Premium';
-            } else {
+        if (this.user && authButtons && userMenu && userName) {
+            authButtons.style.display = 'none';
+            userMenu.style.display = 'block';
+            userName.textContent = this.user.name;
+            
+            if (premiumBadge) {
+                if (this.isPremium()) {
+                    premiumBadge.style.display = 'inline';
+                    premiumBadge.textContent = 'Premium';
+                } else {
+                    premiumBadge.style.display = 'none';
+                }
+            }
+            
+            localStorage.setItem('userIsPremium', this.isPremium() ? 'true' : 'false');
+        } else if (authButtons && userMenu) {
+            authButtons.style.display = 'flex';
+            userMenu.style.display = 'none';
+            
+            if (premiumBadge) {
                 premiumBadge.style.display = 'none';
             }
         }
         
-        // Mettre à jour le statut premium dans le localStorage
-        localStorage.setItem('userIsPremium', this.isPremium() ? 'true' : 'false');
-    } else if (authButtons && userMenu) {
-        authButtons.style.display = 'flex';
-        userMenu.style.display = 'none';
-        
-        // Masquer le bouton d'historique si déconnecté
-        if (historyBtn) {
-            historyBtn.style.display = 'none';
-        }
-        
-        // Masquer le badge premium si déconnecté
-        if (premiumBadge) {
-            premiumBadge.style.display = 'none';
+        if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+            console.log('Rechargement des quiz après mise à jour UI');
+            setTimeout(() => {
+                window.quiz.loadQuizzes();
+            }, 500);
         }
     }
-    
-    // Recharger les quiz si on est sur la page quiz
-    if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-        console.log('Rechargement des quiz après mise à jour UI');
-        setTimeout(() => {
-            window.quiz.loadQuizzes();
-        }, 500);
-    }
-}
 
     hideModals() {
         const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
@@ -585,17 +322,12 @@ updateUI() {
         }
         window.location.href = CONFIG.PAGES.FORGOT_PASSWORD;
     }
-    // Dans la classe Auth de js/auth.js
-showHistory() {
-    if (this.isAuthenticated()) {
-        window.location.href = 'history.html';
-    } else {
-        this.showLoginModal();
+    
+    showHistory() {
+        if (this.isAuthenticated()) {
+            window.location.href = 'history.html';
+        } else {
+            this.showLoginModal();
+        }
     }
 }
-}
-
-// Initialisation automatique quand le DOM est chargé
-document.addEventListener('DOMContentLoaded', function() {
-    window.auth = new Auth();
-});

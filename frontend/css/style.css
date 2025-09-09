@@ -306,6 +306,31 @@ body {
     user-select: none;
 }
 
+/* Styles pour le dropdown utilisateur */
+.dropdown-menu {
+    position: absolute;
+    right: 0;
+    left: auto;
+    z-index: 1000;
+}
+
+/* Ajustements pour mobile */
+@media (max-width: 768px) {
+    .dropdown-menu {
+        position: static;
+        width: 100%;
+    }
+    
+    #user-menu {
+        margin-top: 10px;
+    }
+}
+
+/* Assurer la visibilité du dropdown */
+.dropdown-menu.show {
+    display: block;
+}
+
 /* Styles spécifiques pour mobile */
 @media (max-width: 768px) {
     .qcm-viewer-container {
