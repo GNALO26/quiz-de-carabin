@@ -2,6 +2,7 @@ const User = require('../models/User');
 const PasswordReset = require('../models/PasswordReset');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const geoip = require('geoip-lite');
 const transporter = require('../config/email');
 const generateCode = require('../utils/generateCode');
 
@@ -59,14 +60,17 @@ exports.register = async (req, res) => {
   }
 };
 
-// Fonction de connexion
+// Fonction de connexion 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, deviceId, deviceInfo } = req.body;
 
     // Vérifier si l'utilisateur existe
     const user = await User.findOne({ email });
     if (!user) {
+      // Enregistrer la tentative échouée dans l'historique
+      await addLoginHistory(req, email, false, 'Utilisateur non trouvé');
+      
       return res.status(400).json({
         success: false,
         message: "Email ou mot de passe incorrect"
@@ -76,15 +80,49 @@ exports.login = async (req, res) => {
     // Vérifier le mot de passe
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      // Enregistrer la tentative échouée dans l'historique
+      await addLoginHistory(req, email, false, 'Mot de passe incorrect');
+      
       return res.status(400).json({
         success: false,
         message: "Email ou mot de passe incorrect"
       });
     }
 
+    // Gestion des appareils
+    if (deviceId) {
+      const knownDevice = user.knownDevices.find(d => d.deviceId === deviceId);
+      
+      if (knownDevice) {
+        // Mettre à jour la date de dernière connexion
+        knownDevice.deviceInfo.lastSeen = new Date();
+      } else {
+        // Nouvel appareil - l'ajouter à la liste
+        user.knownDevices.push({
+          deviceId,
+          deviceInfo: {
+            ...deviceInfo,
+            firstSeen: new Date(),
+            lastSeen: new Date()
+          },
+          isTrusted: false // Marquer comme non approuvé par défaut
+        });
+        
+        // Envoyer une notification si configuré
+        if (user.securitySettings.alertOnNewDevice) {
+          await sendNewDeviceAlert(user, deviceInfo, req.clientIp);
+        }
+      }
+      
+      await user.save();
+    }
+
+    // Enregistrer la connexion réussie dans l'historique
+    await addLoginHistory(req, email, true, 'Connexion réussie');
+
     // Générer le token JWT
     const token = jwt.sign(
-      { id: user._id },
+      { id: user._id, deviceId },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -98,16 +136,92 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         isPremium: user.isPremium
-      }
+      },
+      isNewDevice: !knownDevice // Informer le frontend si c'est un nouvel appareil
     });
   } catch (error) {
     console.error('Erreur login:', error);
+    
+    // Enregistrer l'erreur dans l'historique
+    await addLoginHistory(req, req.body.email, false, 'Erreur serveur');
+    
     res.status(500).json({
       success: false,
       message: "Erreur serveur lors de la connexion"
     });
   }
 };
+
+// Fonction utilitaire pour ajouter une entrée à l'historique de connexion
+async function addLoginHistory(req, email, success, reason) {
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return;
+    
+    // Obtenir les informations de localisation à partir de l'IP
+    const geo = geoip.lookup(req.clientIp);
+    
+    user.loginHistory.push({
+      timestamp: new Date(),
+      deviceId: req.deviceId,
+      deviceInfo: req.deviceInfo,
+      ipAddress: req.clientIp,
+      location: geo ? `${geo.city}, ${geo.country}` : 'Inconnu',
+      success,
+      reason
+    });
+    
+    // Garder seulement les 100 dernières entrées
+    if (user.loginHistory.length > 100) {
+      user.loginHistory = user.loginHistory.slice(-100);
+    }
+    
+    await user.save();
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout à l\'historique de connexion:', error);
+  }
+}
+
+// Fonction pour envoyer une alerte de nouvel appareil
+async function sendNewDeviceAlert(user, deviceInfo, ipAddress) {
+  try {
+    // Obtenir les informations de localisation
+    const geo = geoip.lookup(ipAddress);
+    const location = geo ? `${geo.city}, ${geo.country}` : 'Inconnu';
+    
+    // Préparer le contenu de l'email
+    const emailContent = `
+      <h2>Nouvelle connexion détectée</h2>
+      <p>Une connexion a été détectée depuis un nouvel appareil sur votre compte Quiz de Carabin.</p>
+      
+      <h3>Détails de la connexion :</h3>
+      <ul>
+        <li><strong>Date :</strong> ${new Date().toLocaleString('fr-FR')}</li>
+        <li><strong>Appareil :</strong> ${deviceInfo.userAgent}</li>
+        <li><strong>Plateforme :</strong> ${deviceInfo.platform}</li>
+        <li><strong>Résolution d'écran :</strong> ${deviceInfo.screenResolution}</li>
+        <li><strong>Fuseau horaire :</strong> ${deviceInfo.timezone}</li>
+        <li><strong>Localisation approximative :</strong> ${location}</li>
+        <li><strong>Adresse IP :</strong> ${ipAddress}</li>
+      </ul>
+      
+      <p>Si vous êtes à l'origine de cette connexion, vous pouvez ignorer cet email.</p>
+      <p>Sinon, veuillez immédiatement changer votre mot de passe et nous contacter.</p>
+    `;
+    
+    // Envoyer l'email (implémentez cette fonction selon votre configuration d'email)
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: 'Nouvelle connexion détectée - Quiz de Carabin',
+      html: emailContent
+    });
+    
+    console.log('Alerte de nouvel appareil envoyée à:', user.email);
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de l\'alerte de nouvel appareil:', error);
+  }
+}
 
 // Fonction de déconnexion
 exports.logout = async (req, res) => {

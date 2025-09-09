@@ -9,6 +9,10 @@ const quizRoutes = require('./routes/quiz');
 const paymentRoutes = require('./routes/payment');
 const userRoutes = require('./routes/user');
 const accessCodeRoutes = require('./routes/accessCode');
+const tokenRoutes = require('./routes/token');
+const deviceDetection = require('./middleware/deviceDetection');
+
+
 
 const app = express();
 
@@ -41,12 +45,17 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .catch(err => console.error('Could not connect to MongoDB', err));
 
+//détection d'appareil
+app.use(deviceDetection);
+
+
 // Routes API
 app.use('/api/auth', authRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/access-code', accessCodeRoutes);
+app.use('/api/auth', tokenRoutes);
 
 // Route de santé
 app.get('/api/health', (req, res) => {

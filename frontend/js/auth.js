@@ -82,7 +82,7 @@ showHistory() {
     alert('Fonctionnalité d\'historique à venir bientôt!');
     
     // Redirection vers une page d'historique si elle existe
-    // window.location.href = 'history.html';
+     window.location.href = 'history.html';
 }
 
     // Validation du token JWT
@@ -111,90 +111,239 @@ showHistory() {
             return false;
         }
     }
+    // Méthode pour vérifier et renouveler le token si nécessaire
+async checkAndRenewToken() {
+  try {
+    const token = this.getToken();
+    if (!token) return false;
+    
+    const API_BASE_URL = await this.getActiveAPIUrl();
+    const response = await fetch(`${API_BASE_URL}/api/auth/verify-token`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (response.ok) {
+      const renewedToken = response.headers.get('X-Renewed-Token');
+      if (renewedToken) {
+        console.log('Token renouvelé automatiquement');
+        this.token = renewedToken;
+        localStorage.setItem('quizToken', renewedToken);
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Erreur lors du renouvellement du token:', error);
+    return false;
+  }
+}
 
-    async login() {
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
+// Modifiez la méthode getToken pour gérer le renouvellement
+getToken() {
+  const token = localStorage.getItem('quizToken');
+  
+  // Vérifier la structure de base du token
+  if (!token || typeof token !== 'string' || token.split('.').length !== 3) {
+    console.warn('Token JWT invalide, déconnexion automatique');
+    this.logout();
+    return null;
+  }
+  
+  return token;
+}
 
-        if (!email || !password) {
-            this.showAlert('Veuillez remplir tous les champs', 'danger');
+// Ajoutez cette méthode pour vérifier périodiquement le token
+startTokenMonitor() {
+  // Vérifier le token toutes les 5 minutes
+  this.tokenMonitorInterval = setInterval(async () => {
+    if (this.isAuthenticated()) {
+      await this.checkAndRenewToken();
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+}
+
+// N'oubliez pas de nettoyer l'intervalle lors de la déconnexion
+logout() {
+  try {
+    // Arrêter le monitoring du token
+    if (this.tokenMonitorInterval) {
+      clearInterval(this.tokenMonitorInterval);
+    }
+    
+    // Supprimer tous les éléments du localStorage
+    localStorage.removeItem('quizToken');
+    localStorage.removeItem('quizUser');
+    localStorage.removeItem('userIsPremium');
+    localStorage.removeItem('premiumExpiresAt');
+    
+    // Réinitialiser les variables
+    this.token = null;
+    this.user = null;
+    
+    // Mettre à jour l'interface
+    this.updateUI();
+    
+    // Afficher un message
+    this.showAlert('Déconnexion réussie', 'success');
+    
+    // Rediriger vers la page d'accueil après 1 seconde
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Logout error:', error);
+    this.showAlert('Erreur lors de la déconnexion', 'danger');
+  }
+}
+
+   // Méthode pour générer un ID d'appareil unique
+getDeviceId() {
+    let deviceId = localStorage.getItem('deviceId');
+    
+    if (!deviceId) {
+        // Créer un hash basé sur les caractéristiques du navigateur et de l'appareil
+        const navigatorInfo = navigator.userAgent + 
+                             navigator.language + 
+                             navigator.hardwareConcurrency + 
+                             (navigator.plugins ? navigator.plugins.length : '') +
+                             (screen ? screen.width + screen.height : '');
+        
+        // Générer un hash simple
+        let hash = 0;
+        for (let i = 0; i < navigatorInfo.length; i++) {
+            const char = navigatorInfo.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convertir en 32-bit integer
+        }
+        
+        deviceId = 'device_' + Math.abs(hash).toString(16);
+        localStorage.setItem('deviceId', deviceId);
+        
+        console.log('Nouvel appareil détecté, ID généré:', deviceId);
+    }
+    
+    return deviceId;
+}
+
+// Méthode pour obtenir les informations détaillées de l'appareil
+getDeviceInfo() {
+    return {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        platform: navigator.platform,
+        hardwareConcurrency: navigator.hardwareConcurrency,
+        deviceMemory: navigator.deviceMemory || 'non disponible',
+        screenResolution: `${screen.width}x${screen.height}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        cookiesEnabled: navigator.cookieEnabled,
+        // Ajoutez d'autres informations utiles si nécessaire
+    };
+}
+
+// Modifiez la méthode login pour inclure les informations de l'appareil
+async login() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+        this.showAlert('Veuillez remplir tous les champs', 'danger');
+        return;
+    }
+
+    try {
+        const API_BASE_URL = await this.getActiveAPIUrl();
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        // Préparer les données avec informations de l'appareil
+        const requestData = {
+            email, 
+            password,
+            deviceId: this.getDeviceId(),
+            deviceInfo: this.getDeviceInfo()
+        };
+
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.status === 429) {
+            this.showAlert('Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.', 'warning');
             return;
         }
 
-        try {
-            const API_BASE_URL = await this.getActiveAPIUrl();
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorData;
             
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorData;
-                
-                try {
-                    errorData = JSON.parse(errorText);
-                } catch {
-                    throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
-                }
-                
-                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
+            try {
+                errorData = JSON.parse(errorText);
+            } catch {
+                throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
             }
-
-            const data = await response.json();
-
-            if (data.success) {
-                if (!this.validateToken(data.token)) {
-                    this.showAlert('Erreur: Token de connexion invalide', 'danger');
-                    return;
-                }
-
-                this.token = data.token;
-                this.user = data.user;
-                
-                localStorage.setItem('quizToken', data.token);
-                localStorage.setItem('quizUser', JSON.stringify(data.user));
-                
-                this.updateUI();
-                this.hideModals();
-                this.showAlert('Connexion réussie!', 'success');
-                
-                // Recharger les quiz si on est sur la page quiz
-                if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-                    window.quiz.loadQuizzes();
-                }
-                
-                // Rediriger vers la page quiz si on était sur index
-                if (window.location.pathname.includes('index.html')) {
-                    setTimeout(() => {
-                        window.location.href = CONFIG.PAGES.QUIZ;
-                    }, 1000);
-                }
-            } else {
-                this.showAlert(data.message, 'danger');
-            }
-        } catch (error) {
-            console.error('Login error:', error);
             
-            if (error.name === 'AbortError') {
-                this.showAlert('Le serveur ne répond pas. Veuillez réessayer plus tard.', 'danger');
-            } else if (error.message.includes('Failed to fetch')) {
-                this.showAlert('Impossible de se connecter au serveur. Vérifiez votre connexion internet.', 'danger');
-            } else {
-                this.showAlert('Erreur de connexion: ' + error.message, 'danger');
+            throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            if (!this.validateToken(data.token)) {
+                this.showAlert('Erreur: Token de connexion invalide', 'danger');
+                return;
             }
+
+            this.token = data.token;
+            this.user = data.user;
+            
+            // Stocker les informations de session
+            localStorage.setItem('quizToken', data.token);
+            localStorage.setItem('quizUser', JSON.stringify(data.user));
+            sessionStorage.setItem('quizSessionActive', 'true');
+            
+            // Enregistrer la session actuelle
+            localStorage.setItem('currentSession', JSON.stringify({
+                deviceId: this.getDeviceId(),
+                loginTime: new Date().toISOString()
+            }));
+            
+            this.updateUI();
+            this.hideModals();
+            this.showAlert('Connexion réussie!', 'success');
+            
+            // Démarrer le monitoring du token
+            this.startTokenMonitor();
+            
+            if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                window.quiz.loadQuizzes();
+            }
+        } else {
+            this.showAlert(data.message, 'danger');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        
+        if (error.name === 'AbortError') {
+            this.showAlert('Le serveur ne répond pas. Veuillez réessayer plus tard.', 'danger');
+        } else if (error.message.includes('Failed to fetch')) {
+            this.showAlert('Impossible de se connecter au serveur. Vérifiez votre connexion internet.', 'danger');
+        } else {
+            this.showAlert('Erreur de connexion: ' + error.message, 'danger');
         }
     }
+}
 
     async register() {
         const name = document.getElementById('registerName').value;
@@ -327,6 +476,7 @@ updateUI() {
     const userMenu = document.getElementById('user-menu');
     const userName = document.getElementById('user-name');
     const premiumBadge = document.getElementById('premium-badge');
+    const historyBtn = document.getElementById('history-btn'); // Nouvelle ligne
 
     console.log('Mise à jour de l\'UI - Utilisateur:', this.user);
 
@@ -334,6 +484,11 @@ updateUI() {
         authButtons.style.display = 'none';
         userMenu.style.display = 'block';
         userName.textContent = this.user.name;
+        
+        // Afficher ou masquer le bouton d'historique selon l'authentification
+        if (historyBtn) {
+            historyBtn.style.display = 'block';
+        }
         
         // Afficher le badge premium si l'utilisateur est premium
         if (premiumBadge) {
@@ -350,6 +505,11 @@ updateUI() {
     } else if (authButtons && userMenu) {
         authButtons.style.display = 'flex';
         userMenu.style.display = 'none';
+        
+        // Masquer le bouton d'historique si déconnecté
+        if (historyBtn) {
+            historyBtn.style.display = 'none';
+        }
         
         // Masquer le badge premium si déconnecté
         if (premiumBadge) {
@@ -425,6 +585,14 @@ updateUI() {
         }
         window.location.href = CONFIG.PAGES.FORGOT_PASSWORD;
     }
+    // Dans la classe Auth de js/auth.js
+showHistory() {
+    if (this.isAuthenticated()) {
+        window.location.href = 'history.html';
+    } else {
+        this.showLoginModal();
+    }
+}
 }
 
 // Initialisation automatique quand le DOM est chargé
