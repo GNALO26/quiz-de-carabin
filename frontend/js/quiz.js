@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { Auth } from './auth.js';
+import { Auth } from '.auth.js';
 
 export class Quiz {
     constructor() {
@@ -84,6 +84,8 @@ export class Quiz {
             console.error('Erreur lors du chargement des quizs:', error);
         }
     }
+
+
 
     renderQuizzes() {
         const quizList = document.getElementById('quiz-list');
