@@ -8,14 +8,18 @@ export class Quiz {
         this.timerInterval = null;
         this.timeLeft = 0;
         this.quizzes = [];
-        this.init();
+        
+        // Initialisation différée pour s'assurer que l'authentification est chargée
+        setTimeout(() => this.init(), 100);
     }
 
     init() {
+        console.log("Initialisation du module Quiz");
         this.setupEventListeners();
         
         // Charger les quiz si on est sur la page quiz
         if (window.location.pathname.includes('quiz.html')) {
+            console.log("Page quiz détectée, chargement des quizs");
             this.loadQuizzes();
         }
     }
@@ -32,69 +36,80 @@ export class Quiz {
         });
     }
 
-    // Dans js/quiz.js - Modifiez la méthode loadQuizzes
-async loadQuizzes() {
-    try {
-        console.log('Tentative de chargement des quiz...');
-        
-        // Vérifier l'authentification
-        if (!window.auth || !window.auth.isAuthenticated()) {
-            console.log('Utilisateur non authentifié, affichage de l\'invite de connexion');
-            this.showLoginPrompt();
-            return;
-        }
-
-        const token = window.auth.getToken();
-        
-        if (!token) {
-            console.log('Token non disponible');
-            this.showLoginPrompt();
-            return;
-        }
-
-        const API_BASE_URL = await this.getActiveAPIUrl();
-        console.log('Chargement depuis:', API_BASE_URL);
-        
-        const response = await fetch(`${API_BASE_URL}/api/quiz`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+    async loadQuizzes() {
+        try {
+            console.log("Début du chargement des quizs");
+            
+            // Vérifier si l'auth est chargé
+            if (!window.auth) {
+                console.error("Module d'authentification non chargé");
+                this.showError("Erreur d'authentification. Veuillez actualiser la page.");
+                return;
             }
-        });
-        
-        // Gestion spécifique des erreurs 401
-        if (response.status === 401) {
-            console.warn('Token expiré, déconnexion...');
-            if (window.auth && typeof window.auth.logout === 'function') {
-                window.auth.logout();
+            
+            const token = window.auth.getToken();
+            
+            if (!token) {
+                console.log("Utilisateur non authentifié, affichage de l'invite de connexion");
+                this.showLoginPrompt();
+                return;
             }
-            this.showLoginPrompt();
-            return;
-        }
-        
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP ${response.status}`);
-        }
 
-        const data = await response.json();
-        console.log('Données reçues:', data);
+            console.log("Token JWT trouvé, tentative de chargement des quizs");
+            
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            console.log("URL de l'API:", API_BASE_URL);
+            
+            const response = await fetch(`${API_BASE_URL}/api/quiz`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log("Réponse du serveur:", response.status, response.statusText);
+            
+            // Gestion spécifique des erreurs 401
+            if (response.status === 401) {
+                console.warn('Token expiré ou invalide, déconnexion...');
+                if (window.auth && typeof window.auth.logout === 'function') {
+                    window.auth.logout();
+                }
+                this.showLoginPrompt();
+                return;
+            }
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Erreur serveur:', response.status, errorText);
+                throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+            }
 
-        if (data.success) {
-            this.quizzes = data.quizzes;
-            this.renderQuizzes();
-        } else {
-            console.error('Échec du chargement des quiz:', data.message);
-            this.showError('Erreur lors du chargement des quizzes: ' + data.message);
+            const data = await response.json();
+            console.log("Données reçues:", data);
+
+            if (data.success) {
+                console.log("Quizs chargés avec succès:", data.quizzes.length, "quizs trouvés");
+                this.quizzes = data.quizzes;
+                this.renderQuizzes();
+            } else {
+                console.error('Erreur dans la réponse:', data.message);
+                this.showError('Erreur lors du chargement des quizzes: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement des quizs:', error);
+            this.showError('Erreur de connexion au serveur. Veuillez réessayer.');
         }
-    } catch (error) {
-        console.error('Erreur lors du chargement des quiz:', error);
-        this.showError('Erreur de connexion au serveur. Veuillez réessayer.');
     }
-}
+
     renderQuizzes() {
         const quizList = document.getElementById('quiz-list');
-        if (!quizList) return;
+        if (!quizList) {
+            console.error("Element #quiz-list non trouvé dans le DOM");
+            return;
+        }
         
+        console.log("Rendu des quizs dans l'interface");
         quizList.innerHTML = '';
 
         if (this.quizzes.length === 0) {
@@ -110,7 +125,7 @@ async loadQuizzes() {
 
         this.quizzes.forEach(quiz => {
             const isFree = quiz.free;
-            const hasAccess = isFree || window.auth.isPremium();
+            const hasAccess = isFree || (window.auth && window.auth.isPremium());
             
             const quizCard = document.createElement('div');
             quizCard.className = 'col-md-6 mb-4';
@@ -150,9 +165,11 @@ async loadQuizzes() {
                 const quizId = e.target.getAttribute('data-quiz-id');
                 const quiz = this.quizzes.find(q => q._id === quizId);
                 
-                if (!quiz.free && !window.auth.isPremium()) {
+                if (!quiz.free && window.auth && !window.auth.isPremium()) {
                     // Rediriger vers l'abonnement
-                    window.payment.initiatePayment();
+                    if (window.payment && typeof window.payment.initiatePayment === 'function') {
+                        window.payment.initiatePayment();
+                    }
                 } else {
                     this.startQuiz(quizId);
                 }
@@ -185,8 +202,11 @@ async loadQuizzes() {
                 this.currentQuestionIndex = 0;
 
                 // Afficher l'interface du quiz
-                document.getElementById('quiz-section').style.display = 'none';
-                document.getElementById('quiz-interface').style.display = 'block';
+                const quizSection = document.getElementById('quiz-section');
+                const quizInterface = document.getElementById('quiz-interface');
+                
+                if (quizSection) quizSection.style.display = 'none';
+                if (quizInterface) quizInterface.style.display = 'block';
 
                 // Initialiser le quiz
                 document.getElementById('quiz-title').textContent = this.currentQuiz.title;
@@ -365,7 +385,7 @@ async loadQuizzes() {
             `;
 
             if (!isCorrect) {
-                resultsHTML += `<p class="correct"><strong>Réponse correcte:</strong> ${correctAnswerText}</p>;`
+                resultsHTML += <p class="correct"><strong>Réponse correcte:</strong> ${correctAnswerText}</p>;
             }
 
             resultsHTML += `
@@ -404,6 +424,7 @@ async loadQuizzes() {
         `;
         
         document.getElementById('quiz-login-button').addEventListener('click', () => {
+            // Ouvrir la modale de connexion
             if (window.auth && typeof window.auth.showLoginModal === 'function') {
                 window.auth.showLoginModal();
             }
@@ -447,5 +468,6 @@ async loadQuizzes() {
 
 // Initialisation automatique quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM chargé, initialisation du module Quiz");
     window.quiz = new Quiz();
 });
