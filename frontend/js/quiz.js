@@ -32,46 +32,65 @@ export class Quiz {
         });
     }
 
-    async loadQuizzes() {
-        try {
-            const token = window.auth.getToken();
-            
-            if (!token) {
-                this.showLoginPrompt();
-                return;
-            }
-
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            const headers = { 'Authorization': `Bearer ${token}` };
-            
-            const response = await fetch(`${API_BASE_URL}/api/quiz`, { headers });
-            
-            if (response.status === 401) {
-                console.warn('Token expiré, déconnexion...');
-                window.auth.logout();
-                this.showLoginPrompt();
-                return;
-            }
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                this.quizzes = data.quizzes;
-                this.renderQuizzes();
-            } else {
-                console.error('Failed to load quizzes:', data.message);
-                this.showError('Erreur lors du chargement des quizzes: ' + data.message);
-            }
-        } catch (error) {
-            console.error('Error loading quizzes:', error);
-            this.showError('Erreur lors du chargement des quizzes');
+    // Dans js/quiz.js - Modifiez la méthode loadQuizzes
+async loadQuizzes() {
+    try {
+        console.log('Tentative de chargement des quiz...');
+        
+        // Vérifier l'authentification
+        if (!window.auth || !window.auth.isAuthenticated()) {
+            console.log('Utilisateur non authentifié, affichage de l\'invite de connexion');
+            this.showLoginPrompt();
+            return;
         }
-    }
 
+        const token = window.auth.getToken();
+        
+        if (!token) {
+            console.log('Token non disponible');
+            this.showLoginPrompt();
+            return;
+        }
+
+        const API_BASE_URL = await this.getActiveAPIUrl();
+        console.log('Chargement depuis:', API_BASE_URL);
+        
+        const response = await fetch(`${API_BASE_URL}/api/quiz`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        // Gestion spécifique des erreurs 401
+        if (response.status === 401) {
+            console.warn('Token expiré, déconnexion...');
+            if (window.auth && typeof window.auth.logout === 'function') {
+                window.auth.logout();
+            }
+            this.showLoginPrompt();
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Données reçues:', data);
+
+        if (data.success) {
+            this.quizzes = data.quizzes;
+            this.renderQuizzes();
+        } else {
+            console.error('Échec du chargement des quiz:', data.message);
+            this.showError('Erreur lors du chargement des quizzes: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des quiz:', error);
+        this.showError('Erreur de connexion au serveur. Veuillez réessayer.');
+    }
+}
     renderQuizzes() {
         const quizList = document.getElementById('quiz-list');
         if (!quizList) return;

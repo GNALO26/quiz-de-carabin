@@ -12,24 +12,78 @@ export class Auth {
         this.setupEventListeners();
     }
 
-    setupEventListeners() {
-        // Login
-        document.getElementById('login-btn')?.addEventListener('click', () => this.login());
-        
-        // Register
-        document.getElementById('register-btn')?.addEventListener('click', () => this.register());
-        
-        // Logout
-        document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
-        
-        // Redirection vers la page de mot de passe oublié
-        document.querySelectorAll('.forgot-password-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.redirectToForgotPassword();
-            });
+   //la méthode setupEventListeners
+setupEventListeners() {
+    // Login
+    document.getElementById('login-btn')?.addEventListener('click', () => this.login());
+    
+    // Register
+    document.getElementById('register-btn')?.addEventListener('click', () => this.register());
+    
+    // Logout - Gestion améliorée
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        // Supprimer les anciens écouteurs pour éviter les doublons
+        logoutBtn.replaceWith(logoutBtn.cloneNode(true));
+        document.getElementById('logout-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.logout();
         });
     }
+    
+    // History button
+    const historyBtn = document.getElementById('history-btn');
+    if (historyBtn) {
+        historyBtn.replaceWith(historyBtn.cloneNode(true));
+        document.getElementById('history-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showHistory();
+        });
+    }
+    
+    // Redirection vers la page de mot de passe oublié
+    document.querySelectorAll('.forgot-password-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.redirectToForgotPassword();
+        });
+    });
+    
+    // Initialisation des menus déroulants Bootstrap
+    this.initDropdowns();
+}
+
+// Ajoutez cette méthode pour initialiser les menus déroulants
+initDropdowns() {
+    // Initialiser tous les menus déroulants Bootstrap
+    const dropdowns = document.querySelectorAll('.dropdown-toggle');
+    dropdowns.forEach(dropdown => {
+        dropdown.addEventListener('click', function(e) {
+            e.preventDefault();
+            const dropdownMenu = this.nextElementSibling;
+            dropdownMenu.classList.toggle('show');
+        });
+    });
+    
+    // Fermer les menus déroulants en cliquant à l'extérieur
+    document.addEventListener('click', (e) => {
+        if (!e.target.matches('.dropdown-toggle') && !e.target.closest('.dropdown-menu')) {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    });
+}
+
+// Ajoutez cette méthode pour afficher l'historique
+showHistory() {
+    console.log('Affichage de l\'historique');
+    // Pour l'instant, affichons une alerte en attendant l'implémentation complète
+    alert('Fonctionnalité d\'historique à venir bientôt!');
+    
+    // Redirection vers une page d'historique si elle existe
+    // window.location.href = 'history.html';
+}
 
     // Validation du token JWT
     validateToken(token) {
@@ -267,29 +321,50 @@ export class Auth {
         return token;
     }
 
-    updateUI() {
-        const authButtons = document.getElementById('auth-buttons');
-        const userMenu = document.getElementById('user-menu');
-        const userName = document.getElementById('user-name');
-        const premiumBadge = document.getElementById('premium-badge');
+   // méthode updateUI
+updateUI() {
+    const authButtons = document.getElementById('auth-buttons');
+    const userMenu = document.getElementById('user-menu');
+    const userName = document.getElementById('user-name');
+    const premiumBadge = document.getElementById('premium-badge');
 
-        if (this.user && authButtons && userMenu && userName) {
-            authButtons.style.display = 'none';
-            userMenu.style.display = 'block';
-            userName.textContent = this.user.name;
-            
-            if (premiumBadge) {
-                if (this.isPremium() || localStorage.getItem('userIsPremium') === 'true') {
-                    premiumBadge.style.display = 'inline';
-                } else {
-                    premiumBadge.style.display = 'none';
-                }
+    console.log('Mise à jour de l\'UI - Utilisateur:', this.user);
+
+    if (this.user && authButtons && userMenu && userName) {
+        authButtons.style.display = 'none';
+        userMenu.style.display = 'block';
+        userName.textContent = this.user.name;
+        
+        // Afficher le badge premium si l'utilisateur est premium
+        if (premiumBadge) {
+            if (this.isPremium()) {
+                premiumBadge.style.display = 'inline';
+                premiumBadge.textContent = 'Premium';
+            } else {
+                premiumBadge.style.display = 'none';
             }
-        } else if (authButtons && userMenu) {
-            authButtons.style.display = 'flex';
-            userMenu.style.display = 'none';
+        }
+        
+        // Mettre à jour le statut premium dans le localStorage
+        localStorage.setItem('userIsPremium', this.isPremium() ? 'true' : 'false');
+    } else if (authButtons && userMenu) {
+        authButtons.style.display = 'flex';
+        userMenu.style.display = 'none';
+        
+        // Masquer le badge premium si déconnecté
+        if (premiumBadge) {
+            premiumBadge.style.display = 'none';
         }
     }
+    
+    // Recharger les quiz si on est sur la page quiz
+    if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+        console.log('Rechargement des quiz après mise à jour UI');
+        setTimeout(() => {
+            window.quiz.loadQuizzes();
+        }, 500);
+    }
+}
 
     hideModals() {
         const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
