@@ -55,7 +55,34 @@ const userSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }]
+  }], 
+  knownDevices: [{
+    deviceId: String,
+    deviceInfo: {
+      userAgent: String,
+      platform: String,
+      screenResolution: String,
+      timezone: String,
+      firstSeen: { type: Date, default: Date.now },
+      lastSeen: { type: Date, default: Date.now }
+    },
+    isTrusted: { type: Boolean, default: false }
+  }],
+  
+  loginHistory: [{
+    timestamp: { type: Date, default: Date.now },
+    deviceId: String,
+    deviceInfo: Object,
+    ipAddress: String,
+    success: Boolean,
+    reason: String
+  }],
+  
+  securitySettings: {
+    require2FA: { type: Boolean, default: false },
+    alertOnNewDevice: { type: Boolean, default: true },
+    maxParallelSessions: { type: Number, default: 3 }
+  }
 });
 
 // Middleware pour hasher le mot de passe avant sauvegarde
