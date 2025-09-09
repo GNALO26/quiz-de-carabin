@@ -1,70 +1,69 @@
-const express = require('express');
-const authMiddleware = require('../middleware/auth');
-const User = require('../models/User');
-const router = express.Router();
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
-// Get user profile
-router.get('/profile', authMiddleware, async (req, res) => {
-  try {
-    await req.user.populate({ 
-      path: 'quizHistory.quizId', 
-      select: 'title category' 
-    });
-
-    res.json({
-      success: true,
-      data: {
-        user: {
-          id: req.user._id,
-          name: req.user.name,
-          email: req.user.email,
-          isPremium: req.user.isPremium,
-          premiumExpiresAt: req.user.premiumExpiresAt
-        },
-        quizHistory: req.user.quizHistory
-      }
-    });
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur.' 
-    });
-  }
-});
-
-// Obtenir l'historique des quiz de l'utilisateur
-router.get('/quiz-history', authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).populate('quizHistory.quizId');
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6
+  },
+  isPremium: {
+    type: Boolean,
+    default: false
+  },
+  premiumExpiresAt: {
+    type: Date,
+    default: null
+  },
+  quizHistory: [{
+    quizId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Quiz'
+    },
+    score: Number,
+    totalQuestions: Number,
+    correctAnswers: Number,
+    completedAt: {
+      type: Date,
+      default: Date.now
     }
-
-    // Formater l'historique pour l'affichage
-    const history = user.quizHistory.map(item => ({
-      quizTitle: item.quizId ? item.quizId.title : 'Quiz supprimé',
-      score: item.score,
-      totalQuestions: item.totalQuestions,
-      correctAnswers: item.correctAnswers,
-      completedAt: item.completedAt
-    }));
-
-    res.json({
-      success: true,
-      history: history.reverse() // Du plus récent au plus ancien
-    });
-  } catch (error) {
-    console.error('Erreur lors de la récupération de l\'historique:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-module.exports = router;
+// Hash du mot de passe avant sauvegarde
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Méthode pour comparer les mots de passe
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Ne PAS importer d'autres fichiers qui pourraient créer des dépendances circulaires
+// Évitez les imports comme: const auth = require('../middleware/auth');
+
+module.exports = mongoose.model('User', userSchema);

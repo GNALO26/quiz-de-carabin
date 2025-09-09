@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const mongoose = require('mongoose');
 
 const auth = async (req, res, next) => {
   console.log('Auth middleware called for:', req.method, req.originalUrl);
@@ -27,6 +27,9 @@ const auth = async (req, res, next) => {
 
     // Vérification plus tolérante du token
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: false });
+    
+    // Utilisation de mongoose.model pour éviter les dépendances circulaires
+    const User = mongoose.model('User');
     
     // Vérifier si l'utilisateur existe toujours
     const user = await User.findById(decoded.id).select('-password');
