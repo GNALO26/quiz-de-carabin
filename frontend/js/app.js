@@ -20,19 +20,15 @@ class App {
         }
         
         if (window.location.pathname.includes('quiz.html')) {
-            this.quiz = new Quiz();
+            this.quiz = new Quiz(this.auth); // Passer l'instance d'auth
         }
         
         this.checkAuthenticationStatus();
-        
-        // CORRECTION: Exposer l'application globalement
-        window.app = this;
-        console.log('Application initialisée avec succès');
     }
 
     checkAuthenticationStatus() {
         if (this.auth.isAuthenticated()) {
-            console.log('Utilisateur authentifié:', this.auth.getUser()?.email);
+            console.log('Utilisateur authentifié:', this.auth.getUser().email);
         } else {
             console.log('Utilisateur non authentifié');
         }
@@ -41,5 +37,5 @@ class App {
 
 // Démarrer l'application quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    new App();
+    window.app = new App();
 });
