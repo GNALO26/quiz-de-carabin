@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { Auth } from '.auth.js';
+import { Auth } from './auth.js';
 
 export class Quiz {
     constructor() {
