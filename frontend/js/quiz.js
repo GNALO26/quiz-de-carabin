@@ -277,7 +277,7 @@ export class Quiz {
                 <h5>Question ${index + 1}: ${question.text}</h5>
                 <p><strong>Votre réponse:</strong> ${userAnswer.map(a => question.options[a]).join(', ') || 'Aucune réponse'}</p>
                 <p><strong>Réponse correcte:</strong> ${question.correctAnswers.map(a => question.options[a]).join(', ')}</p>
-                ${question.justification ? <p><strong>Explication:</strong> ${question.justification}</p> : ''}
+                ${question.justification ? `<p><strong>Explication:</strong> ${question.justification}</p>` : ''}
             `;
             
             resultsContent.appendChild(questionElement);
