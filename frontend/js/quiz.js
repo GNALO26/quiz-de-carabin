@@ -1,5 +1,4 @@
 import { CONFIG } from './config.js';
-import { Auth } from './auth.js';
 
 export class Quiz {
     constructor() {
@@ -15,9 +14,15 @@ export class Quiz {
 
     init() {
         console.log("Initialisation du module Quiz");
-        
         this.setupEventListeners();
-        this.loadQuizzes();
+        
+        // Attendre que l'authentification soit initialisée
+        if (window.app && window.app.auth) {
+            this.loadQuizzes();
+        } else {
+            // Si l'app n'est pas encore initialisée, attendre un peu
+            setTimeout(() => this.loadQuizzes(), 1000);
+        }
     }
 
     setupEventListeners() {
@@ -38,19 +43,20 @@ export class Quiz {
         // Afficher le loader
         this.showLoader();
         
-        // Vérifier si l'utilisateur est authentifié
+        // Récupérer le token directement du localStorage
         const token = localStorage.getItem('quizToken');
         if (!token) {
-            console.log('Utilisateur non authentifié');
+            console.log('Token non disponible');
             this.showLoginPrompt();
             return;
         }
 
         try {
-            const API_BASE_URL = CONFIG.API_BASE_URL;
+            const API_BASE_URL = await this.getActiveAPIUrl();
             const response = await fetch(`${API_BASE_URL}/api/quiz`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
             });
 
@@ -64,7 +70,7 @@ export class Quiz {
 
             if (response.ok) {
                 const data = await response.json();
-                this.quizzes = data.quizzes || [];
+                this.quizzes = data.quizzes || data.data || [];
                 this.displayQuizzes();
             } else {
                 console.error('Erreur lors du chargement des quizs:', response.status);
@@ -86,7 +92,7 @@ export class Quiz {
         // Cacher le loader
         this.hideLoader();
         
-        console.log("Rendu des quizs dans l'interface");
+        console.log("Rendu des quizs dans l'interface", this.quizzes);
         quizList.innerHTML = '';
 
         if (this.quizzes.length === 0) {
@@ -100,11 +106,9 @@ export class Quiz {
             return;
         }
 
-        const user = JSON.parse(localStorage.getItem('quizUser') || 'null');
-
         this.quizzes.forEach(quiz => {
             const isFree = quiz.free || false;
-            const hasAccess = isFree || (user && user.isPremium);
+            const hasAccess = isFree || (window.app && window.app.auth && window.app.auth.isPremium());
             
             const quizCard = document.createElement('div');
             quizCard.className = 'col-md-4 mb-4';
@@ -146,10 +150,9 @@ export class Quiz {
                 
                 if (!quiz) return;
                 
-                const user = JSON.parse(localStorage.getItem('quizUser') || 'null');
-                if (!quiz.free && (!user || !user.isPremium)) {
+                if (!quiz.free && window.app.auth && !window.app.auth.isPremium()) {
                     // Rediriger vers l'abonnement
-                    if (window.app && window.app.payment && typeof window.app.payment.initiatePayment === 'function') {
+                    if (window.app.payment && typeof window.app.payment.initiatePayment === 'function') {
                         window.app.payment.initiatePayment();
                     }
                 } else {
@@ -201,7 +204,7 @@ export class Quiz {
         `;
         
         document.getElementById('quiz-login-button').addEventListener('click', () => {
-            if (window.app && window.app.auth && typeof window.app.auth.showLoginModal === 'function') {
+            if (window.app.auth && typeof window.app.auth.showLoginModal === 'function') {
                 window.app.auth.showLoginModal();
             }
         });
@@ -226,6 +229,23 @@ export class Quiz {
         `;
     }
 
+    async getActiveAPIUrl() {
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
+                method: 'GET',
+                cache: 'no-cache'
+            });
+            
+            if (response.ok) {
+                return CONFIG.API_BASE_URL;
+            }
+        } catch (error) {
+            console.warn('URL principale inaccessible, tentative avec URL de secours:', error);
+        }
+        
+        return CONFIG.API_BACKUP_URL;
+    }
+
     async startQuiz(quizId) {
         try {
             const token = localStorage.getItem('quizToken');
@@ -235,7 +255,7 @@ export class Quiz {
                 return;
             }
 
-            const API_BASE_URL = CONFIG.API_BASE_URL;
+            const API_BASE_URL = await this.getActiveAPIUrl();
             
             const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}`, {
                 headers: {
@@ -246,7 +266,7 @@ export class Quiz {
             const data = await response.json();
 
             if (data.success) {
-                this.currentQuiz = data.quiz;
+                this.currentQuiz = data.quiz || data.data;
                 this.userAnswers = new Array(this.currentQuiz.questions.length).fill(null);
                 this.currentQuestionIndex = 0;
 
@@ -269,7 +289,6 @@ export class Quiz {
             alert('Erreur lors du chargement du quiz');
         }
     }
-
 
     showQuestion(index) {
         if (!this.currentQuiz || index < 0 || index >= this.currentQuiz.questions.length) return;
@@ -354,8 +373,8 @@ export class Quiz {
         clearInterval(this.timerInterval);
         
         try {
-            const token = window.app.auth.getToken();
-            const API_BASE_URL = CONFIG.API_BASE_URL;
+            const token = localStorage.getItem('quizToken');
+            const API_BASE_URL = await this.getActiveAPIUrl();
             
             const response = await fetch(`${API_BASE_URL}/api/quiz/${this.currentQuiz._id}/submit`, {
                 method: 'POST',
@@ -425,7 +444,7 @@ export class Quiz {
             `;
 
             if (!isCorrect) {
-                resultsHTML += `<p class="correct"><strong>Réponse correcte:</strong> ${question.options[correctAnswer]}</p>`;
+                resultsHTML += <p class="correct"><strong>Réponse correcte:</strong> ${question.options[correctAnswer]}</p>;
             }
 
             resultsHTML += `

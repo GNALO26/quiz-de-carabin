@@ -1,4 +1,20 @@
 const express = require('express');
+const {
+  getAllQuizzes,
+  getQuiz,
+  submitQuiz,
+  getQuizHistory
+} = require('../controllers/quizController');
+const auth = require('../middleware/auth');
+const router = express.Router();
+
+router.get('/', auth, getAllQuizzes);
+router.get('/:id', auth, getQuiz);
+router.post('/:id/submit', auth, submitQuiz);
+router.get('/history/user', auth, getQuizHistory);
+
+module.exports = router;
+/*const express = require('express');
 const Quiz = require('../models/Quiz');
 const auth = require('../middleware/auth');
 const router = express.Router();
@@ -107,4 +123,4 @@ router.get('/history/user', auth, async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router;*/
