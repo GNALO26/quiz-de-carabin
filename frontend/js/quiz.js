@@ -26,6 +26,21 @@ export class Quiz {
     }
 
     setupEventListeners() {
+        // Bouton précédent
+        document.getElementById('prev-btn')?.addEventListener('click', () => {
+            this.showQuestion(this.currentQuestionIndex - 1);
+        });
+        
+        // Bouton suivant
+        document.getElementById('next-btn')?.addEventListener('click', () => {
+            this.showQuestion(this.currentQuestionIndex + 1);
+        });
+        
+        // Bouton soumettre
+        document.getElementById('submit-quiz')?.addEventListener('click', () => {
+            this.submitQuiz();
+        });
+        
         // Bouton de retour aux quiz
         document.getElementById('back-to-quizzes')?.addEventListener('click', () => {
             this.showQuizList();
@@ -444,7 +459,7 @@ export class Quiz {
             `;
 
             if (!isCorrect) {
-                resultsHTML += `<p class="correct"><strong>Réponse correcte:</strong> ${question.options[correctAnswer]}</p>`;
+                resultsHTML += <p class="correct"><strong>Réponse correcte:</strong> ${question.options[correctAnswer]}</p>;
             }
 
             resultsHTML += `
