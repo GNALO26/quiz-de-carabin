@@ -70,7 +70,7 @@ export class Quiz {
             const API_BASE_URL = await this.getActiveAPIUrl();
             const response = await fetch(`${API_BASE_URL}/api/quiz`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': ` ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -316,15 +316,26 @@ export class Quiz {
         question.options.forEach((option, i) => {
             const isSelected = this.userAnswers[index] === i;
             optionsHTML += `
-                <div class="option ${isSelected ? 'selected' : ''}" data-option="${i}">
-                    ${option}
+                <div class="form-check mb-2 option-item">
+                    <input class="form-check-input" type="radio" name="question-${index}" 
+                           id="option-${index}-${i}" value="${i}" ${isSelected ? 'checked' : ''}>
+                    <label class="form-check-label w-100" for="option-${index}-${i}">
+                        ${option}
+                    </label>
                 </div>
             `;
         });
 
         questionContainer.innerHTML = `
-            <div class="question">Question ${index + 1}/${this.currentQuiz.questions.length}: ${question.text}</div>
-            <div class="options">${optionsHTML}</div>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Question ${index + 1}/${this.currentQuiz.questions.length}</h5>
+                    <p class="card-text">${question.text}</p>
+                    <div class="options-container mt-3">
+                        ${optionsHTML}
+                    </div>
+                </div>
+            </div>
         `;
 
         // Mise à jour de la navigation
@@ -341,20 +352,13 @@ export class Quiz {
     }
 
     addOptionEventListeners(questionIndex) {
-        document.querySelectorAll('.option').forEach(option => {
-            option.addEventListener('click', (e) => {
-                const optionIndex = parseInt(option.getAttribute('data-option'));
-                
-                // Désélectionner toutes les options
-                document.querySelectorAll('.option').forEach(opt => {
-                    opt.classList.remove('selected');
-                });
-                
-                // Sélectionner l'option cliquée
-                option.classList.add('selected');
-                
-                // Enregistrer la réponse
-                this.userAnswers[questionIndex] = optionIndex;
+        const optionInputs = document.querySelectorAll(input[name="question-${questionIndex}"]);
+        
+        optionInputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                const selectedValue = parseInt(e.target.value);
+                this.userAnswers[questionIndex] = selectedValue;
+                console.log('Réponse sélectionnée:', selectedValue, 'pour la question', questionIndex);
             });
         });
     }
@@ -382,10 +386,29 @@ export class Quiz {
         const seconds = this.timeLeft % 60;
         document.getElementById('quiz-timer').textContent = 
             `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Changement de couleur quand le temps est critique
+        if (this.timeLeft < 60) {
+            document.getElementById('quiz-timer').classList.add('text-danger');
+        } else {
+            document.getElementById('quiz-timer').classList.remove('text-danger');
+        }
     }
 
     async submitQuiz() {
         clearInterval(this.timerInterval);
+        
+        // Vérifier si toutes les questions ont été répondues
+        const unansweredQuestions = this.userAnswers.filter(answer => answer === null).length;
+        
+        if (unansweredQuestions > 0) {
+            const confirmSubmit = confirm(`Vous n'avez pas répondu à ${unansweredQuestions} question(s). Êtes-vous sûr de vouloir soumettre le quiz ?`);
+            if (!confirmSubmit) {
+                // Redémarrer le timer si l'utilisateur annule
+                this.startTimer(this.timeLeft);
+                return;
+            }
+        }
         
         try {
             const token = localStorage.getItem('quizToken');
@@ -405,11 +428,12 @@ export class Quiz {
             if (data.success) {
                 this.showResults(data);
             } else {
-                alert('Erreur lors de la soumission du quiz: ' + data.message);
+                console.error('Erreur détaillée:', data);
+                alert('Erreur lors de la soumission du quiz: ' + (data.message || 'Erreur inconnue'));
             }
         } catch (error) {
             console.error('Error submitting quiz:', error);
-            alert('Erreur lors de la soumission du quiz');
+            alert('Erreur lors de la soumission du quiz: ' + error.message);
         }
     }
 
@@ -417,57 +441,63 @@ export class Quiz {
         const resultsContent = document.getElementById('results-content');
         const scorePercent = Math.round((data.score / data.totalQuestions) * 100);
         
-        // Mettre à jour le score
-        document.getElementById('score-value').textContent = scorePercent;
+        let resultsHTML = `
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Résultats du Quiz</h3>
+                    <div class="display-4 fw-bold ${scorePercent >= 70 ? 'text-success' : scorePercent >= 50 ? 'text-warning' : 'text-danger'}">
+                        ${scorePercent}%
+                    </div>
+                    <p class="fs-5">${data.score} bonnes réponses sur ${data.totalQuestions} questions</p>
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar ${scorePercent >= 70 ? 'bg-success' : scorePercent >= 50 ? 'bg-warning' : 'bg-danger'}" 
+                             role="progressbar" style="width: ${scorePercent}%;" 
+                             aria-valuenow="${scorePercent}" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
         
-        // Déterminer le message en fonction du score
-        let scoreText = '';
-        let scoreDescription = '';
-        
-        if (scorePercent >= 80) {
-            scoreText = 'Excellent!';
-            scoreDescription = 'Vous maîtrisez parfaitement ce sujet!';
-        } else if (scorePercent >= 60) {
-            scoreText = 'Bon travail!';
-            scoreDescription = 'Vous avez une bonne compréhension de ce sujet.';
-        } else if (scorePercent >= 40) {
-            scoreText = 'Pas mal!';
-            scoreDescription = 'Quelques révisions vous aideront à améliorer votre score.';
-        } else {
-            scoreText = 'À améliorer';
-            scoreDescription = 'Continuez à étudier, vous vous améliorerez!';
-        }
-        
-        document.getElementById('score-text').textContent = scoreText;
-        document.getElementById('score-description').textContent = scoreDescription;
-        
-        // Construction du HTML des résultats
-        let resultsHTML = '';
-        
+        // Construction du HTML des résultats détaillés
         this.currentQuiz.questions.forEach((question, index) => {
             const userAnswer = this.userAnswers[index];
-            const correctAnswer = question.correctAnswers[0]; // Suppose une seule réponse correcte
-            const isCorrect = userAnswer === correctAnswer;
+            const isCorrect = Array.isArray(question.correctAnswers) 
+                ? question.correctAnswers.includes(userAnswer)
+                : userAnswer === question.correctAnswers;
             
             resultsHTML += `
-                <div class="mb-4 p-3 ${isCorrect ? 'border-success' : 'border-danger'} border rounded">
-                    <h5>Question ${index + 1}: ${question.text}</h5>
-                    <p class="${isCorrect ? 'correct' : 'incorrect'}">
-                        <strong>Votre réponse:</strong> ${userAnswer !== null ? question.options[userAnswer] : 'Aucune réponse'}
-                        ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
-                    </p>
+                <div class="card mb-3 ${isCorrect ? 'border-success' : 'border-danger'}">
+                    <div class="card-header ${isCorrect ? 'bg-success text-white' : 'bg-danger text-white'}">
+                        Question ${index + 1}: ${isCorrect ? 'Correct' : 'Incorrect'}
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">${question.text}</h5>
+                        
+                        <p class="${isCorrect ? 'text-success' : 'text-danger'}">
+                            <strong>Votre réponse:</strong> 
+                            ${userAnswer !== null ? question.options[userAnswer] : 'Aucune réponse'}
+                        </p>
             `;
 
             if (!isCorrect) {
-                resultsHTML += `<p class="correct"><strong>Réponse correcte:</strong> ${question.options[correctAnswer]}</p>`;
+                resultsHTML += `
+                    <p class="text-success">
+                        <strong>Réponse(s) correcte(s):</strong> 
+                        ${Array.isArray(question.correctAnswers) 
+                            ? question.correctAnswers.map(idx => question.options[idx]).join(', ') 
+                            : question.options[question.correctAnswers]}
+                    </p>`;
             }
 
-            resultsHTML += `
-                    <div class="justification">
+            if (question.justification) {
+                resultsHTML += `
+                    <div class="alert alert-info mt-3">
                         <strong>Explication:</strong> ${question.justification}
-                    </div>
-                </div>
-            `;
+                    </div>`;
+            }
+
+            resultsHTML += `</div></div>`;
         });
 
         resultsContent.innerHTML = resultsHTML;
@@ -475,12 +505,20 @@ export class Quiz {
         // Afficher les résultats
         document.getElementById('question-container').style.display = 'none';
         document.getElementById('results-container').style.display = 'block';
+        
+        // Masquer les boutons de navigation
+        document.getElementById('prev-btn').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('submit-quiz').style.display = 'none';
     }
 
     showQuizList() {
         document.getElementById('quiz-interface').style.display = 'none';
         document.getElementById('quiz-section').style.display = 'block';
         document.getElementById('results-container').style.display = 'none';
+        
+        // Réinitialiser le timer
+        document.getElementById('quiz-timer').classList.remove('text-danger');
         
         // Recharger les quiz pour mettre à jour les statuts
         this.loadQuizzes();
