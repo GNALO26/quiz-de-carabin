@@ -15,14 +15,7 @@ export class Quiz {
     init() {
         console.log("Initialisation du module Quiz");
         this.setupEventListeners();
-        
-        // Attendre que l'authentification soit initialisée
-        if (window.app && window.app.auth) {
-            this.loadQuizzes();
-        } else {
-            // Si l'app n'est pas encore initialisée, attendre un peu
-            setTimeout(() => this.loadQuizzes(), 1000);
-        }
+        this.loadQuizzes();
     }
 
     setupEventListeners() {
@@ -58,30 +51,13 @@ export class Quiz {
         // Afficher le loader
         this.showLoader();
         
-        // Récupérer le token directement du localStorage
-        const token = localStorage.getItem('quizToken');
-        if (!token) {
-            console.log('Token non disponible');
-            this.showLoginPrompt();
-            return;
-        }
-
         try {
             const API_BASE_URL = await this.getActiveAPIUrl();
             const response = await fetch(`${API_BASE_URL}/api/quiz`, {
                 headers: {
-                    'Authorization': ` ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
-
-            if (response.status === 401) {
-                console.log('Token expiré ou invalide');
-                localStorage.removeItem('quizToken');
-                localStorage.removeItem('quizUser');
-                this.showLoginPrompt();
-                return;
-            }
 
             if (response.ok) {
                 const data = await response.json();
@@ -123,7 +99,6 @@ export class Quiz {
 
         this.quizzes.forEach(quiz => {
             const isFree = quiz.free || false;
-            const hasAccess = isFree || (window.app && window.app.auth && window.app.auth.isPremium());
             
             const quizCard = document.createElement('div');
             quizCard.className = 'col-md-4 mb-4';
@@ -142,12 +117,9 @@ export class Quiz {
                     </div>
                     <div class="card-footer bg-white">
                         <button class="btn ${isFree ? 'btn-outline-primary' : 'btn-primary'} w-100 start-quiz" 
-                                data-quiz-id="${quiz._id}" ${!hasAccess && !isFree ? 'disabled' : ''}>
-                            ${isFree ? 'Commencer le quiz' : (hasAccess ? 'Commencer le quiz' : 'Accéder (5.000 XOF)')}
+                                data-quiz-id="${quiz._id}">
+                            ${isFree ? 'Commencer le quiz' : 'Accéder (5.000 XOF)'}
                         </button>
-                        ${!hasAccess && !isFree ? `
-                            <small class="text-muted d-block mt-2">Abonnement premium requis</small>
-                        ` : ''}
                     </div>
                 </div>
             `;
@@ -165,7 +137,7 @@ export class Quiz {
                 
                 if (!quiz) return;
                 
-                if (!quiz.free && window.app.auth && !window.app.auth.isPremium()) {
+                if (!quiz.free) {
                     // Rediriger vers l'abonnement
                     if (window.app.payment && typeof window.app.payment.initiatePayment === 'function') {
                         window.app.payment.initiatePayment();
@@ -198,31 +170,6 @@ export class Quiz {
         if (loader) {
             loader.style.display = 'none';
         }
-    }
-
-    showLoginPrompt() {
-        const quizList = document.getElementById('quiz-list');
-        if (!quizList) return;
-        
-        this.hideLoader();
-        
-        quizList.innerHTML = `
-            <div class="col-12 text-center">
-                <div class="alert alert-warning">
-                    <h4>Connexion requise</h4>
-                    <p>Vous devez vous connecter pour accéder aux quiz.</p>
-                    <button class="btn btn-primary mt-2" id="quiz-login-button">
-                        Se connecter
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.getElementById('quiz-login-button').addEventListener('click', () => {
-            if (window.app.auth && typeof window.app.auth.showLoginModal === 'function') {
-                window.app.auth.showLoginModal();
-            }
-        });
     }
 
     showError(message) {
@@ -263,20 +210,9 @@ export class Quiz {
 
     async startQuiz(quizId) {
         try {
-            const token = localStorage.getItem('quizToken');
-            
-            if (!token) {
-                alert('Vous devez vous connecter pour accéder à ce quiz.');
-                return;
-            }
-
             const API_BASE_URL = await this.getActiveAPIUrl();
             
-            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}`);
             
             const data = await response.json();
 
@@ -316,24 +252,21 @@ export class Quiz {
         question.options.forEach((option, i) => {
             const isSelected = this.userAnswers[index] === i;
             optionsHTML += `
-                <div class="form-check mb-2 option-item">
-                    <input class="form-check-input" type="radio" name="question-${index}" 
-                           id="option-${index}-${i}" value="${i}" ${isSelected ? 'checked' : ''}>
-                    <label class="form-check-label w-100" for="option-${index}-${i}">
-                        ${option}
-                    </label>
+                <div class="option ${isSelected ? 'selected' : ''}" data-option="${i}">
+                    <div class="option-content">
+                        <span class="option-letter">${String.fromCharCode(65 + i)}</span>
+                        <span class="option-text">${option}</span>
+                    </div>
                 </div>
             `;
         });
 
         questionContainer.innerHTML = `
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Question ${index + 1}/${this.currentQuiz.questions.length}</h5>
-                    <p class="card-text">${question.text}</p>
-                    <div class="options-container mt-3">
-                        ${optionsHTML}
-                    </div>
+            <div class="question-container">
+                <h4 class="question-title">Question ${index + 1}/${this.currentQuiz.questions.length}</h4>
+                <p class="question-text">${question.text}</p>
+                <div class="options-list">
+                    ${optionsHTML}
                 </div>
             </div>
         `;
@@ -352,13 +285,18 @@ export class Quiz {
     }
 
     addOptionEventListeners(questionIndex) {
-        const optionInputs = document.querySelectorAll(input[name="question-${questionIndex}"]);
-        
-        optionInputs.forEach(input => {
-            input.addEventListener('change', (e) => {
-                const selectedValue = parseInt(e.target.value);
-                this.userAnswers[questionIndex] = selectedValue;
-                console.log('Réponse sélectionnée:', selectedValue, 'pour la question', questionIndex);
+        document.querySelectorAll('.option').forEach(option => {
+            option.addEventListener('click', (e) => {
+                const optionIndex = parseInt(option.getAttribute('data-option'));
+                
+                // Enregistrer la réponse
+                this.userAnswers[questionIndex] = optionIndex;
+                
+                // Mettre à jour l'apparence des options
+                document.querySelectorAll('.option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                option.classList.add('selected');
             });
         });
     }
@@ -398,27 +336,13 @@ export class Quiz {
     async submitQuiz() {
         clearInterval(this.timerInterval);
         
-        // Vérifier si toutes les questions ont été répondues
-        const unansweredQuestions = this.userAnswers.filter(answer => answer === null).length;
-        
-        if (unansweredQuestions > 0) {
-            const confirmSubmit = confirm(`Vous n'avez pas répondu à ${unansweredQuestions} question(s). Êtes-vous sûr de vouloir soumettre le quiz ?`);
-            if (!confirmSubmit) {
-                // Redémarrer le timer si l'utilisateur annule
-                this.startTimer(this.timeLeft);
-                return;
-            }
-        }
-        
         try {
-            const token = localStorage.getItem('quizToken');
             const API_BASE_URL = await this.getActiveAPIUrl();
             
             const response = await fetch(`${API_BASE_URL}/api/quiz/${this.currentQuiz._id}/submit`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ answers: this.userAnswers })
             });
@@ -449,12 +373,6 @@ export class Quiz {
                         ${scorePercent}%
                     </div>
                     <p class="fs-5">${data.score} bonnes réponses sur ${data.totalQuestions} questions</p>
-                    <div class="progress mb-3" style="height: 20px;">
-                        <div class="progress-bar ${scorePercent >= 70 ? 'bg-success' : scorePercent >= 50 ? 'bg-warning' : 'bg-danger'}" 
-                             role="progressbar" style="width: ${scorePercent}%;" 
-                             aria-valuenow="${scorePercent}" aria-valuemin="0" aria-valuemax="100">
-                        </div>
-                    </div>
                 </div>
             </div>
         `;
