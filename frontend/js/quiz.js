@@ -5,7 +5,7 @@ export class Quiz {
         this.quizzes = [];
         this.currentQuiz = null;
         this.currentQuestionIndex = 0;
-        this.userAnswers = []; // Maintenant un tableau de tableaux pour les réponses multiples
+        this.userAnswers = []; // Ce sera un tableau de tableaux (une entrée par question, chaque entrée est un tableau d'indices de réponses choisies)
         this.timerInterval = null;
         this.timeLeft = 0;
         
@@ -278,6 +278,10 @@ export class Quiz {
                 }
             });
             
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
             const data = await response.json();
 
             if (data.success) {
@@ -286,23 +290,24 @@ export class Quiz {
                 this.userAnswers = new Array(this.currentQuiz.questions.length).fill().map(() => []);
                 this.currentQuestionIndex = 0;
 
-                // Cacher la section des quizs et afficher uniquement le quiz
-                document.getElementById('quiz-section').style.display = 'none';
-                document.getElementById('quiz-interface').style.display = 'block';
-                // Masquer également le header et le footer si nécessaire
-                document.querySelector('nav').style.display = 'none';
-                document.querySelector('footer').style.display = 'none';
+                // Afficher l'interface du quiz
+                const quizSection = document.getElementById('quiz-section');
+                const quizInterface = document.getElementById('quiz-interface');
+                
+                if (quizSection) quizSection.style.display = 'none';
+                if (quizInterface) quizInterface.style.display = 'block';
 
                 // Initialiser le quiz
                 document.getElementById('quiz-title').textContent = this.currentQuiz.title;
                 this.showQuestion(0);
                 this.startTimer(this.currentQuiz.duration * 60);
             } else {
-                alert('Erreur: ' + data.message);
+                throw new Error(data.message || 'Erreur inconnue');
             }
         } catch (error) {
             console.error('Error starting quiz:', error);
-            alert('Erreur lors du chargement du quiz');
+            alert('Erreur lors du chargement du quiz: ' + error.message);
+            this.showQuizList();
         }
     }
 
@@ -317,8 +322,8 @@ export class Quiz {
         question.options.forEach((option, i) => {
             const isSelected = this.userAnswers[index].includes(i);
             optionsHTML += `
-                <div class="option" data-option="${i}">
-                    <input type="checkbox" id="option-${i}" ${isSelected ? 'checked' : ''}>
+                <div class="option">
+                    <input type="checkbox" id="option-${i}" data-index="${i}" ${isSelected ? 'checked' : ''}>
                     <label for="option-${i}">${option}</label>
                 </div>
             `;
@@ -345,31 +350,39 @@ export class Quiz {
     addOptionEventListeners(questionIndex) {
         document.querySelectorAll('.option input[type="checkbox"]').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
-                const optionIndex = parseInt(checkbox.id.split('-')[1]);
+                const optionIndex = parseInt(e.target.getAttribute('data-index'));
                 
                 if (e.target.checked) {
-                    // Ajouter l'index de l'option au tableau des réponses
+                    // Ajouter l'index de l'option si coché
                     if (!this.userAnswers[questionIndex].includes(optionIndex)) {
                         this.userAnswers[questionIndex].push(optionIndex);
                     }
                 } else {
-                    // Retirer l'index de l'option
+                    // Retirer l'index de l'option si décoché
                     this.userAnswers[questionIndex] = this.userAnswers[questionIndex].filter(idx => idx !== optionIndex);
                 }
             });
         });
     }
 
+    nextQuestion() {
+        this.saveCurrentAnswers();
+        if (this.currentQuestionIndex < this.currentQuiz.questions.length - 1) {
+            this.showQuestion(this.currentQuestionIndex + 1);
+        }
+    }
+
     prevQuestion() {
+        this.saveCurrentAnswers();
         if (this.currentQuestionIndex > 0) {
             this.showQuestion(this.currentQuestionIndex - 1);
         }
     }
 
-    nextQuestion() {
-        if (this.currentQuestionIndex < this.currentQuiz.questions.length - 1) {
-            this.showQuestion(this.currentQuestionIndex + 1);
-        }
+    saveCurrentAnswers() {
+        // Cette fonction est appelée lors du changement de question pour s'assurer que les réponses sont bien enregistrées
+        // Mais avec les checkboxes, nous enregistrons en temps réel, donc cette fonction peut être vide
+        // Ou on peut l'utiliser pour forcer la sauvegarde si nécessaire
     }
 
     startTimer(seconds) {
@@ -410,9 +423,16 @@ export class Quiz {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ answers: this.userAnswers })
+                body: JSON.stringify({ 
+                    answers: this.userAnswers,
+                    timeSpent: (this.currentQuiz.duration * 60) - this.timeLeft
+                })
             });
             
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
             const data = await response.json();
             
             if (data.success) {
@@ -422,7 +442,7 @@ export class Quiz {
             }
         } catch (error) {
             console.error('Error submitting quiz:', error);
-            alert('Erreur lors de la soumission du quiz');
+            alert('Erreur lors de la soumission du quiz: ' + error.message);
         }
     }
 
@@ -458,8 +478,8 @@ export class Quiz {
         let resultsHTML = '';
         
         this.currentQuiz.questions.forEach((question, index) => {
-            const userAnswer = this.userAnswers[index];
-            const correctAnswers = question.correctAnswers; // Maintenant un tableau
+            const userAnswer = this.userAnswers[index] || [];
+            const correctAnswers = question.correctAnswers;
             const isCorrect = userAnswer.length === correctAnswers.length && 
                               userAnswer.every(val => correctAnswers.includes(val));
             
@@ -493,10 +513,6 @@ export class Quiz {
     }
 
     showQuizList() {
-        // Réafficher le header et le footer
-        document.querySelector('nav').style.display = 'block';
-        document.querySelector('footer').style.display = 'block';
-
         document.getElementById('quiz-interface').style.display = 'none';
         document.getElementById('quiz-section').style.display = 'block';
         document.getElementById('results-container').style.display = 'none';
@@ -505,14 +521,3 @@ export class Quiz {
         this.loadQuizzes();
     }
 }
-
-// Initialisation différée pour s'assurer que l'application est chargée
-setTimeout(() => {
-    if (window.location.pathname.includes('quiz.html') || 
-        window.location.pathname.includes('index.html') || 
-        window.location.pathname === '/' || 
-        window.location.pathname.endsWith('.html') === false) {
-        console.log("Initialisation du module Quiz");
-        window.quiz = new Quiz();
-    }
-}, 500);
