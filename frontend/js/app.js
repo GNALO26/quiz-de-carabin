@@ -9,10 +9,14 @@ class App {
         this.auth = new Auth();
         this.payment = null;
         this.quiz = null;
-        this.init();
+        
+        // Initialisation différée pour éviter les conflits
+        setTimeout(() => this.init(), 100);
     }
 
     init() {
+        console.log("Initialisation de l'application");
+        
         // Initialiser les modules en fonction de la page
         if (window.location.pathname.includes('quiz.html') || 
             window.location.pathname.includes('index.html')) {
@@ -24,28 +28,6 @@ class App {
         }
         
         this.checkAuthenticationStatus();
-        this.setupGlobalEventListeners();
-    }
-
-    setupGlobalEventListeners() {
-        // Gestionnaire pour les liens de navigation
-        document.addEventListener('click', (e) => {
-            const link = e.target.closest('a');
-            if (link && link.href && link.href.includes('#')) {
-                e.preventDefault();
-                const targetId = link.getAttribute('href').substring(1);
-                const targetElement = document.getElementById(targetId);
-                if (targetElement) {
-                    targetElement.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-        });
-        
-        // Gestionnaire pour le bouton d'historique
-        document.getElementById('history-btn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.showHistory();
-        });
     }
 
     checkAuthenticationStatus() {
@@ -56,19 +38,12 @@ class App {
             console.log('Utilisateur non authentifié');
         }
     }
-
-    showHistory() {
-        if (this.auth.isAuthenticated()) {
-            window.location.href = 'history.html';
-        } else {
-            this.auth.showLoginModal();
-        }
-    }
 }
 
 // Démarrer l'application quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
     window.app = new App();
+    console.log("Application initialisée");
 });
 
 // Fonction globale pour fermer le modal de connexion
