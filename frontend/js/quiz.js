@@ -15,25 +15,17 @@ export class Quiz {
     init() {
         console.log("Initialisation du module Quiz");
         this.setupEventListeners();
-        this.loadQuizzes();
+        
+        // Attendre que l'authentification soit initialisée
+        if (window.app && window.app.auth) {
+            this.loadQuizzes();
+        } else {
+            // Si l'app n'est pas encore initialisée, attendre un peu
+            setTimeout(() => this.loadQuizzes(), 1000);
+        }
     }
 
     setupEventListeners() {
-        // Bouton précédent
-        document.getElementById('prev-btn')?.addEventListener('click', () => {
-            this.showQuestion(this.currentQuestionIndex - 1);
-        });
-        
-        // Bouton suivant
-        document.getElementById('next-btn')?.addEventListener('click', () => {
-            this.showQuestion(this.currentQuestionIndex + 1);
-        });
-        
-        // Bouton soumettre
-        document.getElementById('submit-quiz')?.addEventListener('click', () => {
-            this.submitQuiz();
-        });
-        
         // Bouton de retour aux quiz
         document.getElementById('back-to-quizzes')?.addEventListener('click', () => {
             this.showQuizList();
@@ -51,13 +43,30 @@ export class Quiz {
         // Afficher le loader
         this.showLoader();
         
+        // Récupérer le token directement du localStorage
+        const token = localStorage.getItem('quizToken');
+        if (!token) {
+            console.log('Token non disponible');
+            this.showLoginPrompt();
+            return;
+        }
+
         try {
             const API_BASE_URL = await this.getActiveAPIUrl();
             const response = await fetch(`${API_BASE_URL}/api/quiz`, {
                 headers: {
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
+
+            if (response.status === 401) {
+                console.log('Token expiré ou invalide');
+                localStorage.removeItem('quizToken');
+                localStorage.removeItem('quizUser');
+                this.showLoginPrompt();
+                return;
+            }
 
             if (response.ok) {
                 const data = await response.json();
@@ -99,6 +108,7 @@ export class Quiz {
 
         this.quizzes.forEach(quiz => {
             const isFree = quiz.free || false;
+            const hasAccess = isFree || (window.app && window.app.auth && window.app.auth.isPremium());
             
             const quizCard = document.createElement('div');
             quizCard.className = 'col-md-4 mb-4';
@@ -117,9 +127,12 @@ export class Quiz {
                     </div>
                     <div class="card-footer bg-white">
                         <button class="btn ${isFree ? 'btn-outline-primary' : 'btn-primary'} w-100 start-quiz" 
-                                data-quiz-id="${quiz._id}">
-                            ${isFree ? 'Commencer le quiz' : 'Accéder (5.000 XOF)'}
+                                data-quiz-id="${quiz._id}" ${!hasAccess && !isFree ? 'disabled' : ''}>
+                            ${isFree ? 'Commencer le quiz' : (hasAccess ? 'Commencer le quiz' : 'Accéder (5.000 XOF)')}
                         </button>
+                        ${!hasAccess && !isFree ? `
+                            <small class="text-muted d-block mt-2">Abonnement premium requis</small>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -137,7 +150,7 @@ export class Quiz {
                 
                 if (!quiz) return;
                 
-                if (!quiz.free) {
+                if (!quiz.free && window.app.auth && !window.app.auth.isPremium()) {
                     // Rediriger vers l'abonnement
                     if (window.app.payment && typeof window.app.payment.initiatePayment === 'function') {
                         window.app.payment.initiatePayment();
@@ -170,6 +183,31 @@ export class Quiz {
         if (loader) {
             loader.style.display = 'none';
         }
+    }
+
+    showLoginPrompt() {
+        const quizList = document.getElementById('quiz-list');
+        if (!quizList) return;
+        
+        this.hideLoader();
+        
+        quizList.innerHTML = `
+            <div class="col-12 text-center">
+                <div class="alert alert-warning">
+                    <h4>Connexion requise</h4>
+                    <p>Vous devez vous connecter pour accéder aux quiz.</p>
+                    <button class="btn btn-primary mt-2" id="quiz-login-button">
+                        Se connecter
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('quiz-login-button').addEventListener('click', () => {
+            if (window.app.auth && typeof window.app.auth.showLoginModal === 'function') {
+                window.app.auth.showLoginModal();
+            }
+        });
     }
 
     showError(message) {
@@ -210,9 +248,20 @@ export class Quiz {
 
     async startQuiz(quizId) {
         try {
+            const token = localStorage.getItem('quizToken');
+            
+            if (!token) {
+                alert('Vous devez vous connecter pour accéder à ce quiz.');
+                return;
+            }
+
             const API_BASE_URL = await this.getActiveAPIUrl();
             
-            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}`);
+            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             
             const data = await response.json();
 
@@ -253,22 +302,14 @@ export class Quiz {
             const isSelected = this.userAnswers[index] === i;
             optionsHTML += `
                 <div class="option ${isSelected ? 'selected' : ''}" data-option="${i}">
-                    <div class="option-content">
-                        <span class="option-letter">${String.fromCharCode(65 + i)}</span>
-                        <span class="option-text">${option}</span>
-                    </div>
+                    ${option}
                 </div>
             `;
         });
 
         questionContainer.innerHTML = `
-            <div class="question-container">
-                <h4 class="question-title">Question ${index + 1}/${this.currentQuiz.questions.length}</h4>
-                <p class="question-text">${question.text}</p>
-                <div class="options-list">
-                    ${optionsHTML}
-                </div>
-            </div>
+            <div class="question">Question ${index + 1}/${this.currentQuiz.questions.length}: ${question.text}</div>
+            <div class="options">${optionsHTML}</div>
         `;
 
         // Mise à jour de la navigation
@@ -289,14 +330,16 @@ export class Quiz {
             option.addEventListener('click', (e) => {
                 const optionIndex = parseInt(option.getAttribute('data-option'));
                 
-                // Enregistrer la réponse
-                this.userAnswers[questionIndex] = optionIndex;
-                
-                // Mettre à jour l'apparence des options
+                // Désélectionner toutes les options
                 document.querySelectorAll('.option').forEach(opt => {
                     opt.classList.remove('selected');
                 });
+                
+                // Sélectionner l'option cliquée
                 option.classList.add('selected');
+                
+                // Enregistrer la réponse
+                this.userAnswers[questionIndex] = optionIndex;
             });
         });
     }
@@ -324,25 +367,20 @@ export class Quiz {
         const seconds = this.timeLeft % 60;
         document.getElementById('quiz-timer').textContent = 
             `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
-        // Changement de couleur quand le temps est critique
-        if (this.timeLeft < 60) {
-            document.getElementById('quiz-timer').classList.add('text-danger');
-        } else {
-            document.getElementById('quiz-timer').classList.remove('text-danger');
-        }
     }
 
     async submitQuiz() {
         clearInterval(this.timerInterval);
         
         try {
+            const token = localStorage.getItem('quizToken');
             const API_BASE_URL = await this.getActiveAPIUrl();
             
             const response = await fetch(`${API_BASE_URL}/api/quiz/${this.currentQuiz._id}/submit`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ answers: this.userAnswers })
             });
@@ -352,12 +390,11 @@ export class Quiz {
             if (data.success) {
                 this.showResults(data);
             } else {
-                console.error('Erreur détaillée:', data);
-                alert('Erreur lors de la soumission du quiz: ' + (data.message || 'Erreur inconnue'));
+                alert('Erreur lors de la soumission du quiz: ' + data.message);
             }
         } catch (error) {
             console.error('Error submitting quiz:', error);
-            alert('Erreur lors de la soumission du quiz: ' + error.message);
+            alert('Erreur lors de la soumission du quiz');
         }
     }
 
@@ -365,57 +402,57 @@ export class Quiz {
         const resultsContent = document.getElementById('results-content');
         const scorePercent = Math.round((data.score / data.totalQuestions) * 100);
         
-        let resultsHTML = `
-            <div class="card mb-4">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Résultats du Quiz</h3>
-                    <div class="display-4 fw-bold ${scorePercent >= 70 ? 'text-success' : scorePercent >= 50 ? 'text-warning' : 'text-danger'}">
-                        ${scorePercent}%
-                    </div>
-                    <p class="fs-5">${data.score} bonnes réponses sur ${data.totalQuestions} questions</p>
-                </div>
-            </div>
-        `;
+        // Mettre à jour le score
+        document.getElementById('score-value').textContent = scorePercent;
         
-        // Construction du HTML des résultats détaillés
+        // Déterminer le message en fonction du score
+        let scoreText = '';
+        let scoreDescription = '';
+        
+        if (scorePercent >= 80) {
+            scoreText = 'Excellent!';
+            scoreDescription = 'Vous maîtrisez parfaitement ce sujet!';
+        } else if (scorePercent >= 60) {
+            scoreText = 'Bon travail!';
+            scoreDescription = 'Vous avez une bonne compréhension de ce sujet.';
+        } else if (scorePercent >= 40) {
+            scoreText = 'Pas mal!';
+            scoreDescription = 'Quelques révisions vous aideront à améliorer votre score.';
+        } else {
+            scoreText = 'À améliorer';
+            scoreDescription = 'Continuez à étudier, vous vous améliorerez!';
+        }
+        
+        document.getElementById('score-text').textContent = scoreText;
+        document.getElementById('score-description').textContent = scoreDescription;
+        
+        // Construction du HTML des résultats
+        let resultsHTML = '';
+        
         this.currentQuiz.questions.forEach((question, index) => {
             const userAnswer = this.userAnswers[index];
-            const isCorrect = Array.isArray(question.correctAnswers) 
-                ? question.correctAnswers.includes(userAnswer)
-                : userAnswer === question.correctAnswers;
+            const correctAnswer = question.correctAnswers[0]; // Suppose une seule réponse correcte
+            const isCorrect = userAnswer === correctAnswer;
             
             resultsHTML += `
-                <div class="card mb-3 ${isCorrect ? 'border-success' : 'border-danger'}">
-                    <div class="card-header ${isCorrect ? 'bg-success text-white' : 'bg-danger text-white'}">
-                        Question ${index + 1}: ${isCorrect ? 'Correct' : 'Incorrect'}
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">${question.text}</h5>
-                        
-                        <p class="${isCorrect ? 'text-success' : 'text-danger'}">
-                            <strong>Votre réponse:</strong> 
-                            ${userAnswer !== null ? question.options[userAnswer] : 'Aucune réponse'}
-                        </p>
+                <div class="mb-4 p-3 ${isCorrect ? 'border-success' : 'border-danger'} border rounded">
+                    <h5>Question ${index + 1}: ${question.text}</h5>
+                    <p class="${isCorrect ? 'correct' : 'incorrect'}">
+                        <strong>Votre réponse:</strong> ${userAnswer !== null ? question.options[userAnswer] : 'Aucune réponse'}
+                        ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
+                    </p>
             `;
 
             if (!isCorrect) {
-                resultsHTML += `
-                    <p class="text-success">
-                        <strong>Réponse(s) correcte(s):</strong> 
-                        ${Array.isArray(question.correctAnswers) 
-                            ? question.correctAnswers.map(idx => question.options[idx]).join(', ') 
-                            : question.options[question.correctAnswers]}
-                    </p>`;
+                resultsHTML += <p class="correct"><strong>Réponse correcte:</strong> ${question.options[correctAnswer]}</p>;
             }
 
-            if (question.justification) {
-                resultsHTML += `
-                    <div class="alert alert-info mt-3">
+            resultsHTML += `
+                    <div class="justification">
                         <strong>Explication:</strong> ${question.justification}
-                    </div>`;
-            }
-
-            resultsHTML += `</div></div>`;
+                    </div>
+                </div>
+            `;
         });
 
         resultsContent.innerHTML = resultsHTML;
@@ -423,20 +460,12 @@ export class Quiz {
         // Afficher les résultats
         document.getElementById('question-container').style.display = 'none';
         document.getElementById('results-container').style.display = 'block';
-        
-        // Masquer les boutons de navigation
-        document.getElementById('prev-btn').style.display = 'none';
-        document.getElementById('next-btn').style.display = 'none';
-        document.getElementById('submit-quiz').style.display = 'none';
     }
 
     showQuizList() {
         document.getElementById('quiz-interface').style.display = 'none';
         document.getElementById('quiz-section').style.display = 'block';
         document.getElementById('results-container').style.display = 'none';
-        
-        // Réinitialiser le timer
-        document.getElementById('quiz-timer').classList.remove('text-danger');
         
         // Recharger les quiz pour mettre à jour les statuts
         this.loadQuizzes();
