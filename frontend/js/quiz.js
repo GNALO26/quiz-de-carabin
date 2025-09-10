@@ -459,7 +459,7 @@ export class Quiz {
             `;
 
             if (!isCorrect) {
-                resultsHTML += <p class="correct"><strong>Réponse correcte:</strong> ${question.options[correctAnswer]}</p>;
+                resultsHTML += `<p class="correct"><strong>Réponse correcte:</strong> ${question.options[correctAnswer]}</p>`;
             }
 
             resultsHTML += `
