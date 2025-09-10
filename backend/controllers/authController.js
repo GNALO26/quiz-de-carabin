@@ -89,6 +89,8 @@ exports.login = async (req, res) => {
       });
     }
 
+    let isNewDevice = false;
+
     // Gestion des appareils
     if (deviceId) {
       const knownDevice = user.knownDevices.find(d => d.deviceId === deviceId);
@@ -108,8 +110,10 @@ exports.login = async (req, res) => {
           isTrusted: false // Marquer comme non approuvé par défaut
         });
         
+        isNewDevice = true;
+        
         // Envoyer une notification si configuré
-        if (user.securitySettings.alertOnNewDevice) {
+        if (user.securitySettings && user.securitySettings.alertOnNewDevice) {
           await sendNewDeviceAlert(user, deviceInfo, req.clientIp);
         }
       }
@@ -137,7 +141,7 @@ exports.login = async (req, res) => {
         email: user.email,
         isPremium: user.isPremium
       },
-      isNewDevice: !knownDevice // Informer le frontend si c'est un nouvel appareil
+      isNewDevice // Informer le frontend si c'est un nouvel appareil
     });
   } catch (error) {
     console.error('Erreur login:', error);
@@ -157,7 +161,8 @@ async function addLoginHistory(req, email, success, reason) {
   try {
     const user = await User.findOne({ email });
     if (!user) return;
-    //INITIALISER loginHistory
+    
+    // Initialiser loginHistory s'il n'existe pas
     if(!user.loginHistory) {
       user.loginHistory = [];
     }
