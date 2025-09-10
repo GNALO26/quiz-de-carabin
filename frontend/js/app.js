@@ -10,12 +10,14 @@ class App {
         this.payment = null;
         this.quiz = null;
         
-        // Initialisation différée pour éviter les conflits
-        setTimeout(() => this.init(), 100);
+        this.init();
     }
 
     init() {
         console.log("Initialisation de l'application");
+        
+        // Vérifier l'état d'authentification
+        this.checkAuthenticationStatus();
         
         // Initialiser les modules en fonction de la page
         if (window.location.pathname.includes('quiz.html') || 
@@ -26,16 +28,16 @@ class App {
         if (window.location.pathname.includes('quiz.html')) {
             this.quiz = new Quiz();
         }
-        
-        this.checkAuthenticationStatus();
     }
 
     checkAuthenticationStatus() {
-        // Vérifier l'état d'authentification au chargement
+        // Mettre à jour l'UI en fonction de l'état d'authentification
         if (this.auth.isAuthenticated()) {
-            console.log('Utilisateur authentifié:', this.auth.getUser().email);
+            console.log('Utilisateur authentifié');
+            this.auth.updateUI();
         } else {
             console.log('Utilisateur non authentifié');
+            this.auth.updateUI();
         }
     }
 }
@@ -45,11 +47,3 @@ document.addEventListener('DOMContentLoaded', function() {
     window.app = new App();
     console.log("Application initialisée");
 });
-
-// Fonction globale pour fermer le modal de connexion
-window.closeLoginModal = function() {
-    const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-    if (loginModal) {
-        loginModal.hide();
-    }
-};

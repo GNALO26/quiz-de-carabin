@@ -40,50 +40,51 @@ export class Quiz {
         });
     }
 
-    async loadQuizzes() {
-        console.log('Début du chargement des quizs');
-        
-        // Afficher le loader
-        this.showLoader();
-        
-        // Vérifier si l'utilisateur est authentifié
-        if (!window.app || !window.app.auth || !window.app.auth.isAuthenticated()) {
-            console.log('Utilisateur non authentifié');
+   // Dans la méthode loadQuizzes(), remplacez la vérification d'authentification
+async loadQuizzes() {
+    console.log('Début du chargement des quizs');
+    
+    // Afficher le loader
+    this.showLoader();
+    
+    // Vérifier si l'utilisateur est authentifié avec une meilleure approche
+    const token = localStorage.getItem('quizToken');
+    if (!token) {
+        console.log('Utilisateur non authentifié');
+        this.showLoginPrompt();
+        return;
+    }
+
+    try {
+        const API_BASE_URL = CONFIG.API_BASE_URL;
+        const response = await fetch( `${API_BASE_URL}/api/quiz `, {
+            headers: {
+                'Authorization':  `Bearer ${token} `
+            }
+        });
+
+        // Gestion des erreurs de token
+        if (response.status === 401) {
+            console.log('Token expiré ou invalide');
+            localStorage.removeItem('quizToken');
+            localStorage.removeItem('quizUser');
             this.showLoginPrompt();
             return;
         }
 
-        try {
-            const token = window.app.auth.getToken();
-            if (!token) {
-                console.log('Token non disponible');
-                this.showLoginPrompt();
-                return;
-            }
-
-            const API_BASE_URL = CONFIG.API_BASE_URL;
-            const response = await fetch(`${API_BASE_URL}/api/quiz`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.quizzes = data.quizzes || [];
-                this.displayQuizzes();
-            } else if (response.status === 401) {
-                console.log('Token invalide ou expiré');
-                this.showLoginPrompt();
-            } else {
-                console.error('Erreur lors du chargement des quizs:', response.status);
-                this.showError('Erreur serveur. Veuillez réessayer plus tard.');
-            }
-        } catch (error) {
-            console.error('Erreur lors du chargement des quizs:', error);
-            this.showError('Erreur de connexion. Vérifiez votre connexion internet.');
+        if (response.ok) {
+            const data = await response.json();
+            this.quizzes = data.quizzes || [];
+            this.displayQuizzes();
+        } else {
+            console.error('Erreur lors du chargement des quizs:', response.status);
+            this.showError('Erreur serveur. Veuillez réessayer plus tard.');
         }
+    } catch (error) {
+        console.error('Erreur lors du chargement des quizs:', error);
+        this.showError('Erreur de connexion. Vérifiez votre connexion internet.');
     }
+}
 
     displayQuizzes() {
         const quizList = document.getElementById('quiz-list');

@@ -245,44 +245,54 @@ export class Auth {
     }
 
     updateUI() {
-        const authButtons = document.getElementById('auth-buttons');
-        const userMenu = document.getElementById('user-menu');
-        const userName = document.getElementById('user-name');
-        const premiumBadge = document.getElementById('premium-badge');
+    const authButtons = document.getElementById('auth-buttons');
+    const userMenu = document.getElementById('user-menu');
+    const userName = document.getElementById('user-name');
+    const premiumBadge = document.getElementById('premium-badge');
 
-        console.log('Mise à jour de l\'UI - Utilisateur:', this.user);
+    // Vérifier que les éléments existent avant de les manipuler
+    if (!authButtons || !userMenu) {
+        console.warn('Éléments UI non trouvés');
+        return;
+    }
 
-        if (this.user && authButtons && userMenu && userName) {
-            authButtons.style.display = 'none';
-            userMenu.style.display = 'block';
-            userName.textContent = this.user.name;
-            
-            if (premiumBadge) {
-                if (this.isPremium()) {
-                    premiumBadge.style.display = 'inline';
-                    premiumBadge.textContent = 'Premium';
-                } else {
-                    premiumBadge.style.display = 'none';
-                }
-            }
-            
-            localStorage.setItem('userIsPremium', this.isPremium() ? 'true' : 'false');
-        } else if (authButtons && userMenu) {
-            authButtons.style.display = 'flex';
-            userMenu.style.display = 'none';
-            
-            if (premiumBadge) {
+    const token = localStorage.getItem('quizToken');
+    const user = JSON.parse(localStorage.getItem('quizUser') || 'null');
+    
+    console.log('Mise à jour de l\'UI - Utilisateur:', user, 'Token présent:', !!token);
+
+    if (token && user) {
+        authButtons.style.display = 'none';
+        userMenu.style.display = 'block';
+        if (userName) userName.textContent = user.name;
+        
+        if (premiumBadge) {
+            if (user.isPremium) {
+                premiumBadge.style.display = 'inline';
+                premiumBadge.textContent = 'Premium';
+            } else {
                 premiumBadge.style.display = 'none';
             }
         }
         
-        if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-            console.log('Rechargement des quiz après mise à jour UI');
-            setTimeout(() => {
-                window.quiz.loadQuizzes();
-            }, 500);
+        localStorage.setItem('userIsPremium', user.isPremium ? 'true' : 'false');
+    } else {
+        authButtons.style.display = 'flex';
+        userMenu.style.display = 'none';
+        
+        if (premiumBadge) {
+            premiumBadge.style.display = 'none';
         }
     }
+    
+    // Recharger les quiz si nécessaire
+    if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+        console.log('Rechargement des quiz après mise à jour UI');
+        setTimeout(() => {
+            window.quiz.loadQuizzes();
+        }, 500);
+    }
+}
 
     hideModals() {
         const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
