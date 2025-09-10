@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { Auth } from './auth.js';
 
 export class Quiz {
     constructor() {
@@ -15,17 +16,8 @@ export class Quiz {
     init() {
         console.log("Initialisation du module Quiz");
         
-        // Attendre que l'authentification soit initialisée
-        if (window.app && window.app.auth) {
-            this.setupEventListeners();
-            this.loadQuizzes();
-        } else {
-            // Si l'app n'est pas encore initialisée, attendre un peu
-            setTimeout(() => {
-                this.setupEventListeners();
-                this.loadQuizzes();
-            }, 1000);
-        }
+        this.setupEventListeners();
+        this.loadQuizzes();
     }
 
     setupEventListeners() {
@@ -40,51 +32,49 @@ export class Quiz {
         });
     }
 
-   // Dans la méthode loadQuizzes(), remplacez la vérification d'authentification
-async loadQuizzes() {
-    console.log('Début du chargement des quizs');
-    
-    // Afficher le loader
-    this.showLoader();
-    
-    // Vérifier si l'utilisateur est authentifié avec une meilleure approche
-    const token = localStorage.getItem('quizToken');
-    if (!token) {
-        console.log('Utilisateur non authentifié');
-        this.showLoginPrompt();
-        return;
-    }
-
-    try {
-        const API_BASE_URL = CONFIG.API_BASE_URL;
-        const response = await fetch( `${API_BASE_URL}/api/quiz `, {
-            headers: {
-                'Authorization':  `Bearer ${token} `
-            }
-        });
-
-        // Gestion des erreurs de token
-        if (response.status === 401) {
-            console.log('Token expiré ou invalide');
-            localStorage.removeItem('quizToken');
-            localStorage.removeItem('quizUser');
+    async loadQuizzes() {
+        console.log('Début du chargement des quizs');
+        
+        // Afficher le loader
+        this.showLoader();
+        
+        // Vérifier si l'utilisateur est authentifié
+        const token = localStorage.getItem('quizToken');
+        if (!token) {
+            console.log('Utilisateur non authentifié');
             this.showLoginPrompt();
             return;
         }
 
-        if (response.ok) {
-            const data = await response.json();
-            this.quizzes = data.quizzes || [];
-            this.displayQuizzes();
-        } else {
-            console.error('Erreur lors du chargement des quizs:', response.status);
-            this.showError('Erreur serveur. Veuillez réessayer plus tard.');
+        try {
+            const API_BASE_URL = CONFIG.API_BASE_URL;
+            const response = await fetch(`${API_BASE_URL}/api/quiz`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.status === 401) {
+                console.log('Token expiré ou invalide');
+                localStorage.removeItem('quizToken');
+                localStorage.removeItem('quizUser');
+                this.showLoginPrompt();
+                return;
+            }
+
+            if (response.ok) {
+                const data = await response.json();
+                this.quizzes = data.quizzes || [];
+                this.displayQuizzes();
+            } else {
+                console.error('Erreur lors du chargement des quizs:', response.status);
+                this.showError('Erreur serveur. Veuillez réessayer plus tard.');
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement des quizs:', error);
+            this.showError('Erreur de connexion. Vérifiez votre connexion internet.');
         }
-    } catch (error) {
-        console.error('Erreur lors du chargement des quizs:', error);
-        this.showError('Erreur de connexion. Vérifiez votre connexion internet.');
     }
-}
 
     displayQuizzes() {
         const quizList = document.getElementById('quiz-list');
@@ -110,9 +100,11 @@ async loadQuizzes() {
             return;
         }
 
+        const user = JSON.parse(localStorage.getItem('quizUser') || 'null');
+
         this.quizzes.forEach(quiz => {
             const isFree = quiz.free || false;
-            const hasAccess = isFree || (window.app.auth.isPremium());
+            const hasAccess = isFree || (user && user.isPremium);
             
             const quizCard = document.createElement('div');
             quizCard.className = 'col-md-4 mb-4';
@@ -154,9 +146,10 @@ async loadQuizzes() {
                 
                 if (!quiz) return;
                 
-                if (!quiz.free && window.app.auth && !window.app.auth.isPremium()) {
+                const user = JSON.parse(localStorage.getItem('quizUser') || 'null');
+                if (!quiz.free && (!user || !user.isPremium)) {
                     // Rediriger vers l'abonnement
-                    if (window.app.payment && typeof window.app.payment.initiatePayment === 'function') {
+                    if (window.app && window.app.payment && typeof window.app.payment.initiatePayment === 'function') {
                         window.app.payment.initiatePayment();
                     }
                 } else {
@@ -208,7 +201,7 @@ async loadQuizzes() {
         `;
         
         document.getElementById('quiz-login-button').addEventListener('click', () => {
-            if (window.app.auth && typeof window.app.auth.showLoginModal === 'function') {
+            if (window.app && window.app.auth && typeof window.app.auth.showLoginModal === 'function') {
                 window.app.auth.showLoginModal();
             }
         });
@@ -235,7 +228,7 @@ async loadQuizzes() {
 
     async startQuiz(quizId) {
         try {
-            const token = window.app.auth.getToken();
+            const token = localStorage.getItem('quizToken');
             
             if (!token) {
                 alert('Vous devez vous connecter pour accéder à ce quiz.');
@@ -276,6 +269,7 @@ async loadQuizzes() {
             alert('Erreur lors du chargement du quiz');
         }
     }
+
 
     showQuestion(index) {
         if (!this.currentQuiz || index < 0 || index >= this.currentQuiz.questions.length) return;

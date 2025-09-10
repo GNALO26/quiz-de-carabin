@@ -45,15 +45,18 @@ export class Auth {
         });
     }
 
-    validateToken(token) {
+    getToken() {
+        const token = localStorage.getItem('quizToken');
+        if (!token) {
+            return null;
+        }
+        
+        // Validation basique du token sans déconnexion automatique
         try {
-            if (!token || typeof token !== 'string') {
-                return false;
-            }
-            
             const parts = token.split('.');
             if (parts.length !== 3) {
-                return false;
+                console.warn('Token JWT invalide: structure incorrecte');
+                return null;
             }
             
             // Vérifier l'expiration du token
@@ -62,44 +65,15 @@ export class Auth {
             
             if (payload.exp && payload.exp < currentTime) {
                 console.warn('Token expiré');
-                return false;
+                // Ne pas déconnecter automatiquement, laisser l'UI gérer
+                return null;
             }
-            return true;
+            return token;
         } catch (error) {
             console.error('Token validation error:', error);
-            return false;
-        }
-    }
-
-   getToken() {
-    const token = localStorage.getItem('quizToken');
-    if (!token) {
-        return null;
-    }
-    
-    // Validation basique du token sans déconnexion automatique
-    try {
-        const parts = token.split('.');
-        if (parts.length !== 3) {
-            console.warn('Token JWT invalide: structure incorrecte');
             return null;
         }
-        
-        // Vérifier l'expiration du token
-        const payload = JSON.parse(atob(parts[1]));
-        const currentTime = Math.floor(Date.now() / 1000);
-        
-        if (payload.exp && payload.exp < currentTime) {
-            console.warn('Token expiré');
-            // Ne pas déconnecter automatiquement, laisser l'UI gérer
-            return null;
-        }
-        return token;
-    } catch (error) {
-        console.error('Token validation error:', error);
-        return null;
     }
-}
 
     async login() {
         const email = document.getElementById('loginEmail').value;
@@ -134,7 +108,8 @@ export class Auth {
                 this.hideModals();
                 this.showAlert('Connexion réussie!', 'success');
                 
-                if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                // Recharger les quiz si on est sur la page quiz.html
+                if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
                     window.quiz.loadQuizzes();
                 }
             } else {
@@ -187,8 +162,8 @@ export class Auth {
                 this.hideModals();
                 this.showAlert('Compte créé avec succès! Vous êtes maintenant connecté.', 'success');
                 
-                // Recharger les quiz
-                if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                // Recharger les quiz si on est sur la page quiz.html
+                if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
                     window.quiz.loadQuizzes();
                 }
             } else {
@@ -230,10 +205,12 @@ export class Auth {
             this.updateUI();
             this.showAlert('Déconnexion réussie', 'success');
             
-            if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+            // Recharger les quiz si on est sur la page quiz.html
+            if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
                 window.quiz.loadQuizzes();
             }
             
+            // Redirection vers l'accueil après déconnexion
             setTimeout(() => {
                 window.location.href = CONFIG.PAGES.INDEX;
             }, 1000);
@@ -245,56 +222,46 @@ export class Auth {
     }
 
     updateUI() {
-    const authButtons = document.getElementById('auth-buttons');
-    const userMenu = document.getElementById('user-menu');
-    const userName = document.getElementById('user-name');
-    const premiumBadge = document.getElementById('premium-badge');
+        const authButtons = document.getElementById('auth-buttons');
+        const userMenu = document.getElementById('user-menu');
+        const userName = document.getElementById('user-name');
+        const premiumBadge = document.getElementById('premium-badge');
 
-    // Vérifier que les éléments existent avant de les manipuler
-    if (!authButtons || !userMenu) {
-        console.warn('Éléments UI non trouvés');
-        return;
-    }
+        if (!authButtons || !userMenu) {
+            console.warn('Éléments UI non trouvés');
+            return;
+        }
 
-    const token = localStorage.getItem('quizToken');
-    const user = JSON.parse(localStorage.getItem('quizUser') || 'null');
-    
-    console.log('Mise à jour de l\'UI - Utilisateur:', user, 'Token présent:', !!token);
+        const token = this.getToken();
+        const user = this.user;
 
-    if (token && user) {
-        authButtons.style.display = 'none';
-        userMenu.style.display = 'block';
-        if (userName) userName.textContent = user.name;
-        
-        if (premiumBadge) {
-            if (user.isPremium) {
-                premiumBadge.style.display = 'inline';
-                premiumBadge.textContent = 'Premium';
-            } else {
+        if (token && user) {
+            authButtons.style.display = 'none';
+            userMenu.style.display = 'block';
+            if (userName) userName.textContent = user.name;
+            
+            if (premiumBadge) {
+                if (user.isPremium) {
+                    premiumBadge.style.display = 'inline';
+                    premiumBadge.textContent = 'Premium';
+                } else {
+                    premiumBadge.style.display = 'none';
+                }
+            }
+            
+            localStorage.setItem('userIsPremium', user.isPremium ? 'true' : 'false');
+        } else {
+            authButtons.style.display = 'flex';
+            userMenu.style.display = 'none';
+            
+            if (premiumBadge) {
                 premiumBadge.style.display = 'none';
             }
         }
-        
-        localStorage.setItem('userIsPremium', user.isPremium ? 'true' : 'false');
-    } else {
-        authButtons.style.display = 'flex';
-        userMenu.style.display = 'none';
-        
-        if (premiumBadge) {
-            premiumBadge.style.display = 'none';
-        }
     }
-    
-    // Recharger les quiz si nécessaire
-    if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-        console.log('Rechargement des quiz après mise à jour UI');
-        setTimeout(() => {
-            window.quiz.loadQuizzes();
-        }, 500);
-    }
-}
 
     hideModals() {
+        // Cacher les modals Bootstrap
         const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
         if (loginModal) loginModal.hide();
         
@@ -303,6 +270,7 @@ export class Auth {
     }
 
     showAlert(message, type) {
+        // Supprimer les alertes existantes
         document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
         
         const alertDiv = document.createElement('div');
@@ -319,6 +287,7 @@ export class Auth {
         
         document.body.appendChild(alertDiv);
         
+        // Supprimer automatiquement après 5 secondes
         setTimeout(() => {
             if (alertDiv.parentNode) {
                 alertDiv.parentNode.removeChild(alertDiv);
@@ -327,7 +296,7 @@ export class Auth {
     }
 
     isAuthenticated() {
-        return this.token !== null;
+        return this.getToken() !== null;
     }
 
     isPremium() {
@@ -343,22 +312,6 @@ export class Auth {
         if (loginModalElement) {
             const loginModal = new bootstrap.Modal(loginModalElement);
             loginModal.show();
-        }
-    }
-    
-    redirectToForgotPassword() {
-        const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-        if (loginModal) {
-            loginModal.hide();
-        }
-        window.location.href = CONFIG.PAGES.FORGOT_PASSWORD;
-    }
-    
-    showHistory() {
-        if (this.isAuthenticated()) {
-            window.location.href = 'history.html';
-        } else {
-            this.showLoginModal();
         }
     }
 }
