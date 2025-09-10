@@ -476,6 +476,203 @@ function closeLoginModal() {
     }
 }
 </script>
+<script type="module">
+    import { CONFIG } from './js/config.js';
+    
+    class QuizDisplay {
+        constructor() {
+            this.quizzes = [];
+            this.init();
+        }
+
+        async init() {
+            try {
+                await this.loadQuizzes();
+                this.displayQuizzes();
+            } catch (error) {
+                console.error('Erreur lors du chargement des quizs:', error);
+                this.showError();
+            }
+        }
+
+        async loadQuizzes() {
+            try {
+                // Récupérer le token d'authentification
+                const token = localStorage.getItem('quizToken');
+                
+                const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.status === 401) {
+                    this.showLoginPrompt();
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Erreur de chargement des quizs');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.quizzes = data.quizzes || data.data || [];
+                } else {
+                    throw new Error(data.message || 'Erreur inconnue');
+                }
+            } catch (error) {
+                console.error('Erreur fetch:', error);
+                throw error;
+            }
+        }
+
+        displayQuizzes() {
+            const quizList = document.getElementById('quiz-list');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            // Cacher le spinner de chargement
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
+            
+            // Si aucun quiz n'est disponible
+            if (!this.quizzes || this.quizzes.length === 0) {
+                quizList.innerHTML = `
+                    <div class="col-12 text-center">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Aucun quiz disponible pour le moment.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Afficher les quizs
+            quizList.innerHTML = this.quizzes.map(quiz => {
+                const isFree = quiz.free || false;
+                const user = JSON.parse(localStorage.getItem('quizUser') || '{}');
+                const hasAccess = isFree || user.isPremium;
+                
+                return `
+                    <div class="col-md-4 mb-4">
+                        <div class="card quiz-card h-100">
+                            <div class="card-body">
+                                <span class="badge ${isFree ? 'bg-success' : 'bg-warning'} mb-2">
+                                    ${isFree ? 'GRATUIT' : 'PREMIUM'}
+                                </span>
+                                <h5 class="card-title">${quiz.title}</h5>
+                                <p class="card-text">${quiz.description || 'Aucune description'}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small><i class="fas fa-question-circle me-1"></i> ${quiz.questions?.length || 0} questions</small>
+                                    <small><i class="fas fa-clock me-1"></i> ${quiz.duration || 10} min</small>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                ${hasAccess ? 
+                                    <a href="quiz.html?id=${quiz._id}" class="btn btn-primary w-100">Commencer</a> : 
+                                    `<button class="btn btn-outline-primary w-100 premium-quiz" data-quiz-id="${quiz._id}">
+                                        ${isFree ? 'Commencer' : 'Accéder (5.000 XOF)'}
+                                    </button>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Ajouter les événements pour les quizs
+            this.addQuizEventListeners();
+        }
+
+        addQuizEventListeners() {
+            // Quiz premium - ouvrir modal d'abonnement
+            document.querySelectorAll('.premium-quiz').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const quizId = e.target.getAttribute('data-quiz-id');
+                    this.handlePremiumQuiz(quizId);
+                });
+            });
+        }
+
+        handlePremiumQuiz(quizId) {
+            // Vérifier si l'utilisateur est connecté
+            if (!localStorage.getItem('quizToken')) {
+                // Afficher le modal de connexion
+                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                loginModal.show();
+                return;
+            }
+            
+            // Afficher le modal d'abonnement
+            const codeModal = new bootstrap.Modal(document.getElementById('codeModal'));
+            codeModal.show();
+            // Stocker l'ID du quiz pour plus tard
+            document.getElementById('validate-code').setAttribute('data-quiz-id', quizId);
+        }
+        showLoginPrompt() {
+            const quizList = document.getElementById('quiz-list');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
+            
+            quizList.innerHTML = `
+                <div class="col-12 text-center">
+                    <div class="alert alert-warning">
+                        <h4>Connexion requise</h4>
+                        <p>Vous devez vous connecter pour accéder aux quiz.</p>
+                        <button class="btn btn-primary mt-2" id="quiz-login-button">
+                            Se connecter
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('quiz-login-button').addEventListener('click', () => {
+                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                loginModal.show();
+            });
+        }
+
+        showError() {
+            const quizList = document.getElementById('quiz-list');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
+            
+            quizList.innerHTML = `
+                <div class="col-12 text-center">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erreur lors du chargement des quizs. Veuillez réessayer.
+                    </div>
+                    <button class="btn btn-primary mt-2" id="retry-loading">Réessayer</button>
+                </div>
+            `;
+            
+            document.getElementById('retry-loading').addEventListener('click', () => {
+                this.init();
+            });
+        }
+    }
+
+    // Initialiser l'affichage des quizs quand la page est chargée
+    document.addEventListener('DOMContentLoaded', () => {
+        // Vérifier si on est sur la page d'accueil
+        if (window.location.pathname.includes('index.html') || 
+            window.location.pathname === '/' || 
+            window.location.pathname.endsWith('.html') === false) {
+            new QuizDisplay();
+        }
+    });
+</script>
 <script>
 /* Code de débogage temporaire
 console.log("État de l'authentification:", {
