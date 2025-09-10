@@ -259,8 +259,16 @@
                 </div>
             </div>
             <div class="row" id="quiz-list">
-                <!-- Les quiz seront chargés dynamiquement ici -->
+    <!-- Les quiz seront chargés dynamiquement ici -->
+    <div class="col-12">
+        <div class="text-center" id="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
             </div>
+            <p class="mt-2">Chargement des quizs...</p>
+        </div>
+    </div>
+</div>
         </div>
     </section>
     <!-- Quiz Interface (hidden by default) -->
@@ -467,14 +475,13 @@
     <script type="module" src="js/payment.js"></script>
     <script type="module" src="js/quiz.js"></script>
     <script type="module" src="js/app.js"></script>
-    <script>
-// Fonction pour fermer le modal de connexion
-function closeLoginModal() {
-    const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-    if (loginModal) {
-        loginModal.hide();
+<script>
+    function closeLoginModal() {
+        const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+        if (loginModal) {
+            loginModal.hide();
+        }
     }
-}
 </script>
 <script type="module">
     import { CONFIG } from './js/config.js';

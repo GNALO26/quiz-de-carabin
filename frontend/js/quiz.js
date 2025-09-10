@@ -474,7 +474,10 @@ export class Quiz {
 
 // Initialisation différée pour s'assurer que l'application est chargée
 setTimeout(() => {
-    if (window.location.pathname.includes('quiz.html')) {
+    if (window.location.pathname.includes('quiz.html') || 
+        window.location.pathname.includes('index.html') || 
+        window.location.pathname === '/' || 
+        window.location.pathname.endsWith('.html') === false) {
         console.log("Initialisation du module Quiz");
         window.quiz = new Quiz();
     }
