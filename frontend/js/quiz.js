@@ -25,6 +25,64 @@ export class Quiz {
         }
     }
 
+async loadSingleQuiz() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const quizId = urlParams.get('id');
+        
+        if (!quizId) {
+            this.showError('ID de quiz non fourni');
+            return;
+        }
+
+        this.showLoader();
+        
+        const token = localStorage.getItem('quizToken');
+        if (!token) {
+            this.showLoginPrompt();
+            return;
+        }
+
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+             if (response.status === 401) {
+                localStorage.removeItem('quizToken');
+                localStorage.removeItem('quizUser');
+                this.showLoginPrompt();
+                return;
+            }
+
+            if (response.ok) {
+                const data = await response.json();
+                this.currentQuiz = data.quiz || data.data;
+                this.userAnswers = new Array(this.currentQuiz.questions.length).fill(null);
+                this.currentQuestionIndex = 0;
+
+                // Afficher l'interface du quiz
+                document.getElementById('quiz-section').style.display = 'none';
+                document.getElementById('quiz-interface').style.display = 'block';
+
+                document.getElementById('quiz-title').textContent = this.currentQuiz.title;
+                this.showQuestion(0);
+                this.startTimer(this.currentQuiz.duration * 60);
+            } else {
+                this.showError('Erreur lors du chargement du quiz');
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement du quiz:', error);
+             this.showError('Erreur de connexion. Vérifiez votre connexion internet.');
+        }
+    }
+
+
+
+
+
     setupEventListeners() {
         // Bouton de retour aux quiz
         document.getElementById('back-to-quizzes')?.addEventListener('click', () => {
