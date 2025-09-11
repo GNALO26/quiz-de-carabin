@@ -87,17 +87,6 @@ getToken() {
   }
 }
 
-// Ajoutez cette méthode au constructeur
-constructor() {
-  this.token = localStorage.getItem('quizToken');
-  this.user = JSON.parse(localStorage.getItem('quizUser') || 'null');
-  
-  // Nettoyer les tokens corrompus au chargement
-  this.cleanCorruptedTokens();
-  
-  this.init();
-}
-
 // Ajoutez cette méthode à la classe
 cleanCorruptedTokens() {
   const token = localStorage.getItem('quizToken');
