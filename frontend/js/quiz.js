@@ -1,5 +1,23 @@
 import { CONFIG } from './config.js';
 
+// Fonction pour gérer les erreurs d'authentification
+async function handleAuthError(response, requestFn) {
+  if (response.status === 401) {
+    const data = await response.json();
+    
+    if (data.code === 'TOKEN_EXPIRED' || data.code === 'INVALID_TOKEN' || data.code === 'TOKEN_INVALIDATED') {
+      if (window.auth && typeof window.auth.cleanInvalidToken === 'function') {
+        window.auth.cleanInvalidToken();
+      }
+      
+      alert('Votre session a expiré. Veuillez vous reconnecter.');
+      window.location.href = 'index.html';
+      return null;
+    }
+  }
+  
+  return requestFn();
+}
 export class Quiz {
     constructor() {
         this.quizzes = [];
@@ -53,49 +71,50 @@ export class Quiz {
     }
 
     async loadQuizzes() {
-        console.log('Début du chargement des quizs');
-        
-        // Afficher le loader
-        this.showLoader();
-        
-        // Récupérer le token directement du localStorage
-        const token = localStorage.getItem('quizToken');
-        if (!token) {
-            console.log('Token non disponible');
-            this.showLoginPrompt();
-            return;
-        }
+  console.log('Début du chargement des quizs');
+  this.showLoader();
+  
+  const token = localStorage.getItem('quizToken');
+  if (!token) {
+    this.showLoginPrompt();
+    return;
+  }
 
-        try {
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            const response = await fetch(`${API_BASE_URL}/api/quiz`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+  try {
+    const API_BASE_URL = await this.getActiveAPIUrl();
+    const response = await fetch(`${API_BASE_URL}/api/quiz`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
 
-            if (response.status === 401) {
-                console.log('Token expiré ou invalide');
-                localStorage.removeItem('quizToken');
-                localStorage.removeItem('quizUser');
-                this.showLoginPrompt();
-                return;
-            }
+    // Utiliser handleAuthError
+    const data = await handleAuthError(response, async () => {
+      if (response.status === 401) {
+        localStorage.removeItem('quizToken');
+        localStorage.removeItem('quizUser');
+        this.showLoginPrompt();
+        return;
+      }
 
-            if (response.ok) {
-                const data = await response.json();
-                this.quizzes = data.quizzes || data.data || [];
-                this.displayQuizzes();
-            } else {
-                console.error('Erreur lors du chargement des quizs:', response.status);
-                this.showError('Erreur serveur. Veuillez réessayer plus tard.');
-            }
-        } catch (error) {
-            console.error('Erreur lors du chargement des quizs:', error);
-            this.showError('Erreur de connexion. Vérifiez votre connexion internet.');
-        }
-    }
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      return await response.json();
+    });
+
+    if (!data) return; // Si handleAuthError a redirigé
+
+    this.quizzes = data.quizzes || data.data || [];
+    this.displayQuizzes();
+    
+  } catch (error) {
+    console.error('Erreur lors du chargement des quizs:', error);
+    this.showError('Erreur de connexion. Vérifiez votre connexion internet.');
+  }
+}
 
     displayQuizzes() {
         const quizList = document.getElementById('quiz-list');
@@ -114,8 +133,7 @@ export class Quiz {
             quizList.innerHTML = `
                 <div class="col-12 text-center">
                     < class="alert alert-info">
-                        Aucun quiz disponible pour le moment.
-                        (Veuillez actualiser la page)
+                        Aucun quiz disponible pour le moment.(Veuillez actualiser la page)
                     </div>
                 </div>
             `;

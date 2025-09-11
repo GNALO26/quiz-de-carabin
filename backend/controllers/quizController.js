@@ -53,7 +53,7 @@ exports.submitQuiz = async (req, res) => {
     if (!quiz) {
       return res.status(404).json({
         success: false,
-        message: 'Quiz non trouvé.',
+        message: 'Quiz non trouvé. Vérifiez votre connexion',
       });
     }
 
@@ -106,7 +106,7 @@ exports.getQuizHistory = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Utilisateur non trouvé.',
+        message: 'Utilisateur non trouvé. Connectez-vous',
       });
     }
 

@@ -45,49 +45,76 @@ export class Auth {
         });
     }
 
-    // Dans la classe Auth, ajoutez cette méthode
+// Méthode pour nettoyer les tokens invalides
 cleanInvalidToken() {
-    localStorage.removeItem('quizToken');
-    localStorage.removeItem('quizUser');
-    this.token = null;
-    this.user = null;
-    this.updateUI();
+  localStorage.removeItem('quizToken');
+  localStorage.removeItem('quizUser');
+  this.token = null;
+  this.user = null;
+  this.updateUI();
 }
 
-// Et modifiez la méthode getToken() comme suit :
+// Modifiez la méthode getToken
 getToken() {
-    let token = localStorage.getItem('quizToken');
-    if (!token) {
-        return null;
+  let token = localStorage.getItem('quizToken');
+  if (!token) {
+    return null;
+  }
+  
+  token = token.replace(/^"(.*)"$/, '$1').trim();
+  
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.warn('Token JWT invalide: structure incorrecte');
+      this.cleanInvalidToken();
+      return null;
     }
     
-    // Nettoyer le token des éventuels guillemets
-    token = token.replace(/^"(.*)"$/, '$1').trim();
+    const payload = JSON.parse(atob(parts[1]));
+    const currentTime = Math.floor(Date.now() / 1000);
     
-    // Validation basique du token sans déconnexion automatique
+    if (payload.exp && payload.exp < currentTime) {
+      console.warn('Token expiré');
+      this.cleanInvalidToken();
+      return null;
+    }
+    return token;
+  } catch (error) {
+    console.error('Token validation error:', error);
+    this.cleanInvalidToken();
+    return null;
+  }
+}
+
+// Ajoutez cette méthode au constructeur
+constructor() {
+  this.token = localStorage.getItem('quizToken');
+  this.user = JSON.parse(localStorage.getItem('quizUser') || 'null');
+  
+  // Nettoyer les tokens corrompus au chargement
+  this.cleanCorruptedTokens();
+  
+  this.init();
+}
+
+// Ajoutez cette méthode à la classe
+cleanCorruptedTokens() {
+  const token = localStorage.getItem('quizToken');
+  if (token) {
     try {
-        const parts = token.split('.');
-        if (parts.length !== 3) {
-            console.warn('Token JWT invalide: structure incorrecte');
-            this.cleanInvalidToken();
-            return null;
-        }
-        
-        // Vérifier l'expiration du token
-        const payload = JSON.parse(atob(parts[1]));
-        const currentTime = Math.floor(Date.now() / 1000);
-        
-        if (payload.exp && payload.exp < currentTime) {
-            console.warn('Token expiré');
-            this.cleanInvalidToken();
-            return null;
-        }
-        return token;
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        localStorage.removeItem('quizToken');
+        localStorage.removeItem('quizUser');
+        console.log('Token corrompu nettoyé');
+      }
     } catch (error) {
-        console.error('Token validation error:', error);
-        this.cleanInvalidToken();
-        return null;
+      localStorage.removeItem('quizToken');
+      localStorage.removeItem('quizUser');
+      console.log('Token corrompu nettoyé');
     }
+  }
 }
     async login() {
         const email = document.getElementById('loginEmail').value;

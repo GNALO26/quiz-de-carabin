@@ -6,6 +6,18 @@ const geoip = require('geoip-lite');
 const transporter = require('../config/email');
 const generateCode = require('../utils/generateCode');
 
+// Fonction pour générer un token JWT
+const generateToken = (user) => {
+  return jwt.sign(
+    { 
+      id: user._id,
+      version: user.tokenVersion || 0 
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRE || '24h' }
+  );
+};
+
 // Fonction d'enregistrement
 exports.register = async (req, res) => {
   try {
@@ -372,7 +384,6 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // Vérifier le code
     const passwordReset = await PasswordReset.findOne({
       email,
       code,
@@ -387,7 +398,6 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // Trouver l'utilisateur
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({
@@ -396,12 +406,12 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // Hasher le nouveau mot de passe
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    
     await user.save();
 
-    // Marquer le code comme utilisé
     passwordReset.used = true;
     await passwordReset.save();
 

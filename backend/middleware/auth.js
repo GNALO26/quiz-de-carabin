@@ -8,9 +8,8 @@ const auth = async (req, res, next) => {
     let token;
     const authHeader = req.header('Authorization');
     
-    // Vérifier plusieurs méthodes d'authentification
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.replace('Bearer ', '');
+      token = authHeader.substring(7);
     } else if (req.query.token) {
       token = req.query.token;
     } else if (req.cookies && req.cookies.quizToken) {
@@ -25,13 +24,18 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // Vérification plus tolérante du token
+    token = token.replace(/^"(.*)"$/, '$1').trim();
+    
+    if (!token.match(/^[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-_.+/=]*$/)) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Token JWT malformé.', 
+        code: 'MALFORMED_TOKEN'
+      });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: false });
-    
-    // Utilisation de mongoose.model pour éviter les dépendances circulaires
     const User = mongoose.model('User');
-    
-    // Vérifier si l'utilisateur existe toujours
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {
@@ -41,19 +45,27 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // Vérifier si le token est sur le point d'expirer (dans les 5 minutes)
+    if (decoded.version !== (user.tokenVersion || 0)) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Session invalide. Veuillez vous reconnecter.',
+        code: 'TOKEN_INVALIDATED'
+      });
+    }
+
     const now = Math.floor(Date.now() / 1000);
     const expiresIn = decoded.exp - now;
     
-    if (expiresIn < 300) { // 5 minutes
-      // Générer un nouveau token
+    if (expiresIn < 300) {
       const newToken = jwt.sign(
-        { id: user._id },
+        { 
+          id: user._id,
+          version: user.tokenVersion || 0
+        },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
       
-      // Ajouter le nouveau token à la réponse
       res.set('X-Renewed-Token', newToken);
     }
 

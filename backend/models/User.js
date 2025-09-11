@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema({
   },
   premiumExpiresAt: {
     type: Date,
+    default: 0
+  },
+  tokenVersion: {
+    type: Number,
     default: null
   },
    loginHistory: [{
