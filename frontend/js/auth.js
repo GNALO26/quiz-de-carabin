@@ -45,36 +45,50 @@ export class Auth {
         });
     }
 
-    getToken() {
-        const token = localStorage.getItem('quizToken');
-        if (!token) {
+    // Dans la classe Auth, ajoutez cette méthode
+cleanInvalidToken() {
+    localStorage.removeItem('quizToken');
+    localStorage.removeItem('quizUser');
+    this.token = null;
+    this.user = null;
+    this.updateUI();
+}
+
+// Et modifiez la méthode getToken() comme suit :
+getToken() {
+    let token = localStorage.getItem('quizToken');
+    if (!token) {
+        return null;
+    }
+    
+    // Nettoyer le token des éventuels guillemets
+    token = token.replace(/^"(.*)"$/, '$1').trim();
+    
+    // Validation basique du token sans déconnexion automatique
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+            console.warn('Token JWT invalide: structure incorrecte');
+            this.cleanInvalidToken();
             return null;
         }
         
-        // Validation basique du token sans déconnexion automatique
-        try {
-            const parts = token.split('.');
-            if (parts.length !== 3) {
-                console.warn('Token JWT invalide: structure incorrecte');
-                return null;
-            }
-            
-            // Vérifier l'expiration du token
-            const payload = JSON.parse(atob(parts[1]));
-            const currentTime = Math.floor(Date.now() / 1000);
-            
-            if (payload.exp && payload.exp < currentTime) {
-                console.warn('Token expiré');
-                // Ne pas déconnecter automatiquement, laisser l'UI gérer
-                return null;
-            }
-            return token;
-        } catch (error) {
-            console.error('Token validation error:', error);
+        // Vérifier l'expiration du token
+        const payload = JSON.parse(atob(parts[1]));
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+        if (payload.exp && payload.exp < currentTime) {
+            console.warn('Token expiré');
+            this.cleanInvalidToken();
             return null;
         }
+        return token;
+    } catch (error) {
+        console.error('Token validation error:', error);
+        this.cleanInvalidToken();
+        return null;
     }
-
+}
     async login() {
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
