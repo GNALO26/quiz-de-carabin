@@ -113,8 +113,9 @@ export class Quiz {
         if (this.quizzes.length === 0) {
             quizList.innerHTML = `
                 <div class="col-12 text-center">
-                    <div class="alert alert-info">
+                    < class="alert alert-info">
                         Aucun quiz disponible pour le moment.
+                        (Veuillez actualiser la page)
                     </div>
                 </div>
             `;

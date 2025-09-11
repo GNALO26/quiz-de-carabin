@@ -175,6 +175,75 @@ export class Auth {
         }
     }
 
+    // Mot de passe oublié
+    async forgotPassword(email) {
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Erreur demande de réinitialisation:', error);
+            return {
+                success: false,
+                message: 'Erreur de connexion. Veuillez réessayer.',
+            };
+        }
+    }
+
+    // Vérification du code de réinitialisation
+    async verifyResetCode(email, code) {
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const response = await fetch(`${API_BASE_URL}/api/auth/verify-reset-code`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, code }),
+            });
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Erreur vérification du code:', error);
+            return {
+                success: false,
+                message: 'Erreur de connexion. Veuillez réessayer.',
+            };
+        }
+    }
+
+    // Réinitialisation du mot de passe
+    async resetPassword(email, code, newPassword) {
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, code, newPassword }),
+            });
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Erreur réinitialisation mot de passe:', error);
+            return {
+                success: false,
+                message: 'Erreur de connexion. Veuillez réessayer.',
+            };
+        }
+    }
+
     async getActiveAPIUrl() {
         try {
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
@@ -315,3 +384,13 @@ export class Auth {
         }
     }
 }
+
+// Exposer la classe Auth globalement
+window.Auth = Auth;
+
+// Initialisation automatique si on est sur une page qui nécessite l'authentification
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('auth-buttons') || document.getElementById('user-menu')) {
+        window.auth = new Auth();
+    }
+});
