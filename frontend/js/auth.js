@@ -345,7 +345,7 @@ export class Auth {
         }
     }
 
-    updateUI() {
+updateUI() {
     const authButtons = document.getElementById('auth-buttons');
     const userMenu = document.getElementById('user-menu');
     const userName = document.getElementById('user-name');
@@ -360,7 +360,7 @@ export class Auth {
     const user = this.user;
 
     if (token && user) {
-        // Cacher complètement les boutons de connexion
+        // Cacher les boutons de connexion
         authButtons.style.display = 'none';
         // Afficher le menu utilisateur
         userMenu.style.display = 'block';
@@ -375,8 +375,6 @@ export class Auth {
                 premiumBadge.style.display = 'none';
             }
         }
-        
-        localStorage.setItem('userIsPremium', user.isPremium ? 'true' : 'false');
     } else {
         // Afficher les boutons de connexion
         authButtons.style.display = 'flex';
