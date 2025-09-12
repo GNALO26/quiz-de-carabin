@@ -17,52 +17,6 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-/* Styles pour la gestion de l'affichage des boutons */
-.navbar-nav .nav-item .nav-link.active {
-    color: var(--primary) !important;
-    font-weight: 600;
-}
-
-#auth-buttons {
-    display: flex;
-    gap: 0.5rem;
-}
-
-#user-menu {
-    display: none;
-}
-
-.dropdown-menu {
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-.dropdown-item {
-    padding: 0.5rem 1rem;
-    transition: all 0.2s ease;
-}
-
-.dropdown-item:hover {
-    background-color: #f8f9fa;
-    color: var(--primary);
-}
-
-/* Ajustement pour l'affichage responsive */
-@media (max-width: 992px) {
-    #auth-buttons, #user-menu {
-        margin-top: 1rem;
-        justify-content: center;
-        width: 100%;
-    }
-    
-    .dropdown-menu {
-        position: static !important;
-        transform: none !important;
-        width: 100%;
-        margin-top: 0.5rem;
-    }
-}
-
 .navbar-brand {
     font-weight: 700;
     color: var(--primary-color);
