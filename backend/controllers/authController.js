@@ -7,12 +7,18 @@ const transporter = require('../config/email');
 const generateCode = require('../utils/generateCode');
 
 // Fonction pour générer un token JWT
-const generateToken = (user) => {
+const generateToken = (user, deviceId = null) => {
+  const payload = {
+    id: user._id,
+    version: user.tokenVersion || 0
+  };
+  
+  if (deviceId) {
+    payload.deviceId = deviceId;
+  }
+  
   return jwt.sign(
-    { 
-      id: user._id,
-      version: user.tokenVersion || 0 
-    },
+    payload,
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE || '24h' }
   );
@@ -40,17 +46,14 @@ exports.register = async (req, res) => {
     const user = new User({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      tokenVersion: 0
     });
 
     await user.save();
 
     // Générer le token JWT
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const token = generateToken(user);
 
     res.status(201).json({
       success: true,
@@ -137,11 +140,7 @@ exports.login = async (req, res) => {
     await addLoginHistory(req, email, true, 'Connexion réussie');
 
     // Générer le token JWT
-    const token = jwt.sign(
-      { id: user._id, deviceId },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const token = generateToken(user, deviceId);
 
     res.status(200).json({
       success: true,
@@ -174,15 +173,9 @@ async function addLoginHistory(req, email, success, reason) {
     const user = await User.findOne({ email });
     if (!user) return;
     
-    // Initialiser loginHistory s'il n'existe pas
-    if(!user.loginHistory) {
-      user.loginHistory = [];
-    }
-    
-    // Obtenir les informations de localisation à partir de l'IP
+    // Utiliser une mise à jour directe pour éviter les conflits de version
     const geo = geoip.lookup(req.clientIp);
-    
-    user.loginHistory.push({
+    const loginEntry = {
       timestamp: new Date(),
       deviceId: req.deviceId,
       deviceInfo: req.deviceInfo,
@@ -190,14 +183,20 @@ async function addLoginHistory(req, email, success, reason) {
       location: geo ? `${geo.city}, ${geo.country}` : 'Inconnu',
       success,
       reason
-    });
+    };
     
-    // Garder seulement les 100 dernières entrées
-    if (user.loginHistory.length > 100) {
-      user.loginHistory = user.loginHistory.slice(-100);
-    }
-    
-    await user.save();
+    // Mettre à jour directement avec $push et $slice
+    await User.updateOne(
+      { email },
+      {
+        $push: {
+          loginHistory: {
+            $each: [loginEntry],
+            $slice: -100 // Garder seulement les 100 dernières entrées
+          }
+        }
+      }
+    );
   } catch (error) {
     console.error('Erreur lors de l\'ajout à l\'historique de connexion:', error);
   }

@@ -8,7 +8,7 @@ const auth = async (req, res, next) => {
     let token;
     const authHeader = req.header('Authorization');
     
-    // Vérifier plusieurs méthodes d'authentification
+    // Vérifier plusieurs méthodes d'authentification avec nettoyage du token
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.replace('Bearer ', '').replace(/['"]/g, '').trim();
     } else if (req.query.token) {
@@ -17,23 +17,28 @@ const auth = async (req, res, next) => {
       token = req.cookies.quizToken.replace(/['"]/g, '').trim();
     }
     
-    if (!token || token === 'null' || token === 'undefined') {
-      console.log('No token provided for:', req.originalUrl);
+    // Vérification plus stricte de l'absence de token
+    if (!token || token === 'null' || token === 'undefined' || token === 'Bearer null') {
+      console.log('No valid token provided for:', req.originalUrl);
       return res.status(401).json({ 
         success: false, 
-        message: 'Accès refusé. Aucun token fourni.' 
+        message: 'Accès refusé. Aucun token valide fourni.',
+        code: 'NO_TOKEN'
       });
     }
 
-    // Vérification de la structure du token
-    if (token.split('.').length !== 3) {
-      console.log('JWT format invalid');
+    // Vérification de la structure du token JWT
+    const tokenParts = token.split('.');
+    if (tokenParts.length !== 3) {
+      console.log('JWT format invalid for:', req.originalUrl);
       return res.status(401).json({
         success: false,
-        message: 'Token mal formé.'
+        message: 'Token mal formé.',
+        code: 'MALFORMED_TOKEN'
       });
     }
 
+    // Vérification plus tolérante du token
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: false });
     
     // Utilisation de mongoose.model pour éviter les dépendances circulaires
@@ -45,18 +50,18 @@ const auth = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ 
         success: false, 
-        message: 'Token invalide. Utilisateur non trouvé.' 
+        message: 'Token invalide. Utilisateur non trouvé.',
+        code: 'USER_NOT_FOUND'
       });
     }
 
-    // Vérifier la version du token (si elle existe dans le token et l'utilisateur)
-    if (decoded.version !== undefined && user.tokenVersion !== undefined) {
-      if (decoded.version !== user.tokenVersion) {
-        return res.status(401).json({
-          success: false,
-          message: 'Token invalide. Veuillez vous reconnecter.'
-        });
-      }
+    // Vérifier la version du token (si implémentée)
+    if (decoded.version !== undefined && user.tokenVersion !== decoded.version) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token invalide. Veuillez vous reconnecter.',
+        code: 'TOKEN_VERSION_MISMATCH'
+      });
     }
 
     // Vérifier si le token est sur le point d'expirer (dans les 5 minutes)
@@ -68,7 +73,7 @@ const auth = async (req, res, next) => {
       const newToken = jwt.sign(
         { 
           id: user._id,
-          version: user.tokenVersion || 0 
+          version: user.tokenVersion || 0
         },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRE || '24h' }
