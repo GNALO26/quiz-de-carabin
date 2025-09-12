@@ -377,12 +377,6 @@ export class Auth {
         }
         
         localStorage.setItem('userIsPremium', user.isPremium ? 'true' : 'false');
-        
-        // Cacher uniquement l'élément historique dans la navbar principale
-        const historyNavItem = document.querySelector('.nav-item a[href="history.html"]');
-        if (historyNavItem) {
-            historyNavItem.closest('.nav-item').style.display = 'none';
-        }
     } else {
         // Afficher les boutons de connexion
         authButtons.style.display = 'flex';
@@ -391,12 +385,6 @@ export class Auth {
         
         if (premiumBadge) {
             premiumBadge.style.display = 'none';
-        }
-        
-        // Afficher l'élément historique dans la navbar principale
-        const historyNavItem = document.querySelector('.nav-item a[href="history.html"]');
-        if (historyNavItem) {
-            historyNavItem.closest('.nav-item').style.display = 'block';
         }
     }
 }

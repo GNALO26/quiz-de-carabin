@@ -338,10 +338,6 @@ body {
         margin-top: 0.5rem;
     }
     
-    #navbarNav {
-        margin-left: 0 !important;
-    }
-    
     #auth-buttons {
         flex-direction: column;
         gap: 10px;
