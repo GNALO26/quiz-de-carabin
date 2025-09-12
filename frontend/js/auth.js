@@ -2,7 +2,8 @@ import { CONFIG } from './config.js';
 
 export class Auth {
     constructor() {
-        this.token = localStorage.getItem('quizToken');
+        this.cleanCorruptedTokens();
+        this.token = this.getToken();
         this.user = JSON.parse(localStorage.getItem('quizUser') || 'null');
         this.init();
     }
@@ -45,66 +46,81 @@ export class Auth {
         });
     }
 
-// Méthode pour nettoyer les tokens invalides
-cleanInvalidToken() {
-  localStorage.removeItem('quizToken');
-  localStorage.removeItem('quizUser');
-  this.token = null;
-  this.user = null;
-  this.updateUI();
-}
-
-// Modifiez la méthode getToken
-getToken() {
-  let token = localStorage.getItem('quizToken');
-  if (!token) {
-    return null;
-  }
-  
-  token = token.replace(/^"(.*)"$/, '$1').trim();
-  
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      console.warn('Token JWT invalide: structure incorrecte');
-      this.cleanInvalidToken();
-      return null;
-    }
-    
-    const payload = JSON.parse(atob(parts[1]));
-    const currentTime = Math.floor(Date.now() / 1000);
-    
-    if (payload.exp && payload.exp < currentTime) {
-      console.warn('Token expiré');
-      this.cleanInvalidToken();
-      return null;
-    }
-    return token;
-  } catch (error) {
-    console.error('Token validation error:', error);
-    this.cleanInvalidToken();
-    return null;
-  }
-}
-
-// Ajoutez cette méthode à la classe
-cleanCorruptedTokens() {
-  const token = localStorage.getItem('quizToken');
-  if (token) {
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) {
+    // Méthode pour nettoyer les tokens invalides
+    cleanInvalidToken() {
         localStorage.removeItem('quizToken');
         localStorage.removeItem('quizUser');
-        console.log('Token corrompu nettoyé');
-      }
-    } catch (error) {
-      localStorage.removeItem('quizToken');
-      localStorage.removeItem('quizUser');
-      console.log('Token corrompu nettoyé');
+        localStorage.removeItem('userIsPremium');
+        localStorage.removeItem('premiumExpiresAt');
+        this.token = null;
+        this.user = null;
+        this.updateUI();
     }
-  }
-}
+
+    // Nettoyer les tokens corrompus
+    cleanCorruptedTokens() {
+        const token = localStorage.getItem('quizToken');
+        if (token) {
+            try {
+                // Vérifier si le token est mal formé
+                if (typeof token !== 'string' || token === 'null' || token === 'undefined') {
+                    localStorage.removeItem('quizToken');
+                    localStorage.removeItem('quizUser');
+                    return;
+                }
+                
+                // Vérifier la structure JWT
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    localStorage.removeItem('quizToken');
+                    localStorage.removeItem('quizUser');
+                }
+            } catch (error) {
+                localStorage.removeItem('quizToken');
+                localStorage.removeItem('quizUser');
+            }
+        }
+    }
+
+    // Modifiez la méthode getToken
+    getToken() {
+        let token = localStorage.getItem('quizToken');
+        if (!token || token === 'null' || token === 'undefined' || token === 'Bearer null') {
+            return null;
+        }
+        
+        // Nettoyer le token des guillemets et espaces
+        token = token.replace(/^"(.*)"$/, '$1')
+                    .replace(/^'(.*)'$/, '$1')
+                    .replace(/^Bearer /, '')
+                    .trim();
+        
+        // Vérifier la structure JWT
+        try {
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                console.warn('Token JWT invalide: structure incorrecte');
+                this.cleanInvalidToken();
+                return null;
+            }
+            
+            // Vérifier l'expiration
+            const payload = JSON.parse(atob(parts[1]));
+            const currentTime = Math.floor(Date.now() / 1000);
+            
+            if (payload.exp && payload.exp < currentTime) {
+                console.warn('Token expiré');
+                this.cleanInvalidToken();
+                return null;
+            }
+            return token;
+        } catch (error) {
+            console.error('Token validation error:', error);
+            this.cleanInvalidToken();
+            return null;
+        }
+    }
+
     async login() {
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
@@ -122,7 +138,16 @@ cleanCorruptedTokens() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ 
+                    email, 
+                    password,
+                    deviceInfo: {
+                        userAgent: navigator.userAgent,
+                        platform: navigator.platform,
+                        screenResolution: `${screen.width}x${screen.height}`,
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                    }
+                })
             });
 
             const data = await response.json();
@@ -411,6 +436,41 @@ cleanCorruptedTokens() {
         if (loginModalElement) {
             const loginModal = new bootstrap.Modal(loginModalElement);
             loginModal.show();
+        }
+    }
+    
+    // Nouvelle méthode pour les requêtes API avec gestion automatique du token
+    async apiRequest(url, options = {}) {
+        const token = this.getToken();
+        const API_BASE_URL = await this.getActiveAPIUrl();
+        
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+        
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}${url}`, {
+                ...options,
+                headers
+            });
+            
+            // Gérer les tokens expirés ou invalides
+            if (response.status === 401) {
+                this.cleanInvalidToken();
+                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
+                window.location.reload();
+                throw new Error('Session expirée');
+            }
+            
+            return response;
+        } catch (error) {
+            console.error('API Request error:', error);
+            throw error;
         }
     }
 }
