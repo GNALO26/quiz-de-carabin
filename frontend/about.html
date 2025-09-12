@@ -383,51 +383,56 @@
 <body>
     <!-- Navigation -->
    
-    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
-        <div class="container">
-            <a class="navbar-brand" href="index.html">
-                <i class="fas fa-brain me-2"></i>Quiz de Carabin
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="index.html">Accueil</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="quiz.html">Quiz</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="about.html">À propos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="history.html">Historique</a>
-                    </li>
-                </ul>
-                <div class="d-flex" id="auth-buttons">
-                    <a href="#" class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Se connecter</a>
-                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">Créer un compte</a>
-                </div>
-                <div id="user-menu" style="display: none;">
-                    <div class="dropdown">
-                        <button class="btn btn-outline-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
-                            <i class="fas fa-user me-1"></i> <span id="user-name"></span>
-                            <span id="premium-badge" class="badge bg-warning ms-1" style="display: none;">Premium</span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="quiz.html"><i class="fas fa-gamepad me-2"></i>Quiz</a></li>
-                            <li><a class="dropdown-item" href="history.html"><i class="fas fa-history me-2"></i>Historique</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
-                        </ul>
-                    </div>
+   <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+    <div class="container">
+        <a class="navbar-brand" href="index.html">
+            <img src="assets/images/logo.png" style="border-radius: 50%;" alt="Quiz de Carabin" height="42" class="d-inline-block align-text-top me-2">
+            Quiz de Carabin
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="index.html">Accueil</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="quiz.html">Quiz</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="about.html">À propos</a>
+                </li>
+                <!-- L'historique sera caché quand l'utilisateur est connecté -->
+                <li class="nav-item">
+                    <a class="nav-link" href="history.html">Historique</a>
+                </li>
+            </ul>
+            
+            <!-- Boutons de connexion (visibles quand non connecté) -->
+            <div class="d-flex" id="auth-buttons">
+                <a href="#" class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Se connecter</a>
+                <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">Créer un compte</a>
+            </div>
+            
+            <!-- Menu utilisateur (visible quand connecté) -->
+            <div id="user-menu" style="display: none;">
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user me-1"></i> <span id="user-name"></span>
+                        <span id="premium-badge" class="badge bg-warning ms-1" style="display: none;">Premium</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="quiz.html"><i class="fas fa-gamepad me-2"></i>Quiz</a></li>
+                        <li><a class="dropdown-item" href="history.html"><i class="fas fa-history me-2"></i>Historique</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
+                    </ul>
                 </div>
             </div>
         </div>
-    </nav>
-
+    </div>
+</nav>
     <!-- About Hero Section -->
     <section class="about-hero text-white">
         <div class="container position-relative z-2">
@@ -703,7 +708,12 @@
         <!-- Contenu du modal de code -->
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module" src="js/config.js"></script>
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/payment.js"></script>
+<script type="module" src="js/quiz.js"></script>
+<script type="module" src="js/app.js"></script>
     <script>
         // Animation au défilement
         document.addEventListener('DOMContentLoaded', function() {
@@ -725,5 +735,13 @@
             });
         });
     </script>
+    <script>
+// Initialisation de l'authentification
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('auth-buttons') || document.getElementById('user-menu')) {
+        window.auth = new Auth();
+    }
+});
+</script>
 </body>
 </html>

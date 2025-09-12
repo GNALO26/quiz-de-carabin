@@ -346,43 +346,60 @@ export class Auth {
     }
 
     updateUI() {
-        const authButtons = document.getElementById('auth-buttons');
-        const userMenu = document.getElementById('user-menu');
-        const userName = document.getElementById('user-name');
-        const premiumBadge = document.getElementById('premium-badge');
+    const authButtons = document.getElementById('auth-buttons');
+    const userMenu = document.getElementById('user-menu');
+    const userName = document.getElementById('user-name');
+    const premiumBadge = document.getElementById('premium-badge');
 
-        if (!authButtons || !userMenu) {
-            console.warn('Éléments UI non trouvés');
-            return;
-        }
+    if (!authButtons || !userMenu) {
+        console.warn('Éléments UI non trouvés');
+        return;
+    }
 
-        const token = this.getToken();
-        const user = this.user;
+    const token = this.getToken();
+    const user = this.user;
 
-        if (token && user) {
-            authButtons.style.display = 'none';
-            userMenu.style.display = 'block';
-            if (userName) userName.textContent = user.name;
-            
-            if (premiumBadge) {
-                if (user.isPremium) {
-                    premiumBadge.style.display = 'inline';
-                    premiumBadge.textContent = 'Premium';
-                } else {
-                    premiumBadge.style.display = 'none';
-                }
-            }
-            
-            localStorage.setItem('userIsPremium', user.isPremium ? 'true' : 'false');
-        } else {
-            authButtons.style.display = 'flex';
-            userMenu.style.display = 'none';
-            
-            if (premiumBadge) {
+    if (token && user) {
+        // Cacher complètement les boutons de connexion
+        authButtons.style.display = 'none';
+        // Afficher le menu utilisateur
+        userMenu.style.display = 'block';
+        
+        if (userName) userName.textContent = user.name;
+        
+        if (premiumBadge) {
+            if (user.isPremium) {
+                premiumBadge.style.display = 'inline';
+                premiumBadge.textContent = 'Premium';
+            } else {
                 premiumBadge.style.display = 'none';
             }
         }
+        
+        localStorage.setItem('userIsPremium', user.isPremium ? 'true' : 'false');
+        
+        // Cacher uniquement l'élément historique dans la navbar principale
+        const historyNavItem = document.querySelector('.nav-item a[href="history.html"]');
+        if (historyNavItem) {
+            historyNavItem.closest('.nav-item').style.display = 'none';
+        }
+    } else {
+        // Afficher les boutons de connexion
+        authButtons.style.display = 'flex';
+        // Cacher le menu utilisateur
+        userMenu.style.display = 'none';
+        
+        if (premiumBadge) {
+            premiumBadge.style.display = 'none';
+        }
+        
+        // Afficher l'élément historique dans la navbar principale
+        const historyNavItem = document.querySelector('.nav-item a[href="history.html"]');
+        if (historyNavItem) {
+            historyNavItem.closest('.nav-item').style.display = 'block';
+        }
     }
+}
 
     hideModals() {
         // Cacher les modals Bootstrap

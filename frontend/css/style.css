@@ -306,30 +306,8 @@ body {
     user-select: none;
 }
 
-/* Styles pour le dropdown utilisateur */
+/* Styles pour le menu déroulant */
 .dropdown-menu {
-    position: absolute;
-    right: 0;
-    left: auto;
-    z-index: 1000;
-}
-
-/* Ajustements pour mobile */
-@media (max-width: 768px) {
-    .dropdown-menu {
-        position: static;
-        width: 100%;
-    }
-    
-    #user-menu {
-        margin-top: 10px;
-    }
-}
-
-/* Assurer la visibilité du dropdown */
-/* Styles pour les dropdowns */
-.dropdown-menu {
-    display: none;
     position: absolute;
     right: 0;
     left: auto;
@@ -352,6 +330,28 @@ body {
     display: block;
 }
 
+/* Ajustements pour mobile */
+@media (max-width: 768px) {
+    .dropdown-menu {
+        position: static;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+    
+    #navbarNav {
+        margin-left: 0 !important;
+    }
+    
+    #auth-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    #auth-buttons .btn {
+        width: 100%;
+        margin: 5px 0;
+    }
+}
 /* Ajustements pour mobile */
 @media (max-width: 768px) {
     .dropdown-menu {
