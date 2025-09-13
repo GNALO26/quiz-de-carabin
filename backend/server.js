@@ -3,15 +3,15 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-// Configuration optimisée pour serveurs gratuits
+// Configuration optimisée pour serveurs gratuits (options corrigées)
 const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  poolSize: 5, // Limiter le nombre de connexions simultanées
+  maxPoolSize: 5, // Option corrigée - taille maximale du pool de connexions
   serverSelectionTimeoutMS: 5000, // Timeout après 5 secondes
   socketTimeoutMS: 45000, // Fermer les sockets inactifs
   bufferCommands: false, // Désactiver le buffering
-  bufferMaxEntries: 0, // Désactiver le buffering
+  // bufferMaxEntries a été retiré car il est déprécié
 };
 
 // Connexion à MongoDB avec gestion d'erreurs améliorée
