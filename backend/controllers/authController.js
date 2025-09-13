@@ -273,14 +273,18 @@ exports.requestPasswordReset = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Aucun utilisateur trouvé avec cet email"
+      // Pour des raisons de sécurité, ne pas révéler si l'email existe ou non
+      return res.status(200).json({
+        success: true,
+        message: "Si l'email existe, un code de réinitialisation a été envoyé"
       });
     }
 
     // Générer un code à 6 chiffres
     const code = generateCode();
+
+    // Supprimer les anciennes demandes de réinitialisation pour cet email
+    await PasswordReset.deleteMany({ email });
 
     // Sauvegarder la demande de réinitialisation
     const passwordReset = new PasswordReset({
@@ -292,32 +296,33 @@ exports.requestPasswordReset = async (req, res) => {
     await passwordReset.save();
 
     // Envoyer l'email de réinitialisation
-    const emailSent = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Code de réinitialisation - Quiz de Carabin',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #4CAF50;">Réinitialisation de mot de passe</h2>
-          <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
-          <p>Votre code de réinitialisation est :</p>
-          <div style="text-align: center; margin: 20px 0;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #4CAF50;">${code}</span>
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Code de réinitialisation - Quiz de Carabin',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #4CAF50;">Réinitialisation de mot de passe</h2>
+            <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+            <p>Votre code de réinitialisation est :</p>
+            <div style="text-align: center; margin: 20px 0;">
+              <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #4CAF50;">${code}</span>
+            </div>
+            <p>Ce code expirera dans 1 heure.</p>
+            <p>Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email.</p>
+            <br>
+            <p>L'équipe Quiz de Carabin</p>
           </div>
-          <p>Ce code expirera dans 1 heure.</p>
-          <p>Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email.</p>
-          <br>
-          <p>L'équipe Quiz de Carabin</p>
-        </div>
-      `
-    });
+        `
+      });
 
-    if (emailSent) {
       res.status(200).json({
         success: true,
-        message: "Code de réinitialisation envoyé par email"
+        message: "Si l'email existe, un code de réinitialisation a été envoyé"
       });
-    } else {
+    } catch (emailError) {
+      console.error('Erreur envoi email:', emailError);
       res.status(500).json({
         success: false,
         message: "Erreur lors de l'envoi de l'email"
@@ -405,9 +410,18 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
+    // Vérifier que le nouveau mot de passe est différent de l'ancien
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Le nouveau mot de passe doit être différent de l'ancien"
+      });
+    }
+
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
-    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    user.tokenVersion = (user.tokenVersion || 0) + 1; // Invalider les anciens tokens
     
     await user.save();
 
@@ -423,6 +437,64 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Erreur serveur"
+    });
+  }
+};
+
+// Rafraîchissement de token
+exports.refreshToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Token requis"
+      });
+    }
+    
+    // Vérifier que le token est encore valide (mais bientôt expiré)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { 
+      ignoreExpiration: false 
+    });
+    
+    const User = mongoose.model('User');
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Utilisateur non trouvé' 
+      });
+    }
+    
+    // Vérifier que la version du token correspond
+    if (decoded.version !== user.tokenVersion) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session expirée. Veuillez vous reconnecter.'
+      });
+    }
+    
+    // Générer un nouveau token
+    const newToken = generateToken(user);
+    
+    res.status(200).json({
+      success: true,
+      token: newToken
+    });
+  } catch (error) {
+    console.error('Erreur refresh token:', error);
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Token expiré. Veuillez vous reconnecter.' 
+      });
+    }
+    
+    res.status(401).json({ 
+      success: false, 
+      message: 'Token invalide' 
     });
   }
 };

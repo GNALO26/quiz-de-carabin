@@ -11,7 +11,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    lowercase: true
+    lowercase: true,
+    index: true // Ajout d'un index
   },
   password: {
     type: String,
@@ -28,9 +29,9 @@ const userSchema = new mongoose.Schema({
   },
   tokenVersion: {
     type: Number,
-    default: null
+    default: 0
   },
-   loginHistory: [{
+  loginHistory: [{
     timestamp: Date,
     deviceId: String,
     deviceInfo: Object,
@@ -39,7 +40,6 @@ const userSchema = new mongoose.Schema({
     success: Boolean,
     reason: String
   }],
-
   quizHistory: [{
     quizId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -59,12 +59,18 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+// Index pour les recherches courantes
+userSchema.index({ email: 1 });
+userSchema.index({ createdAt: 1 });
+userSchema.index({ isPremium: 1 });
+
 // Hash du mot de passe avant sauvegarde
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    const salt = await bcrypt.genSalt(10);
+    // Réduire le coût du hachage pour les serveurs faibles
+    const salt = await bcrypt.genSalt(8);
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
@@ -76,8 +82,5 @@ userSchema.pre('save', async function(next) {
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
-
-// Ne PAS importer d'autres fichiers qui pourraient créer des dépendances circulaires
-// Évitez les imports comme: const auth = require('../middleware/auth');
 
 module.exports = mongoose.model('User', userSchema);

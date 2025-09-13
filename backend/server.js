@@ -3,17 +3,26 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-// Connexion à MongoDB - DOIT être fait AVANT l'import des routes
-mongoose.connect(process.env.MONGODB_URI, {
+// Configuration optimisée pour serveurs gratuits
+const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-})
+  poolSize: 5, // Limiter le nombre de connexions simultanées
+  serverSelectionTimeoutMS: 5000, // Timeout après 5 secondes
+  socketTimeoutMS: 45000, // Fermer les sockets inactifs
+  bufferCommands: false, // Désactiver le buffering
+  bufferMaxEntries: 0, // Désactiver le buffering
+};
+
+// Connexion à MongoDB avec gestion d'erreurs améliorée
+mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 .then(() => {
   console.log('Connected to MongoDB');
   
   // Charger les modèles après la connexion réussie
   require('./models/User');
   require('./models/Quiz');
+  require('./models/PasswordReset');
   
   // Import des routes (APRÈS la connexion à la base de données)
   const authRoutes = require('./routes/auth');
@@ -37,13 +46,15 @@ mongoose.connect(process.env.MONGODB_URI, {
     credentials: true
   }));
 
+  // Middleware pour parser le JSON
   app.use(express.json({ 
-    limit: '10mb',
+    limit: '1mb', // Réduire la limite pour les serveurs gratuits
     verify: (req, res, buf) => {
       req.rawBody = buf;
     }
   }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // Détection d'appareil
   app.use(deviceDetection);
@@ -61,8 +72,22 @@ mongoose.connect(process.env.MONGODB_URI, {
     res.status(200).json({ 
       success: true, 
       message: 'Server is running correctly',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
     });
+  });
+
+  // Middleware de gestion des erreurs de base de données
+  app.use((err, req, res, next) => {
+    if (err.name === 'MongoError' || err.name === 'MongoServerError') {
+      console.error('Database error:', err);
+      return res.status(503).json({
+        success: false,
+        message: 'Service temporairement indisponible',
+        code: 'DATABASE_ERROR'
+      });
+    }
+    next(err);
   });
 
   // Gestion des routes non trouvées
@@ -84,11 +109,31 @@ mongoose.connect(process.env.MONGODB_URI, {
   });
 
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+  });
+
+  // Gestion propre de la fermeture
+  process.on('SIGINT', () => {
+    console.log('Shutting down gracefully');
+    server.close(() => {
+      mongoose.connection.close(false, () => {
+        console.log('MongoDB connection closed');
+        process.exit(0);
+      });
+    });
   });
 })
 .catch(err => {
   console.error('Could not connect to MongoDB', err);
-  process.exit(1); // Quitter le processus en cas d'échec de connexion à MongoDB
+  process.exit(1);
+});
+
+// Gestion des erreurs de connexion après initialisation
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
 });
