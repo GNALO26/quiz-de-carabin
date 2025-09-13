@@ -482,6 +482,22 @@
 <script type="module" src="js/app.js"></script>
 
 <script>
+    // Fonctions pour afficher/masquer les mots de passe
+        document.getElementById('toggleNewPassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('loginPassword');
+            const icon = this.querySelector('i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        });
+</script>
+
+<script>
 // Initialisation de l'authentification
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('auth-buttons') || document.getElementById('user-menu')) {
