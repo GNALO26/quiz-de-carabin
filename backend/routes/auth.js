@@ -12,6 +12,7 @@ router.post('/logout', authController.logout);
 router.post('/forgot-password', authController.requestPasswordReset);
 router.post('/verify-reset-code', authController.verifyResetCode);
 router.post('/reset-password', authController.resetPassword);
+router.post('/repair-account', authController.repairAccount);
 
 // Route protégée (nécessite un token)
 router.get('/me', auth, async (req, res) => {

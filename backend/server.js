@@ -11,7 +11,6 @@ const mongooseOptions = {
   serverSelectionTimeoutMS: 5000, // Timeout après 5 secondes
   socketTimeoutMS: 45000, // Fermer les sockets inactifs
   bufferCommands: false, // Désactiver le buffering
-  // bufferMaxEntries a été retiré car il est déprécié
 };
 
 // Connexion à MongoDB avec gestion d'erreurs améliorée

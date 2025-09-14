@@ -5,18 +5,9 @@ const auth = async (req, res, next) => {
   console.log('Auth middleware called for:', req.method, req.originalUrl);
   
   try {
-    // Autoriser l'accès public à certaines routes
-    const publicRoutes = [
-      '/api/quiz',
-      '/api/health',
-      '/api/auth/login',
-      '/api/auth/register',
-      '/api/auth/forgot-password',
-      '/api/auth/verify-reset-code',
-      '/api/auth/reset-password'
-    ];
-    
-    if (publicRoutes.includes(req.originalUrl.split('?')[0])) {
+    // Pour la route GET /api/quiz, on autorise l'accès sans token
+    if (req.method === 'GET' && req.originalUrl === '/api/quiz') {
+      console.log('Accès public autorisé à /api/quiz');
       return next();
     }
 
@@ -50,11 +41,7 @@ const auth = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET, { 
-      ignoreExpiration: false,
-      clockTolerance: 30 // 30 secondes de tolérance pour les décalages d'horloge
-    });
-    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: false });
     const User = mongoose.model('User');
     const user = await User.findById(decoded.id).select('-password');
     
@@ -66,13 +53,24 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // Vérifier que la version du token correspond
-    if (decoded.version !== user.tokenVersion) {
-      return res.status(401).json({
-        success: false,
-        message: 'Session expirée. Veuillez vous reconnecter.',
-        code: 'TOKEN_VERSION_MISMATCH'
-      });
+    // Vérification de la version du token avec tolérance
+    const tokenVersion = decoded.version || 0;
+    const userTokenVersion = user.tokenVersion || 0;
+    
+    if (tokenVersion !== userTokenVersion) {
+      // Tentative de récupération pour les petits écarts de version
+      if (Math.abs(tokenVersion - userTokenVersion) <= 2) {
+        // Mise à jour de la version pour synchroniser
+        user.tokenVersion = tokenVersion;
+        await user.save();
+        console.log(`Version de token synchronisée pour ${user.email}`);
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Session expirée. Veuillez vous reconnecter.',
+          code: 'TOKEN_VERSION_MISMATCH'
+        });
+      }
     }
 
     req.user = user;

@@ -375,6 +375,48 @@ exports.verifyResetCode = async (req, res) => {
     });
   }
 };
+// Réparation d'un compte utilisateur (pour support technique)
+exports.repairAccount = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Utilisateur non trouvé"
+      });
+    }
+
+    // Réinitialiser le tokenVersion
+    user.tokenVersion = 0;
+    await user.save();
+
+    // Envoyer un email de confirmation
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Votre compte a été réparé - Quiz de Carabin',
+      html: `
+        <p>Bonjour,</p>
+        <p>Votre compte a été réparé avec succès. Vous pouvez maintenant vous connecter normalement.</p>
+        <p>Si vous continuez à rencontrer des problèmes, veuillez réinitialiser votre mot de passe.</p>
+      `
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Compte ${email} réparé avec succès`
+    });
+
+  } catch (error) {
+    console.error('Erreur repairAccount:', error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur lors de la réparation du compte"
+    });
+  }
+};
 
 // Réinitialisation du mot de passe
 exports.resetPassword = async (req, res) => {
