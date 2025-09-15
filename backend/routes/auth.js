@@ -3,6 +3,14 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const auth = require('../middleware/auth');
 
+// Vérification que les fonctions du contrôleur existent
+console.log('Register function:', typeof authController.register);
+console.log('Login function:', typeof authController.login);
+console.log('Logout function:', typeof authController.logout);
+console.log('RequestPasswordReset function:', typeof authController.requestPasswordReset);
+console.log('VerifyResetCode function:', typeof authController.verifyResetCode);
+console.log('ResetPassword function:', typeof authController.resetPassword);
+
 // Routes d'authentification de base
 router.post('/register', authController.register);
 router.post('/login', authController.login);
@@ -12,7 +20,6 @@ router.post('/logout', authController.logout);
 router.post('/forgot-password', authController.requestPasswordReset);
 router.post('/verify-reset-code', authController.verifyResetCode);
 router.post('/reset-password', authController.resetPassword);
-router.post('/repair-account', authController.repairAccount);
 
 // Route protégée (nécessite un token)
 router.get('/me', auth, async (req, res) => {
