@@ -24,11 +24,28 @@ const generateToken = (user, deviceId = null) => {
   );
 };
 
-// Fonction d'enregistrement
+// Dans authController.js - Fonction register améliorée
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
     
+    // Validation des données
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Tous les champs sont obligatoires"
+      });
+    }
+    
+    // Vérification format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Format d'email invalide"
+      });
+    }
+
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -45,7 +62,7 @@ exports.register = async (req, res) => {
     // Créer l'utilisateur
     const user = new User({
       name,
-      email,
+      email: email.toLowerCase(), // Normaliser l'email en minuscules
       password: hashedPassword,
       tokenVersion: 0
     });
@@ -68,6 +85,15 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur register:', error);
+    
+    // Gestion spécifique des erreurs de duplication
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Un utilisateur avec cet email existe déjà"
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: "Erreur serveur lors de la création du compte"
