@@ -24,7 +24,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   require('./models/PasswordReset');
   
   // Import des routes (APRÈS la connexion à la base de données)
-  const authRoutes = require('./routes/auth-fixed');
+  const authRoutes = require('./routes/auth');
   const quizRoutes = require('./routes/quiz');
   const paymentRoutes = require('./routes/payment');
   const userRoutes = require('./routes/user');
