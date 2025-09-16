@@ -107,7 +107,7 @@ exports.login = async (req, res) => {
     const { email, password, deviceId, deviceInfo } = req.body;
 
     // Vérifier si l'utilisateur existe
-    const user = await User.findOne({ email });
+    const user = await User.findByEmail(email);
     if (!user) {
       // Enregistrer la tentative échouée dans l'historique
       await addLoginHistory(req, email, false, 'Utilisateur non trouvé');
