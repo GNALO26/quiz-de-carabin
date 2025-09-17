@@ -5,12 +5,19 @@ const jwt = require('jsonwebtoken');
 const geoip = require('geoip-lite');
 const transporter = require('../config/email');
 const generateCode = require('../utils/generateCode');
+const crypto = require('crypto');
+
+// Fonction pour générer un ID de session unique
+const generateSessionId = () => {
+  return crypto.randomBytes(16).toString('hex');
+};
 
 // Fonction pour générer un token JWT
-const generateToken = (user, deviceId = null) => {
+const generateToken = (user, deviceId = null, sessionId = null) => {
   const payload = {
     id: user._id,
-    version: user.tokenVersion || 0
+    version: user.tokenVersion || 0,
+    sessionId: sessionId || user.activeSessionId
   };
   
   if (deviceId) {
@@ -100,7 +107,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// Fonction de connexion avec normalisation d'email
+// Fonction de connexion avec normalisation d'email et gestion de session unique
 exports.login = async (req, res) => {
   try {
     const { email, password, deviceId, deviceInfo } = req.body;
@@ -132,11 +139,20 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Générer un nouvel ID de session
+    const sessionId = generateSessionId();
+    
+    // Mettre à jour l'utilisateur avec la nouvelle session
+    user.activeSessionId = sessionId;
+    user.lastLogin = new Date();
+    user.tokenVersion = (user.tokenVersion || 0) + 1; // Invalider les anciens tokens
+    await user.save();
+
     // Enregistrer la connexion réussie dans l'historique
     await addLoginHistory(req, normalizedEmail, true, 'Connexion réussie');
 
-    // Générer le token JWT
-    const token = generateToken(user, deviceId);
+    // Générer le token JWT avec l'ID de session
+    const token = generateToken(user, deviceId, sessionId);
 
     res.status(200).json({
       success: true,
@@ -175,7 +191,7 @@ async function addLoginHistory(req, email, success, reason) {
       deviceId: req.deviceId,
       deviceInfo: req.deviceInfo,
       ipAddress: req.clientIp,
-      location: geo ? `${geo.city}, ${geo.country}` : 'Inconnu',
+      location: geo ?`${geo.city}, ${geo.country}` : 'Inconnu',
       success,
       reason
     };
@@ -196,8 +212,6 @@ async function addLoginHistory(req, email, success, reason) {
     console.error('Erreur lors de l\'ajout à l\'historique de connexion:', error);
   }
 }
-
-
 
 // Fonction pour envoyer une alerte de nouvel appareil
 async function sendNewDeviceAlert(user, deviceInfo, ipAddress) {
@@ -240,9 +254,16 @@ async function sendNewDeviceAlert(user, deviceInfo, ipAddress) {
   }
 }
 
-// Fonction de déconnexion
+// Fonction de déconnexion avec gestion de session
 exports.logout = async (req, res) => {
   try {
+    // Réinitialiser l'ID de session actif
+    if (req.user && req.user._id) {
+      await User.findByIdAndUpdate(req.user._id, { 
+        activeSessionId: null 
+      });
+    }
+    
     res.status(200).json({
       success: true,
       message: "Déconnexion réussie"
@@ -252,6 +273,27 @@ exports.logout = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Erreur serveur lors de la déconnexion"
+    });
+  }
+};
+
+// Fonction pour forcer la déconnexion de toutes les sessions
+exports.forceLogout = async (req, res) => {
+  try {
+    // Incrémenter le tokenVersion pour invalider tous les tokens
+    req.user.tokenVersion = (req.user.tokenVersion || 0) + 1;
+    req.user.activeSessionId = null;
+    await req.user.save();
+    
+    res.status(200).json({
+      success: true,
+      message: "Toutes les sessions ont été déconnectées"
+    });
+  } catch (error) {
+    console.error('Erreur force-logout:', error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur lors de la déconnexion de toutes les sessions"
     });
   }
 };
@@ -268,7 +310,10 @@ exports.requestPasswordReset = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    // Normaliser l'email
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -281,7 +326,7 @@ exports.requestPasswordReset = async (req, res) => {
 
     // Sauvegarder la demande de réinitialisation
     const passwordReset = new PasswordReset({
-      email,
+      email: normalizedEmail,
       code,
       expiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 heure
     });
@@ -292,7 +337,7 @@ exports.requestPasswordReset = async (req, res) => {
     try {
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
-        to: email,
+        to: normalizedEmail,
         subject: 'Code de réinitialisation - Quiz de Carabin',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -342,8 +387,11 @@ exports.verifyResetCode = async (req, res) => {
       });
     }
 
+    // Normaliser l'email
+    const normalizedEmail = email.toLowerCase().trim();
+    
     const passwordReset = await PasswordReset.findOne({
-      email,
+      email: normalizedEmail,
       code,
       used: false,
       expiresAt: { $gt: new Date() }
@@ -381,8 +429,11 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
+    // Normaliser l'email
+    const normalizedEmail = email.toLowerCase().trim();
+    
     const passwordReset = await PasswordReset.findOne({
-      email,
+      email: normalizedEmail,
       code,
       used: false,
       expiresAt: { $gt: new Date() }
@@ -395,7 +446,7 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -409,6 +460,7 @@ exports.resetPassword = async (req, res) => {
     
     // Incrémentation du tokenVersion pour invalider les anciens tokens
     user.tokenVersion = (user.tokenVersion || 0) + 1;
+    user.activeSessionId = null; // Déconnecter toutes les sessions
     
     await user.save();
 
@@ -441,7 +493,10 @@ exports.adminResetAccount = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    // Normaliser l'email
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -449,8 +504,9 @@ exports.adminResetAccount = async (req, res) => {
       });
     }
 
-    // Réinitialiser le tokenVersion
+    // Réinitialiser le tokenVersion et la session
     user.tokenVersion = (user.tokenVersion || 0) + 1;
+    user.activeSessionId = null;
     await user.save();
 
     res.status(200).json({
@@ -472,7 +528,10 @@ exports.repairAccount = async (req, res) => {
   try {
     const { email, newPassword } = req.body;
 
-    const user = await User.findOne({ email });
+    // Normaliser l'email
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -484,8 +543,9 @@ exports.repairAccount = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
     
-    // Réinitialiser le tokenVersion
+    // Réinitialiser le tokenVersion et la session
     user.tokenVersion = 0;
+    user.activeSessionId = null;
     
     await user.save();
 
@@ -508,6 +568,7 @@ console.log('Exportations du authController:');
 console.log('- register:', typeof exports.register);
 console.log('- login:', typeof exports.login);
 console.log('- logout:', typeof exports.logout);
+console.log('- forceLogout:', typeof exports.forceLogout);
 console.log('- requestPasswordReset:', typeof exports.requestPasswordReset);
 console.log('- verifyResetCode:', typeof exports.verifyResetCode);
 console.log('- resetPassword:', typeof exports.resetPassword);
