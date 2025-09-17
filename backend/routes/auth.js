@@ -19,7 +19,39 @@ router.post('/logout', authController.logout);
 // Routes pour la réinitialisation de mot de passe
 router.post('/forgot-password', authController.requestPasswordReset);
 router.post('/verify-reset-code', authController.verifyResetCode);
-router.post('/reset-password', authController.resetPassword);
+router.post('/reset-password', authController.resetPassword);// Route de diagnostic pour vérifier les comptes utilisateurs
+router.post('/diagnose-account', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    const users = await User.find({ 
+      $or: [
+        { email: normalizedEmail },
+        { email: new RegExp(`^${normalizedEmail}$`, 'i') }
+      ]
+    });
+    
+    res.status(200).json({
+      success: true,
+      foundUsers: users.length,
+      users: users.map(u => ({
+        id: u._id,
+        email: u.email,
+        createdAt: u.createdAt,
+        tokenVersion: u.tokenVersion
+      }))
+    });
+  } catch (error) {
+    console.error('Diagnostic error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur de diagnostic'
+    });
+  }
+});
+
+
 
 // Route protégée (nécessite un token)
 router.get('/me', auth, async (req, res) => {

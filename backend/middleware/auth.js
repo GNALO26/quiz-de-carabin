@@ -24,18 +24,40 @@ const auth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: false });
     const User = mongoose.model('User');
-    const user = await User.findById(decoded.id).select('-password');
+    
+    // Recherche de l'utilisateur avec gestion d'erreur améliorée
+    let user;
+    try {
+      user = await User.findById(decoded.id).select('-password');
+    } catch (dbError) {
+      console.error('Erreur DB dans middleware auth:', dbError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Erreur de base de données' 
+      });
+    }
     
     if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token invalide. Utilisateur non trouvé.',
-        code: 'USER_NOT_FOUND'
-      });
+      // Tentative de récupération par email si disponible dans le token
+      if (decoded.email) {
+        try {
+          user = await User.findOne({ email: decoded.email.toLowerCase().trim() }).select('-password');
+        } catch (fallbackError) {
+          console.error('Erreur fallback dans middleware auth:', fallbackError);
+        }
+      }
+      
+      if (!user) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Token invalide. Utilisateur non trouvé.',
+          code: 'USER_NOT_FOUND'
+        });
+      }
     }
 
     // VÉRIFICATION CRITIQUE: Vérifier que la version du token correspond
-    if (decoded.version !== user.tokenVersion) {
+    if (decoded.version !== (user.tokenVersion || 0)) {
       return res.status(401).json({
         success: false,
         message: 'Session expirée. Veuillez vous reconnecter.',

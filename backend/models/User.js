@@ -72,7 +72,7 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Middleware pre-save pour normaliser l'email
+// Remplacer le middleware pre-save existant par :
 userSchema.pre('save', function(next) {
   if (this.isModified('email')) {
     this.email = this.email.toLowerCase().trim();

@@ -24,7 +24,7 @@ const generateToken = (user, deviceId = null) => {
   );
 };
 
-// Dans authController.js - Fonction register améliorée
+// Fonction register améliorée avec gestion de la normalisation des emails
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -37,17 +37,20 @@ exports.register = async (req, res) => {
       });
     }
     
+    // Normaliser l'email (minuscules et trim)
+    const normalizedEmail = email.toLowerCase().trim();
+    
     // Vérification format email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(normalizedEmail)) {
       return res.status(400).json({
         success: false,
         message: "Format d'email invalide"
       });
     }
 
-    // Vérifier si l'utilisateur existe déjà
-    const existingUser = await User.findOne({ email });
+    // Vérifier si l'utilisateur existe déjà avec l'email normalisé
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -55,15 +58,11 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Hasher le mot de passe
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Créer l'utilisateur
+    // Créer l'utilisateur avec l'email normalisé
     const user = new User({
       name,
-      email: email.toLowerCase(), // Normaliser l'email en minuscules
-      password: hashedPassword,
+      email: normalizedEmail,
+      password,
       tokenVersion: 0
     });
 
@@ -101,16 +100,19 @@ exports.register = async (req, res) => {
   }
 };
 
-// Fonction de connexion 
+// Fonction de connexion avec normalisation d'email
 exports.login = async (req, res) => {
   try {
     const { email, password, deviceId, deviceInfo } = req.body;
 
-    // Vérifier si l'utilisateur existe
-    const user = await User.findByEmail(email);
+    // Normaliser l'email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Vérifier si l'utilisateur existe avec l'email normalisé
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       // Enregistrer la tentative échouée dans l'historique
-      await addLoginHistory(req, email, false, 'Utilisateur non trouvé');
+      await addLoginHistory(req, normalizedEmail, false, 'Utilisateur non trouvé');
       
       return res.status(400).json({
         success: false,
@@ -122,7 +124,7 @@ exports.login = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       // Enregistrer la tentative échouée dans l'historique
-      await addLoginHistory(req, email, false, 'Mot de passe incorrect');
+      await addLoginHistory(req, normalizedEmail, false, 'Mot de passe incorrect');
       
       return res.status(400).json({
         success: false,
@@ -130,40 +132,8 @@ exports.login = async (req, res) => {
       });
     }
 
-    let isNewDevice = false;
-
-    // Gestion des appareils
-    if (deviceId) {
-      const knownDevice = user.knownDevices.find(d => d.deviceId === deviceId);
-      
-      if (knownDevice) {
-        // Mettre à jour la date de dernière connexion
-        knownDevice.deviceInfo.lastSeen = new Date();
-      } else {
-        // Nouvel appareil - l'ajouter à la liste
-        user.knownDevices.push({
-          deviceId,
-          deviceInfo: {
-            ...deviceInfo,
-            firstSeen: new Date(),
-            lastSeen: new Date()
-          },
-          isTrusted: false // Marquer comme non approuvé par défaut
-        });
-        
-        isNewDevice = true;
-        
-        // Envoyer une notification si configuré
-        if (user.securitySettings && user.securitySettings.alertOnNewDevice) {
-          await sendNewDeviceAlert(user, deviceInfo, req.clientIp);
-        }
-      }
-      
-      await user.save();
-    }
-
     // Enregistrer la connexion réussie dans l'historique
-    await addLoginHistory(req, email, true, 'Connexion réussie');
+    await addLoginHistory(req, normalizedEmail, true, 'Connexion réussie');
 
     // Générer le token JWT
     const token = generateToken(user, deviceId);
@@ -177,8 +147,7 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         isPremium: user.isPremium
-      },
-      isNewDevice // Informer le frontend si c'est un nouvel appareil
+      }
     });
   } catch (error) {
     console.error('Erreur login:', error);
@@ -206,7 +175,7 @@ async function addLoginHistory(req, email, success, reason) {
       deviceId: req.deviceId,
       deviceInfo: req.deviceInfo,
       ipAddress: req.clientIp,
-      location: geo ?`${geo.city}, ${geo.country}` : 'Inconnu',
+      location: geo ? `${geo.city}, ${geo.country}` : 'Inconnu',
       success,
       reason
     };
@@ -227,6 +196,8 @@ async function addLoginHistory(req, email, success, reason) {
     console.error('Erreur lors de l\'ajout à l\'historique de connexion:', error);
   }
 }
+
+
 
 // Fonction pour envoyer une alerte de nouvel appareil
 async function sendNewDeviceAlert(user, deviceInfo, ipAddress) {
