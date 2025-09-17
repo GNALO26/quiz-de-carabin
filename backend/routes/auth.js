@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const auth = require('../middleware/auth');
+const authController = require('../controllers/authController');
+const deviceDetection = require('../middleware/deviceDetection');
 
 // Vérification que les fonctions du contrôleur existent
 console.log('Register function:', typeof authController.register);
