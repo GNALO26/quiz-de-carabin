@@ -14,7 +14,6 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     validate: {
       validator: function(email) {
-        // Validation robuste des emails
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       },
       message: 'Format d\'email invalide'
@@ -26,7 +25,6 @@ const userSchema = new mongoose.Schema({
     minlength: 6,
     validate: {
       validator: function(password) {
-        // Validation de la force du mot de passe
         return password.length >= 6;
       },
       message: 'Le mot de passe doit contenir au moins 6 caractères'
@@ -43,6 +41,14 @@ const userSchema = new mongoose.Schema({
   tokenVersion: {
     type: Number,
     default: 0
+  },
+  activeSessionId: {
+    type: String,
+    default: null
+  },
+  lastLogin: {
+    type: Date,
+    default: null
   },
   loginHistory: [{
     timestamp: Date,
@@ -72,7 +78,7 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Remplacer le middleware pre-save existant par :
+// Middleware pre-save pour normaliser l'email
 userSchema.pre('save', function(next) {
   if (this.isModified('email')) {
     this.email = this.email.toLowerCase().trim();
