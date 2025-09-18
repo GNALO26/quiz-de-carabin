@@ -474,7 +474,7 @@
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module" src="js/config.js"></script>
 <script type="module" src="js/auth.js"></script>
 <script type="module" src="js/payment.js"></script>
@@ -482,34 +482,65 @@
 <script type="module" src="js/app.js"></script>
 
 <script>
-    // Fonctions pour afficher/masquer les mots de passe
-        document.getElementById('toggleNewPassword').addEventListener('click', function() {
-            const passwordInput = document.getElementById('loginPassword');
-            const icon = this.querySelector('i');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                icon.classList.replace('fa-eye', 'fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                icon.classList.replace('fa-eye-slash', 'fa-eye');
+    // Fonction pour afficher/masquer les mots de passe
+    function setupPasswordToggle() {
+        const toggleButtons = document.querySelectorAll('[id^="toggle"]');
+        
+        toggleButtons.forEach(button => {
+            // Vérifier si l'élément existe avant d'ajouter l'écouteur
+            if (button) {
+                button.addEventListener('click', function() {
+                    // Trouver l'input de mot de passe associé
+                    const form = this.closest('form');
+                    let passwordInput;
+                    
+                    if (form) {
+                        // Chercher dans le formulaire parent
+                        passwordInput = form.querySelector('input[type="password"]');
+                    } else {
+                        // Fallback: chercher par ID conventionnel
+                        const inputId = this.id.replace('toggle', '').toLowerCase() + 'Password';
+                        passwordInput = document.getElementById(inputId);
+                    }
+                    
+                    if (passwordInput) {
+                        const icon = this.querySelector('i');
+                        if (passwordInput.type === 'password') {
+                            passwordInput.type = 'text';
+                            if (icon) {
+                                icon.classList.replace('fa-eye', 'fa-eye-slash');
+                            }
+                        } else {
+                            passwordInput.type = 'password';
+                            if (icon) {
+                                icon.classList.replace('fa-eye-slash', 'fa-eye');
+                            }
+                        }
+                    }
+                });
             }
         });
+    }
+
+    // Initialisation de l'authentification
+    document.addEventListener('DOMContentLoaded', function() {
+        if (document.getElementById('auth-buttons') || document.getElementById('user-menu')) {
+            window.auth = new Auth();
+        }
+        
+        // Configurer les boutons d'affichage de mot de passe
+        setupPasswordToggle();
+    });
 </script>
 
 <script>
-// Initialisation de l'authentification
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('auth-buttons') || document.getElementById('user-menu')) {
-        window.auth = new Auth();
-    }
-});
-</script>
-<script>
     function closeLoginModal() {
-        const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-        if (loginModal) {
-            loginModal.hide();
+        const loginModalElement = document.getElementById('loginModal');
+        if (loginModalElement) {
+            const loginModal = bootstrap.Modal.getInstance(loginModalElement);
+            if (loginModal) {
+                loginModal.hide();
+            }
         }
     }
 </script>
