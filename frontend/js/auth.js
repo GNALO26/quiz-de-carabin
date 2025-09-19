@@ -485,7 +485,8 @@ export class Auth {
         try {
             const response = await fetch(`${API_BASE_URL}${url}`, {
                 ...options,
-                headers
+                headers,
+                credentials: 'include' // Important pour les cookies
             });
             
             // Gérer les tokens expirés ou invalides

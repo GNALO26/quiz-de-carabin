@@ -1,9 +1,24 @@
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const Session = require('../models/Session'); // Assurez-vous d'avoir créé ce modèle
+const Session = require('../models/Session');
+
+// Routes qui ne nécessitent pas d'authentification
+const publicRoutes = [
+  '/api/health',
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/forgot-password',
+  '/api/auth/verify-reset-code',
+  '/api/auth/reset-password'
+];
 
 const auth = async (req, res, next) => {
   try {
+    // Vérifier si la route est publique
+    if (publicRoutes.includes(req.path)) {
+      return next();
+    }
+
     let token;
     const authHeader = req.header('Authorization');
     
@@ -75,7 +90,7 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // NOUVELLE VÉRIFICATION: Vérifier si la session existe et est active dans la base de données
+    // Vérifier si la session existe et est active dans la base de données
     const activeSession = await Session.findOne({
       userId: user._id,
       sessionId: decoded.sessionId,

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/authController'); // Modification ici
+const authController = require('../controllers/authController');
 const auth = require('../middleware/auth');
 
 // Route d'inscription

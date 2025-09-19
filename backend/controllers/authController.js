@@ -110,7 +110,6 @@ exports.register = async (req, res) => {
 };
 
 // Fonction de connexion
-// Fonction de connexion
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;

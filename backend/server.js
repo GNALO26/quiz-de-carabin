@@ -64,21 +64,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   // Détection d'appareil
   app.use(deviceDetection);
 
-  // Middleware d'authentification
-  app.use(auth);
-
-  // Middleware de vérification de session
-  app.use(sessionCheck);
-
-  // Routes API
-  app.use('/api/auth', authRoutes);
-  app.use('/api/quiz', quizRoutes);
-  app.use('/api/payment', paymentRoutes);
-  app.use('/api/user', userRoutes);
-  app.use('/api/access-code', accessCodeRoutes);
-  app.use('/api/auth', tokenRoutes);
-
-  // Route de santé
+  // Routes publiques (sans authentification)
   app.get('/api/health', (req, res) => {
     res.status(200).json({ 
       success: true, 
@@ -87,6 +73,20 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
       database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
     });
   });
+
+  // Routes d'authentification (publiques)
+  app.use('/api/auth', authRoutes);
+
+  // Middleware d'authentification (pour les routes suivantes)
+  app.use(auth);
+  app.use(sessionCheck);
+
+  // Routes protégées (nécessitent une authentification)
+  app.use('/api/quiz', quizRoutes);
+  app.use('/api/payment', paymentRoutes);
+  app.use('/api/user', userRoutes);
+  app.use('/api/access-code', accessCodeRoutes);
+  app.use('/api/auth', tokenRoutes); // Routes auth protégées (comme check-session)
 
   // Middleware de gestion des erreurs de base de données
   app.use(handleDatabaseError);
