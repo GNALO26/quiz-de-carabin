@@ -5,7 +5,9 @@ export class Auth {
         this.cleanCorruptedTokens();
         this.token = this.getToken();
         this.user = JSON.parse(localStorage.getItem('quizUser') || 'null');
+        this.sessionCheckInterval = null;
         this.init();
+        this.startSessionChecker();
     }
 
     init() {
@@ -82,7 +84,6 @@ export class Auth {
         }
     }
 
-    // Modifiez la méthode getToken
     getToken() {
         let token = localStorage.getItem('quizToken');
         if (!token || token === 'null' || token === 'undefined' || token === 'Bearer null') {
@@ -316,8 +317,33 @@ export class Auth {
         return CONFIG.API_BACKUP_URL;
     }
 
+    // NOUVELLE MÉTHODE: Vérification périodique de la session
+    startSessionChecker() {
+        this.sessionCheckInterval = setInterval(async () => {
+            if (this.isAuthenticated()) {
+                try {
+                    const response = await this.apiRequest('/api/auth/check-session');
+                    if (!response.ok) {
+                        const data = await response.json();
+                        if (data.code === 'SESSION_EXPIRED' || data.code === 'SESSION_INVALIDATED') {
+                            this.logout();
+                            this.showAlert('Votre session a expiré ou a été utilisée sur un autre appareil. Veuillez vous reconnecter.', 'warning');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erreur vérification session:', error);
+                }
+            }
+        }, 60000); // Vérifier toutes les minutes
+    }
+
     logout() {
         try {
+            // Arrêter la vérification de session
+            if (this.sessionCheckInterval) {
+                clearInterval(this.sessionCheckInterval);
+            }
+
             localStorage.removeItem('quizToken');
             localStorage.removeItem('quizUser');
             localStorage.removeItem('userIsPremium');
@@ -442,7 +468,7 @@ export class Auth {
         }
     }
     
-    // Nouvelle méthode pour les requêtes API avec gestion automatique du token
+    // Méthode pour les requêtes API avec gestion automatique du token
     async apiRequest(url, options = {}) {
         const token = this.getToken();
         const API_BASE_URL = await this.getActiveAPIUrl();
@@ -453,7 +479,7 @@ export class Auth {
         };
         
         if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
+            headers['Authorization'] = Bearer ${token};
         }
         
         try {

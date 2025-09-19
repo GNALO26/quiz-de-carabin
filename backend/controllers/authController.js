@@ -3,6 +3,7 @@ const PasswordReset = require('../models/PasswordReset');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const geoip = require('geoip-lite');
+const Session = require('../models/Session');
 const transporter = require('../config/email');
 const generateCode = require('../utils/generateCode');
 const crypto = require('crypto');
@@ -109,6 +110,7 @@ exports.register = async (req, res) => {
 };
 
 // Fonction de connexion
+// Fonction de connexion
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -136,12 +138,27 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Désactiver toutes les sessions existantes pour cet utilisateur
+    await Session.deactivateAllUserSessions(user._id);
+
     // Générer un nouvel ID de session et incrémenter tokenVersion
     const sessionId = generateSessionId();
     user.activeSessionId = sessionId;
     user.tokenVersion = (user.tokenVersion || 0) + 1;
     user.lastLogin = new Date();
     await user.save();
+
+    // Créer une nouvelle session
+    const geo = geoip.lookup(req.clientIp);
+    const newSession = new Session({
+      userId: user._id,
+      sessionId: sessionId,
+      deviceInfo: req.deviceInfo,
+      ipAddress: req.clientIp,
+      location: geo ? `${geo.city}, ${geo.country}` : 'Inconnu'
+    });
+
+    await newSession.save();
 
     // Enregistrer la connexion réussie
     await addLoginHistory(req, normalizedEmail, true, 'Connexion réussie');
@@ -204,10 +221,17 @@ async function addLoginHistory(req, email, success, reason) {
 }
 
 // Fonction de déconnexion
+// Fonction de déconnexion
 exports.logout = async (req, res) => {
   try {
-    // Réinitialiser l'ID de session actif et incrémenter tokenVersion
-    if (req.user && req.user._id) {
+    // Désactiver la session active
+    if (req.user && req.user._id && req.user.activeSessionId) {
+      await Session.updateOne(
+        { userId: req.user._id, sessionId: req.user.activeSessionId },
+        { isActive: false }
+      );
+      
+      // Réinitialiser l'ID de session actif et incrémenter tokenVersion
       const user = await User.findById(req.user._id);
       if (user) {
         user.activeSessionId = null;
@@ -511,6 +535,22 @@ exports.repairAccount = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Erreur lors de la réparation du compte"
+    });
+  }
+};
+
+// Vérification de l'état de la session
+exports.checkSession = async (req, res) => {
+  try {
+    // La vérification est faite par le middleware sessionCheck
+    res.status(200).json({
+      success: true,
+      message: 'Session valide'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erreur de vérification de session'
     });
   }
 };

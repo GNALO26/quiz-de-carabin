@@ -3,14 +3,20 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-// Configuration optimisée pour serveurs gratuits (options corrigées)
+// Import des middlewares
+const deviceDetection = require('./middleware/deviceDetection');
+const auth = require('./middleware/auth');
+const sessionCheck = require('./middleware/sessionCheck');
+const handleDatabaseError = require('./middleware/handleDatabaseError');
+
+// Configuration optimisée pour serveurs gratuits
 const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  maxPoolSize: 5, // Option corrigée - taille maximale du pool de connexions
-  serverSelectionTimeoutMS: 5000, // Timeout après 5 secondes
-  socketTimeoutMS: 45000, // Fermer les sockets inactifs
-  bufferCommands: false, // Désactiver le buffering
+  maxPoolSize: 5,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  bufferCommands: false,
 };
 
 // Connexion à MongoDB avec gestion d'erreurs améliorée
@@ -22,6 +28,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   require('./models/User');
   require('./models/Quiz');
   require('./models/PasswordReset');
+  require('./models/Session'); // Nouveau modèle de session
   
   // Import des routes (APRÈS la connexion à la base de données)
   const authRoutes = require('./routes/auth');
@@ -30,7 +37,6 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   const userRoutes = require('./routes/user');
   const accessCodeRoutes = require('./routes/accessCode');
   const tokenRoutes = require('./routes/token');
-  const deviceDetection = require('./middleware/deviceDetection');
 
   const app = express();
 
@@ -47,7 +53,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 
   // Middleware pour parser le JSON
   app.use(express.json({ 
-    limit: '1mb', // Réduire la limite pour les serveurs gratuits
+    limit: '1mb',
     verify: (req, res, buf) => {
       req.rawBody = buf;
     }
@@ -57,6 +63,12 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 
   // Détection d'appareil
   app.use(deviceDetection);
+
+  // Middleware d'authentification
+  app.use(auth);
+
+  // Middleware de vérification de session
+  app.use(sessionCheck);
 
   // Routes API
   app.use('/api/auth', authRoutes);
@@ -77,17 +89,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   });
 
   // Middleware de gestion des erreurs de base de données
-  app.use((err, req, res, next) => {
-    if (err.name === 'MongoError' || err.name === 'MongoServerError') {
-      console.error('Database error:', err);
-      return res.status(503).json({
-        success: false,
-        message: 'Service temporairement indisponible',
-        code: 'DATABASE_ERROR'
-      });
-    }
-    next(err);
-  });
+  app.use(handleDatabaseError);
 
   // Gestion des routes non trouvées
   app.use('*', (req, res) => {

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const Session = require('../models/Session'); // Assurez-vous d'avoir créé ce modèle
 
 const auth = async (req, res, next) => {
   try {
@@ -7,14 +8,14 @@ const auth = async (req, res, next) => {
     const authHeader = req.header('Authorization');
     
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7); // Enlève 'Bearer ' pour obtenir le token
+      token = authHeader.replace('Bearer ', '').replace(/['"]/g, '').trim();
     } else if (req.query.token) {
-      token = req.query.token;
+      token = req.query.token.replace(/['"]/g, '').trim();
     } else if (req.cookies && req.cookies.quizToken) {
-      token = req.cookies.quizToken;
+      token = req.cookies.quizToken.replace(/['"]/g, '').trim();
     }
     
-    if (!token || token === 'null' || token === 'undefined') {
+    if (!token || token === 'null' || token === 'undefined' || token === 'Bearer null') {
       return res.status(401).json({ 
         success: false, 
         message: 'Accès refusé. Aucun token valide fourni.',
@@ -22,7 +23,7 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // Décoder le token sans vérification pour obtenir l'ID utilisateur
+    // Décoder le token pour obtenir les informations sans vérification
     const decodedWithoutVerify = jwt.decode(token);
     if (!decodedWithoutVerify || !decodedWithoutVerify.id) {
       return res.status(401).json({ 
@@ -32,8 +33,18 @@ const auth = async (req, res, next) => {
       });
     }
 
+    // Recherche de l'utilisateur
     const User = mongoose.model('User');
-    const user = await User.findById(decodedWithoutVerify.id).select('-password');
+    let user;
+    try {
+      user = await User.findById(decodedWithoutVerify.id).select('-password');
+    } catch (dbError) {
+      console.error('Erreur DB dans middleware auth:', dbError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Erreur de base de données' 
+      });
+    }
     
     if (!user) {
       return res.status(401).json({ 
@@ -46,8 +57,8 @@ const auth = async (req, res, next) => {
     // Maintenant, vérifier le token avec le secret
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Vérifier la version du token
-    if (decoded.version !== user.tokenVersion) {
+    // VÉRIFICATION CRITIQUE: Vérifier que la version du token correspond
+    if (decoded.version !== (user.tokenVersion || 0)) {
       return res.status(401).json({
         success: false,
         message: 'Session expirée. Veuillez vous reconnecter.',
@@ -55,7 +66,7 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // Vérifier la session active
+    // VÉRIFICATION DE LA SESSION: Vérifier que le token correspond à la session active
     if (decoded.sessionId !== user.activeSessionId) {
       return res.status(401).json({
         success: false,
@@ -63,6 +74,25 @@ const auth = async (req, res, next) => {
         code: 'SESSION_MISMATCH'
       });
     }
+
+    // NOUVELLE VÉRIFICATION: Vérifier si la session existe et est active dans la base de données
+    const activeSession = await Session.findOne({
+      userId: user._id,
+      sessionId: decoded.sessionId,
+      isActive: true
+    });
+
+    if (!activeSession) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session invalide. Connexion depuis un autre appareil détectée.',
+        code: 'SESSION_INVALIDATED'
+      });
+    }
+
+    // Mettre à jour la date de dernière activité de la session
+    activeSession.lastActive = new Date();
+    await activeSession.save();
 
     req.user = user;
     next();

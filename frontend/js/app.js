@@ -47,14 +47,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Fonction globale pour fermer le modal de connexion
 window.closeLoginModal = function() {
-    const loginModalElement = document.getElementById('loginModal');
-    if (loginModalElement) {
-        const loginModal = bootstrap.Modal.getInstance(loginModalElement);
-        if (loginModal) {
-            loginModal.hide();
-        } else {
-            // Créer une instance si elle n'existe pas encore
-            new bootstrap.Modal(loginModalElement).hide();
-        }
+    const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+    if (loginModal) {
+        loginModal.hide();
     }
 };
