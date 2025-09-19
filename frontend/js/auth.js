@@ -345,47 +345,47 @@ export class Auth {
         }
     }
 
-updateUI() {
-    const authButtons = document.getElementById('auth-buttons');
-    const userMenu = document.getElementById('user-menu');
-    const userName = document.getElementById('user-name');
-    const premiumBadge = document.getElementById('premium-badge');
+    updateUI() {
+        const authButtons = document.getElementById('auth-buttons');
+        const userMenu = document.getElementById('user-menu');
+        const userName = document.getElementById('user-name');
+        const premiumBadge = document.getElementById('premium-badge');
 
-    if (!authButtons || !userMenu) {
-        console.warn('Éléments UI non trouvés');
-        return;
-    }
+        if (!authButtons || !userMenu) {
+            console.warn('Éléments UI non trouvés');
+            return;
+        }
 
-    const token = this.getToken();
-    const user = this.user;
+        const token = this.getToken();
+        const user = this.user;
 
-    if (token && user) {
-        // Cacher les boutons de connexion
-        authButtons.style.display = 'none';
-        // Afficher le menu utilisateur
-        userMenu.style.display = 'block';
-        
-        if (userName) userName.textContent = user.name;
-        
-        if (premiumBadge) {
-            if (user.isPremium) {
-                premiumBadge.style.display = 'inline';
-                premiumBadge.textContent = 'Premium';
-            } else {
+        if (token && user) {
+            // Cacher les boutons de connexion
+            authButtons.style.display = 'none';
+            // Afficher le menu utilisateur
+            userMenu.style.display = 'block';
+            
+            if (userName) userName.textContent = user.name;
+            
+            if (premiumBadge) {
+                if (user.isPremium) {
+                    premiumBadge.style.display = 'inline';
+                    premiumBadge.textContent = 'Premium';
+                } else {
+                    premiumBadge.style.display = 'none';
+                }
+            }
+        } else {
+            // Afficher les boutons de connexion
+            authButtons.style.display = 'flex';
+            // Cacher le menu utilisateur
+            userMenu.style.display = 'none';
+            
+            if (premiumBadge) {
                 premiumBadge.style.display = 'none';
             }
         }
-    } else {
-        // Afficher les boutons de connexion
-        authButtons.style.display = 'flex';
-        // Cacher le menu utilisateur
-        userMenu.style.display = 'none';
-        
-        if (premiumBadge) {
-            premiumBadge.style.display = 'none';
-        }
     }
-}
 
     hideModals() {
         // Cacher les modals Bootstrap
