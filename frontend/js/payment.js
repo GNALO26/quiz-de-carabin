@@ -73,67 +73,67 @@ export class Payment {
         }
     }
 
-   async initiatePayment() {
-    try {
-        console.log('Initialisation du paiement...');
-        
-        if (!this.auth.isAuthenticated()) {
-            this.auth.showLoginModal();
-            this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
-            return;
-        }
-
-        const user = this.auth.getUser();
-        const token = this.auth.getToken();
-        
-        console.log('Utilisateur:', user.email);
-        
-        const API_BASE_URL = await this.getActiveAPIUrl();
-        console.log('API URL:', API_BASE_URL);
-        
-        // Afficher l'indicateur de chargement
-        const subscribeBtn = document.getElementById('subscribe-btn');
-        const originalText = subscribeBtn.innerHTML;
-        subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...';
-        subscribeBtn.disabled = true;
-
-        const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+    async initiatePayment() {
+        try {
+            console.log('Initialisation du paiement...');
+            
+            if (!this.auth.isAuthenticated()) {
+                this.auth.showLoginModal();
+                this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
+                return;
             }
-        });
 
-        // Réinitialiser le bouton
-        subscribeBtn.innerHTML = originalText;
-        subscribeBtn.disabled = false;
+            const user = this.auth.getUser();
+            const token = this.auth.getToken();
+            
+            console.log('Utilisateur:', user.email);
+            
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            console.log('API URL:', API_BASE_URL);
+            
+            // Afficher l'indicateur de chargement
+            const subscribeBtn = document.getElementById('subscribe-btn');
+            const originalText = subscribeBtn.innerHTML;
+            subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...';
+            subscribeBtn.disabled = true;
 
-        const data = await response.json();
-        console.log('Réponse complète du serveur:', data);
+            const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
 
-        if (data.success && data.invoiceURL) {
-            if (data.existingTransaction) {
-                // Afficher un message informatif sur la transaction existante
-                this.showAlert(
-                    `Vous avez déjà une transaction en cours. <a href="${data.invoiceURL}" class="alert-link">Cliquez ici pour continuer</a> ou attendez qu'elle expire.`,
-                    'info',
-                    10000
-                );
-            } else {
-                // Nouvelle transaction, rediriger directement
+            // Réinitialiser le bouton
+            subscribeBtn.innerHTML = originalText;
+            subscribeBtn.disabled = false;
+
+            const data = await response.json();
+            console.log('Réponse complète du serveur:', data);
+
+            if (data.success && data.invoiceURL) {
                 console.log('Redirection vers:', data.invoiceURL);
                 window.location.href = data.invoiceURL;
+            } else {
+                console.error('Erreur du serveur:', data);
+                
+                if (data.error && data.error.includes('Transaction Found')) {
+                    this.showAlert('Une transaction est déjà en cours. Veuillez réessayer dans quelques instants.', 'warning');
+                } else {
+                    this.showAlert('Erreur lors de l\'initiation du paiement: ' + (data.message || 'Erreur inconnue'), 'danger');
+                }
             }
-        } else {
-            console.error('Erreur du serveur:', data);
-            this.showAlert('Erreur lors de l\'initiation du paiement: ' + (data.message || 'Erreur inconnue'), 'danger');
+        } catch (error) {
+            console.error('Error initiating payment:', error);
+            
+            if (error.message.includes('Transaction Found')) {
+                this.showAlert('Une transaction est déjà en cours. Veuillez réessayer dans quelques instants.', 'warning');
+            } else {
+                this.showAlert('Erreur lors de l\'initiation du paiement: ' + error.message, 'danger');
+            }
         }
-    } catch (error) {
-        console.error('Error initiating payment:', error);
-        this.showAlert('Erreur lors de l\'initiation du paiement: ' + error.message, 'danger');
     }
-}
 
     async validateAccessCode() {
         try {
@@ -274,35 +274,35 @@ export class Payment {
     }
 
     // Nouvelle méthode pour vérifier le code d'accès
-    async checkAccessCode() {
-        try {
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            const token = this.auth.getToken();
-            
-            if (!token) {
-                console.error('No authentication token found');
-                return null;
-            }
-            
-            const response = await fetch(`${API_BASE_URL}/api/payment/access-code`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    return data.accessCode;
-                }
-            }
-            return null;
-        } catch (error) {
-            console.error('Error checking access code:', error);
+async checkAccessCode() {
+    try {
+        const API_BASE_URL = await this.getActiveAPIUrl();
+        const token = this.auth.getToken();
+        
+        if (!token) {
+            console.error('No authentication token found');
             return null;
         }
+        
+        const response = await fetch(`${API_BASE_URL}/api/payment/access-code`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                return data.accessCode;
+            }
+        }
+        return null;
+    } catch (error) {
+        console.error('Error checking access code:', error);
+        return null;
     }
+}
 
     async getActiveAPIUrl() {
         try {
@@ -321,7 +321,7 @@ export class Payment {
         return CONFIG.API_BACKUP_URL;
     }
 
-    showAlert(message, type, duration = 5000) {
+    showAlert(message, type) {
         document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
         
         const alertDiv = document.createElement('div');
@@ -342,7 +342,7 @@ export class Payment {
             if (alertDiv.parentNode) {
                 alertDiv.parentNode.removeChild(alertDiv);
             }
-        }, duration);
+        }, 5000);
     }
 }
 
@@ -352,15 +352,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Pré-remplir le champ de code s'il y a un code en attente
     const pendingCode = localStorage.getItem('pendingAccessCode');
-    if (pendingCode && document.getElementById('accessCode')) {
-        document.getElementById('accessCode').value = pendingCode;
+    if (pendingCode && document.getElementById('code')) {
+        document.getElementById('code').value = pendingCode;
         localStorage.removeItem('pendingAccessCode');
-        
-        // Valider automatiquement si on est sur la page de validation
-        if (window.location.pathname.includes('access-code.html')) {
-            setTimeout(() => {
-                document.getElementById('validate-code').click();
-            }, 1000);
-        }
     }
 });

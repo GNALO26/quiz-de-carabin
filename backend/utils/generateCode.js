@@ -1,16 +1,10 @@
-const crypto = require('crypto');
-
-// Génère un code numérique de 6 chiffres sécurisé
 const generateCode = () => {
-  return crypto.randomInt(100000, 999999).toString();
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 };
 
-// Vérifie si un code est valide (6 chiffres, non expiré)
-const validateCodeFormat = (code) => {
-  return /^\d{6}$/.test(code);
-};
-
-module.exports = {
-  generateCode,
-  validateCodeFormat
-};
+module.exports = generateCode;

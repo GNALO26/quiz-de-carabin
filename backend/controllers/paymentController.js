@@ -1,60 +1,67 @@
 const Paydunya = require('paydunya');
 const User = require('../models/User');
 const AccessCode = require('../models/AccessCode');
+const generateCode = require('../utils/generateCode');
 const Transaction = require('../models/Transaction');
-const { generateCode, validateCodeFormat } = require('../utils/generateCode');
-const transporter = require('../config/email');
 const crypto = require('crypto');
+const transporter = require('../config/email');
 
 // Configuration PayDunya
 const setup = new Paydunya.Setup({
-  masterKey: process.env.PAYDUNYA_MASTER_KEY,
-  privateKey: process.env.PAYDUNYA_PRIVATE_KEY,
-  publicKey: process.env.PAYDUNYA_PUBLIC_KEY,
-  token: process.env.PAYDUNYA_TOKEN,
-  mode: process.env.PAYDUNYA_MODE || 'test'
+  masterKey: process.env.PAYDUNYA_MASTER_KEY ? process.env.PAYDUNYA_MASTER_KEY.trim() : '',
+  privateKey: process.env.PAYDUNYA_PRIVATE_KEY ? process.env.PAYDUNYA_PRIVATE_KEY.trim() : '',
+  publicKey: process.env.PAYDUNYA_PUBLIC_KEY ? process.env.PAYDUNYA_PUBLIC_KEY.trim() : '',
+  token: process.env.PAYDUNYA_TOKEN ? process.env.PAYDUNYA_TOKEN.trim() : '',
+  mode: (process.env.PAYDUNYA_MODE || 'live').trim()
 });
 
 const store = new Paydunya.Store({
   name: "Quiz de Carabin",
   tagline: "Plateforme de quiz médicaux",
   postalAddress: "Cotonou, Bénin",
-  phoneNumber: process.env.STORE_PHONE,
-  websiteURL: process.env.FRONTEND_URL,
-  logoURL: process.env.STORE_LOGO_URL
+  phoneNumber: process.env.STORE_PHONE || "+2290156035888",
+  websiteURL: process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app",
+  logoURL: process.env.STORE_LOGO_URL || "https://quiz-de-carabin.netlify.app/assets/images/logo.png"
 });
 
+// Fonctions utilitaires
+const generateUniqueTransactionID = () => {
+  return 'TXN_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+};
+
+const generateUniqueReference = () => {
+  return 'REF_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+};
+
 // Fonction pour envoyer des emails avec code d'accès
-const sendAccessCodeEmail = async (email, accessCode, userName = '') => {
+// Remplacer la fonction sendAccessCodeEmail existante par :
+const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') => {
   try {
     const mailOptions = {
-      from: `"Quiz de Carabin" <${process.env.EMAIL_USER}>`,
+      from: process.env.EMAIL_USER,
       to: email,
       subject: 'Votre code d\'accès Premium - 🩺 Quiz de Carabin',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #13a718;">Félicitations ${userName}!</h2>
-          </div>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #13a718ff;">Félicitations ${userName}!</h2>
           <p>Votre abonnement premium a été activé avec succès.</p>
           <p>Voici votre code d'accès unique:</p>
-          <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1e53a2; padding: 10px 20px; background-color: #e9ecef; border-radius: 6px;">${accessCode}</span>
+          <div style="text-align: center; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #1e53a2ff; background: #f8f9fa; padding: 15px; border-radius: 8px; display: inline-block;">
+              ${accessCode}
+            </span>
           </div>
-          <p><strong>Ce code expire dans 30 minutes.</strong></p>
+          <p>Ce code expire dans <strong>30 minutes</strong>.</p>
           <p>Utilisez-le sur la page de validation pour activer votre compte premium.</p>
-          <p>Si vous n'avez pas initié cette demande, veuillez ignorer cet email.</p>
           <br>
-          <p>Cordialement,</p>
-          <p>L'équipe 🩺 <strong>Quiz de Carabin</strong> 🩺</p>
-          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
-          <p style="font-size: 12px; color: #6c757d;">Cet email a été envoyé automatiquement, veuillez ne pas y répondre.</p>
+          <p>Merci pour votre confiance!</p>
+          <p>L'équipe 🩺 Quiz de Carabin 🩺</p>
         </div>
       `
     };
     
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email envoyé avec succès:', info.messageId);
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Email avec code d\'accès envoyé à:', email);
     return true;
   } catch (error) {
     console.error('❌ Erreur envoi email:', error);
@@ -62,109 +69,82 @@ const sendAccessCodeEmail = async (email, accessCode, userName = '') => {
   }
 };
 
+// Exporter la fonction
+exports.sendAccessCodeEmail = sendAccessCodeEmail;
+
 // Initier un paiement
-// Initier un paiement - VERSION CORRIGÉE
 exports.initiatePayment = async (req, res) => {
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
     
     const user = req.user;
-    
-    // Vérifier si l'utilisateur a déjà un abonnement actif
-    if (user.isPremium && new Date(user.premiumExpiresAt) > new Date()) {
+    const uniqueReference = generateUniqueReference();
+
+    if (user.isPremium && user.premiumExpiresAt > new Date()) {
       return res.status(400).json({
         success: false,
         message: 'Vous avez déjà un abonnement premium actif'
       });
     }
 
-    // Vérifier s'il existe déjà une transaction EN COURS pour cet utilisateur
-    // Seulement si elle a été créée dans les 10 dernières minutes
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    
-    const existingTransaction = await Transaction.findOne({
-      userId: user._id,
-      status: 'pending',
-      createdAt: { $gt: tenMinutesAgo } // seulement si créée il y a moins de 10 min
-    });
-
-    if (existingTransaction) {
-      console.log('Transaction en cours trouvée:', existingTransaction.transactionId);
-      
-      // Vérifier si l'URL de la facture est toujours valide
-      try {
-        const invoice = new Paydunya.CheckoutInvoice(setup, store);
-        const success = await invoice.confirm(existingTransaction.paydunyaInvoiceToken);
-        
-        if (success && invoice.status === 'completed') {
-          // La transaction a été payée entre-temps, la marquer comme complétée
-          existingTransaction.status = 'completed';
-          await existingTransaction.save();
-          console.log('Transaction marquée comme complétée après vérification');
-        } else if (success && invoice.status === 'pending') {
-          // La transaction est toujours en attente, renvoyer l'URL existante
-          return res.status(200).json({
-            success: true,
-            message: 'Une transaction est déjà en cours.',
-            invoiceURL: existingTransaction.paydunyaInvoiceURL,
-            transactionId: existingTransaction.transactionId,
-            existingTransaction: true
-          });
-        } else {
-          // La transaction a expiré ou échoué, permettre d'en créer une nouvelle
-          console.log('Transaction précédente a expiré ou échoué, création nouvelle');
-        }
-      } catch (invoiceError) {
-        console.error('Erreur vérification statut transaction:', invoiceError);
-        // En cas d'erreur, permettre de créer une nouvelle transaction
-      }
-    }
-
-    // Créer une nouvelle transaction
-    const transactionId = 'TXN_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+    const transactionID = generateUniqueTransactionID();
     const transaction = new Transaction({
-      userId: user._id,
-      transactionId: transactionId,
-      amount: 5000, // 5000 FCFA
+      userId: req.user._id,
+      transactionId: transactionID,
+      amount: 5000,
       status: 'pending'
     });
 
     await transaction.save();
 
     const invoice = new Paydunya.CheckoutInvoice(setup, store);
-    invoice.addItem('Abonnement Premium Quiz de Carabin', 1, 5000, 5000, 'Accès à tous les quiz premium pendant 1 an');
-    invoice.totalAmount = 5000;
-    invoice.description = 'Abonnement Premium Quiz de Carabin';
+    invoice.addItem(
+      `Abonnement Premium - ${uniqueReference}`,
+      1,
+      200.00,
+      200.00,
+      `Accès illimité à tous les quiz premium - Référence: ${uniqueReference}`
+    );
 
-    invoice.callbackURL = `${process.env.API_BASE_URL}/api/payment/callback`;
-    invoice.returnURL = `${process.env.FRONTEND_URL}/payment-callback.html?transactionId=${transactionId}&userId=${user._id}`;
-    invoice.cancelURL =`${process.env.FRONTEND_URL}/payment-error.html`;
+    invoice.totalAmount = 200.00;
+    invoice.description = `Abonnement Premium Quiz de Carabin - ${uniqueReference}`;
 
-    invoice.addCustomData('user_id', user._id.toString());
-    invoice.addCustomData('user_email', user.email);
-    invoice.addCustomData('transaction_id', transactionId);
+    const baseUrl = process.env.API_BASE_URL;
+    const frontendUrl = process.env.FRONTEND_URL;
+    
+    invoice.callbackURL = `${baseUrl}/api/payment/callback`;
+    invoice.returnURL = `${frontendUrl}/payment-callback.html?userId=${user._id}&transactionId=${transactionID}`;
+    invoice.cancelURL = `${frontendUrl}/payment-error.html`;
 
+    invoice.addCustomData('user_id', req.user._id.toString());
+    invoice.addCustomData('user_email', req.user.email);
+    invoice.addCustomData('service', 'premium_subscription');
+    invoice.addCustomData('transaction_id', transactionID);
+    invoice.addCustomData('unique_reference', uniqueReference);
+    invoice.addCustomData('timestamp', Date.now().toString());
+
+    console.log('Création de la facture PayDunya...');
+    
     const created = await invoice.create();
     
-    if (created) {
+    if (created || invoice.token) {
       transaction.paydunyaInvoiceToken = invoice.token;
       transaction.paydunyaInvoiceURL = invoice.url;
       await transaction.save();
 
-      console.log('✅ Facture PayDunya créée avec succès');
+      console.log('✅ Payment invoice created successfully');
 
       res.status(200).json({
         success: true,
         message: "Paiement initié avec succès",
         invoiceURL: invoice.url,
-        transactionId: transactionId,
-        existingTransaction: false
+        token: invoice.token
       });
     } else {
       transaction.status = 'failed';
       await transaction.save();
 
-      console.error('❌ Échec création facture PayDunya:', invoice.responseText);
+      console.error('❌ Échec de la création de la facture:', invoice.responseText);
       
       res.status(400).json({
         success: false,
@@ -176,40 +156,55 @@ exports.initiatePayment = async (req, res) => {
     
     res.status(500).json({
       success: false,
-      message: "Erreur serveur lors de l'initiation du paiement"
+      message: "Erreur serveur lors de l'initiation du paiement",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
 
-// Gestionnaire de webhook
+// Gestionnaire de webhook - VERSION AMÉLIORÉE
 exports.handleCallback = async (req, res) => {
   try {
     console.log('📨 Webhook reçu de PayDunya:', JSON.stringify(req.body, null, 2));
     
-    const data = req.body;
+    // PayDunya envoie les données différemment selon le mode
+    let data = req.body;
+    
+    // Validation basique des données
+    if (!data || (!data.invoice && !data.custom_data)) {
+      console.error('❌ Format de webhook invalide');
+      return res.status(400).send('Format de webhook invalide');
+    }
+    
+    // Vérification pour le mode test/live
+    if (req.body.data) {
+      data = req.body.data;
+    }
+    
     const token = data.invoice?.token || data.custom_data?.invoice_token;
     
     if (!token) {
-      console.error('❌ Token manquant dans le webhook');
+      console.error('❌ Token manquant dans le webhook:', data);
       return res.status(400).send('Token manquant');
     }
     
     const transaction = await Transaction.findOne({ paydunyaInvoiceToken: token });
     
     if (!transaction) {
-      console.error('❌ Transaction non trouvée pour le token:', token);
+      console.error('Transaction non trouvée pour le token:', token);
       return res.status(404).send('Transaction non trouvée');
     }
     
+    // Vérifier si le paiement n'a pas déjà été traité (anti-doublon)
+    if (transaction.status === 'completed') {
+      console.log('⚠ Paiement déjà traité - Ignorer le webhook doublon');
+      return res.status(200).send('Paiement déjà traité');
+    }
+    
     console.log('📊 Statut reçu du webhook:', data.status);
+    console.log(`🔍 Webhook traitement: transaction ${transaction._id}, user ${transaction.userId}`);
     
     if (data.status === 'completed') {
-      // Vérifier si le paiement n'a pas déjà été traité
-      if (transaction.status === 'completed') {
-        console.log('⚠ Paiement déjà traité');
-        return res.status(200).send('Paiement déjà traité');
-      }
-      
       transaction.status = 'completed';
       
       // Générer et sauvegarder le code d'accès
@@ -232,14 +227,19 @@ exports.handleCallback = async (req, res) => {
           await accessCodeDoc.save();
           console.log('✅ Code d\'accès sauvegardé dans la collection AccessCode');
           
+          // Valider et utiliser l'email
+          const customerEmail = (data.customer?.email && isValidEmail(data.customer.email)) 
+            ? data.customer.email 
+            : user.email;
+            
           // Envoyer l'email avec le code d'accès
-          const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name);
+          const emailSent = await sendAccessCodeEmail(customerEmail, accessCode, user.name);
           
           if (emailSent) {
-            console.log('✅ Email envoyé avec succès à:', user.email);
+            console.log('✅ Email envoyé avec succès à:', customerEmail);
           } else {
-            console.log('⚠ Échec de l\'envoi de l\'email à:', user.email);
-            // On ne renvoie pas d'erreur car le code est sauvegardé et peut être renvoyé plus tard
+            console.log('❌ Échec de l\'envoi de l\'email à:', customerEmail);
+            // Ici tu pourrais logger l'erreur pour suivi
           }
           
           // Mettre à jour le statut premium de l'utilisateur
@@ -259,14 +259,29 @@ exports.handleCallback = async (req, res) => {
       transaction.status = 'failed';
       await transaction.save();
       console.log('❌ Paiement échoué pour la transaction:', transaction.transactionId);
+    } else {
+      console.log('ℹ Statut non géré:', data.status);
     }
     
     res.status(200).send('Webhook traité avec succès');
   } catch (error) {
     console.error('❌ Erreur dans handleCallback:', error);
+    
+    // Gestion d'erreurs spécifiques
+    if (error.name === 'MongoError' && error.code === 11000) {
+      console.error('❌ Erreur de duplication de code');
+      // Ici, tu pourrais régénérer un code et réessayer
+    }
+    
     res.status(500).send('Erreur de traitement du webhook');
   }
 };
+
+// Fonction de validation d'email
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
 
 // Vérifier et traiter un paiement après redirection
 exports.processPaymentReturn = async (req, res) => {
@@ -306,7 +321,7 @@ exports.processPaymentReturn = async (req, res) => {
         // Envoyer l'email
         const user = await User.findById(userId);
         if (user) {
-          await sendAccessCodeEmail(user.email, accessCode, user.name);
+          await sendAccessCodeEmail(user.email, accessCode);
         }
         
         return res.status(200).json({
@@ -348,12 +363,12 @@ exports.processPaymentReturn = async (req, res) => {
             console.log('✅ Code d\'accès sauvegardé dans la collection AccessCode');
             
             // Envoyer l'email avec le code d'accès
-            const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name);
+            const emailSent = await sendAccessCodeEmail(user.email, accessCode);
             
             if (emailSent) {
               console.log('✅ Email envoyé avec succès à:', user.email);
             } else {
-              console.log('⚠ Échec de l\'envoi de l\'email à:', user.email);
+              console.log('❌ Échec de l\'envoi de l\'email à:', user.email);
             }
             
             // Mettre à jour le statut premium de l'utilisateur
@@ -395,17 +410,16 @@ exports.processPaymentReturn = async (req, res) => {
     });
   }
 };
-
 // Validation du code d'accès
 exports.validateAccessCode = async (req, res) => {
   try {
     const { code } = req.body;
     const userId = req.user._id;
 
-    if (!code || !validateCodeFormat(code)) {
+    if (!code) {
       return res.status(400).json({
         success: false,
-        message: "Le code d'accès doit être composé de 6 chiffres"
+        message: "Le code d'accès est requis"
       });
     }
 
@@ -549,75 +563,5 @@ exports.getAccessCode = async (req, res) => {
   }
 };
 
-// Fonction pour renvoyer le code d'accès
-exports.resendAccessCode = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const user = await User.findById(userId);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
-    }
-
-    // Vérifier d'abord dans les transactions
-    const transaction = await Transaction.findOne({
-      userId: userId,
-      status: 'completed',
-      accessCode: { $exists: true, $ne: null }
-    }).sort({ createdAt: -1 });
-
-    if (transaction && transaction.accessCode) {
-      // Réutiliser le code de la transaction
-      const emailSent = await sendAccessCodeEmail(user.email, transaction.accessCode, user.name);
-      
-      if (emailSent) {
-        return res.status(200).json({
-          success: true,
-          message: "Code d'accès renvoyé avec succès"
-        });
-      } else {
-        return res.status(500).json({
-          success: false,
-          message: "Erreur lors de l'envoi de l'email"
-        });
-      }
-    }
-
-    // Si pas trouvé dans les transactions, chercher dans AccessCode
-    const accessCode = await AccessCode.findOne({
-      userId: userId,
-      used: false,
-      expiresAt: { $gt: new Date() }
-    }).sort({ createdAt: -1 });
-
-    if (!accessCode) {
-      return res.status(404).json({
-        success: false,
-        message: "Aucun code d'accès actif trouvé"
-      });
-    }
-
-    const emailSent = await sendAccessCodeEmail(user.email, accessCode.code, user.name);
-    
-    if (emailSent) {
-      res.status(200).json({
-        success: true,
-        message: "Code d'accès renvoyé avec succès"
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: "Erreur lors de l'envoi de l'email"
-      });
-    }
-  } catch (error) {
-    console.error('Erreur lors du renvoi du code:', error);
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur"
-    });
-  }
-};
+// Fonction pour renvoyer le code d'accès (à utiliser dans les routes)
+exports.sendAccessCodeEmail = sendAccessCodeEmail;
