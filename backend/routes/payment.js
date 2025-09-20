@@ -51,7 +51,7 @@ router.get('/transaction/:transactionId/access-code', auth, async (req, res) => 
   }
 });
 
-// Ajouter cette route pour permettre aux utilisateurs de récupérer leur code
+// Dans votre route payment.js
 router.get('/access-code', auth, async (req, res) => {
   try {
     const transaction = await Transaction.findOne({

@@ -23,16 +23,23 @@ export class Payment {
         document.getElementById('resend-code')?.addEventListener('click', () => {
             this.resendAccessCode();
         });
+        
+        // Vérification automatique du code après paiement
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('payment') === 'success') {
+            setTimeout(() => this.checkForAccessCode(), 3000);
+        }
     }
 
     // Vérifier s'il y a un paiement en attente au chargement de la page
     async checkPendingPayment() {
-        // Vérifier si nous venons d'une redirection de paiement
         const urlParams = new URLSearchParams(window.location.search);
         const paymentStatus = urlParams.get('status');
         const transactionId = urlParams.get('transactionId');
         
         if (paymentStatus === 'success' && transactionId) {
+            this.showAlert('Paiement confirmé! Vérification du code d\'accès...', 'info');
+            
             // Attendre un peu pour laisser le webhook traiter le paiement
             setTimeout(async () => {
                 const accessCode = await this.checkAccessCode();
@@ -40,10 +47,29 @@ export class Payment {
                     this.showAlert('Votre code d\'accès a été généré avec succès!', 'success');
                     // Stocker le code pour pré-remplir le formulaire
                     localStorage.setItem('pendingAccessCode', accessCode);
+                    
+                    // Rediriger vers la page de validation du code
+                    setTimeout(() => {
+                        window.location.href = 'access-code.html';
+                    }, 2000);
                 } else {
                     this.showAlert('Paiement confirmé! Vérifiez votre email pour le code d\'accès.', 'info');
                 }
-            }, 3000);
+            }, 5000);
+        }
+    }
+
+    // Vérifier périodiquement si un code d'accès est disponible
+    async checkForAccessCode() {
+        console.log('Vérification du code d\'accès...');
+        const accessCode = await this.checkAccessCode();
+        if (accessCode) {
+            this.showAlert('Code d\'accès disponible! Redirection...', 'success');
+            localStorage.setItem('pendingAccessCode', accessCode);
+            window.location.href = 'access-code.html';
+        } else {
+            // Réessayer après 5 secondes
+            setTimeout(() => this.checkForAccessCode(), 5000);
         }
     }
 
@@ -65,6 +91,12 @@ export class Payment {
             const API_BASE_URL = await this.getActiveAPIUrl();
             console.log('API URL:', API_BASE_URL);
             
+            // Afficher l'indicateur de chargement
+            const subscribeBtn = document.getElementById('subscribe-btn');
+            const originalText = subscribeBtn.innerHTML;
+            subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...';
+            subscribeBtn.disabled = true;
+
             const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
                 method: 'POST',
                 headers: {
@@ -72,6 +104,10 @@ export class Payment {
                     'Authorization': `Bearer ${token}`
                 }
             });
+
+            // Réinitialiser le bouton
+            subscribeBtn.innerHTML = originalText;
+            subscribeBtn.disabled = false;
 
             const data = await response.json();
             console.log('Réponse complète du serveur:', data);
@@ -169,6 +205,11 @@ export class Payment {
                     // Recharger les quiz pour afficher les quiz premium
                     if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
                         window.quiz.loadQuizzes();
+                    }
+                    
+                    // Rediriger vers la page quiz si on est sur la page de validation
+                    if (window.location.pathname.includes('access-code.html')) {
+                        window.location.href = 'quiz.html';
                     }
                 }, 2000);
             } else {
@@ -308,4 +349,11 @@ export class Payment {
 // Initialisation automatique quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
     window.payment = new Payment();
+    
+    // Pré-remplir le champ de code s'il y a un code en attente
+    const pendingCode = localStorage.getItem('pendingAccessCode');
+    if (pendingCode && document.getElementById('code')) {
+        document.getElementById('code').value = pendingCode;
+        localStorage.removeItem('pendingAccessCode');
+    }
 });
