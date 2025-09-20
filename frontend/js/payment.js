@@ -5,6 +5,7 @@ export class Payment {
     constructor() {
         this.auth = new Auth();
         this.setupEventListeners();
+        this.checkPendingPayment();
     }
 
     setupEventListeners() {
@@ -22,6 +23,28 @@ export class Payment {
         document.getElementById('resend-code')?.addEventListener('click', () => {
             this.resendAccessCode();
         });
+    }
+
+    // Vérifier s'il y a un paiement en attente au chargement de la page
+    async checkPendingPayment() {
+        // Vérifier si nous venons d'une redirection de paiement
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentStatus = urlParams.get('status');
+        const transactionId = urlParams.get('transactionId');
+        
+        if (paymentStatus === 'success' && transactionId) {
+            // Attendre un peu pour laisser le webhook traiter le paiement
+            setTimeout(async () => {
+                const accessCode = await this.checkAccessCode();
+                if (accessCode) {
+                    this.showAlert('Votre code d\'accès a été généré avec succès!', 'success');
+                    // Stocker le code pour pré-remplir le formulaire
+                    localStorage.setItem('pendingAccessCode', accessCode);
+                } else {
+                    this.showAlert('Paiement confirmé! Vérifiez votre email pour le code d\'accès.', 'info');
+                }
+            }, 3000);
+        }
     }
 
     async initiatePayment() {
@@ -206,6 +229,37 @@ export class Payment {
         } catch (error) {
             console.error('Error resending access code:', error);
             this.showAlert('Erreur lors de l\'envoi du code. Veuillez réessayer.', 'danger');
+        }
+    }
+
+    // Nouvelle méthode pour vérifier le code d'accès
+    async checkAccessCode() {
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const token = this.auth.getToken();
+            
+            if (!token) {
+                console.error('No authentication token found');
+                return null;
+            }
+            
+            const response = await fetch(`${API_BASE_URL}/api/payment/access-code`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    return data.accessCode;
+                }
+            }
+            return null;
+        } catch (error) {
+            console.error('Error checking access code:', error);
+            return null;
         }
     }
 
