@@ -24,11 +24,39 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 .then(() => {
   console.log('Connected to MongoDB');
   
+  // Test de la configuration email au démarrage
+  setTimeout(() => {
+    const transporter = require('./config/email');
+    transporter.verify(function(error, success) {
+      if (error) {
+        console.log('❌ Erreur configuration email:', error);
+      } else {
+        console.log('✅ Serveur email est prêt à envoyer des messages');
+        
+        // Test d'envoi d'email
+        transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: process.env.EMAIL_USER, // Envoyer à soi-même pour le test
+          subject: 'Test de configuration email - Quiz de Carabin',
+          text: 'Ceci est un email de test pour vérifier la configuration.'
+        }, (err, info) => {
+          if (err) {
+            console.log('❌ Erreur envoi email test:', err);
+          } else {
+            console.log('✅ Email test envoyé avec succès:', info.response);
+          }
+        });
+      }
+    });
+  }, 3000);
+  
   // Charger les modèles après la connexion réussie
   require('./models/User');
   require('./models/Quiz');
   require('./models/PasswordReset');
   require('./models/Session'); // Nouveau modèle de session
+  require('./models/Transaction');
+  require('./models/AccessCode');
   
   // Import des routes (APRÈS la connexion à la base de données)
   const authRoutes = require('./routes/auth');

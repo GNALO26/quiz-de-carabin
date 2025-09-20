@@ -28,6 +28,15 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // CHAMPS AJOUTÉS
+  accessCode: {
+    type: String,
+    default: null
+  },
+  accessCodeUsed: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now,

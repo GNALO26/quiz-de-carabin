@@ -186,6 +186,12 @@ exports.handleCallback = async (req, res) => {
     console.log('📊 Statut reçu du webhook:', data.status);
     
     if (data.status === 'completed') {
+      // Vérifier si le paiement n'a pas déjà été traité
+      if (transaction.status === 'completed') {
+        console.log('⚠ Paiement déjà traité');
+        return res.status(200).send('Paiement déjà traité');
+      }
+      
       transaction.status = 'completed';
       
       // Générer et sauvegarder le code d'accès
@@ -195,23 +201,39 @@ exports.handleCallback = async (req, res) => {
       
       console.log('✅ Code d\'accès généré et sauvegardé:', accessCode);
       
-      // Récupérer l'utilisateur
-      const user = await User.findById(transaction.userId);
-      if (user) {
-        // Envoyer l'email avec le code d'accès
-        const customerEmail = data.customer?.email || user.email;
-        const emailSent = await sendAccessCodeEmail(customerEmail, accessCode);
-        
-        if (!emailSent) {
-          console.log('⚠ Email non envoyé, mais code sauvegardé dans la transaction');
+      // Créer également un document AccessCode pour compatibilité
+      try {
+        const user = await User.findById(transaction.userId);
+        if (user) {
+          const accessCodeDoc = new AccessCode({
+            code: accessCode,
+            email: user.email,
+            userId: user._id,
+            expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+          });
+          await accessCodeDoc.save();
+          console.log('✅ Code d\'accès sauvegardé dans la collection AccessCode');
+          
+          // Envoyer l'email avec le code d'accès
+          const customerEmail = data.customer?.email || user.email;
+          const emailSent = await sendAccessCodeEmail(customerEmail, accessCode);
+          
+          if (emailSent) {
+            console.log('✅ Email envoyé avec succès à:', customerEmail);
+          } else {
+            console.log('❌ Échec de l\'envoi de l\'email à:', customerEmail);
+          }
+          
+          // Mettre à jour le statut premium de l'utilisateur
+          user.isPremium = true;
+          user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
+          await user.save();
+          
+          console.log('✅ Statut premium mis à jour pour l\'utilisateur:', user.email);
         }
-        
-        // Mettre à jour le statut premium de l'utilisateur
-        user.isPremium = true;
-        user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
-        await user.save();
-        
-        console.log('✅ Statut premium mis à jour pour l\'utilisateur:', user.email);
+      } catch (accessCodeError) {
+        console.error('❌ Erreur sauvegarde AccessCode:', accessCodeError);
+        // Continuer quand même car le code est dans la transaction
       }
       
       console.log('✅ Paiement confirmé pour la transaction:', transaction.transactionId);
@@ -245,7 +267,8 @@ exports.validateAccessCode = async (req, res) => {
     const transaction = await Transaction.findOne({
       userId: userId,
       status: 'completed',
-      accessCode: code
+      accessCode: code,
+      accessCodeUsed: false
     });
 
     if (transaction) {
@@ -379,3 +402,6 @@ exports.getAccessCode = async (req, res) => {
     });
   }
 };
+
+// Fonction pour renvoyer le code d'accès (à utiliser dans les routes)
+exports.sendAccessCodeEmail = sendAccessCodeEmail;
