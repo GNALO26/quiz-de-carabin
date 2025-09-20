@@ -107,7 +107,7 @@ exports.initiatePayment = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL;
     
     invoice.callbackURL = `${baseUrl}/api/payment/callback`;
-    invoice.returnURL = `${frontendUrl}/payment-status.html?userId=${user._id}&transactionId=${transactionID}`;
+    invoice.returnURL = `${frontendUrl}/payment-callback.html?userId=${user._id}&transactionId=${transactionID}`;
     invoice.cancelURL = `${frontendUrl}/payment-error.html`;
 
     invoice.addCustomData('user_id', req.user._id.toString());
