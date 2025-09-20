@@ -98,13 +98,13 @@ exports.register = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "Un utilisateur avec cet email existe déjà"
+        // message: "Un utilisateur avec cet email existe déjà"
       });
     }
     
     res.status(500).json({
       success: false,
-      message: "Erreur serveur lors de la création du compte"
+      //message: "Erreur serveur lors de la création du compte"
     });
   }
 };

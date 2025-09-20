@@ -16,6 +16,9 @@ router.get('/status/:paymentId', auth, paymentController.checkPaymentStatus);
 router.post('/callback', paymentController.handleCallback);
 
 // Route pour récupérer le code d'accès d'une transaction
+router.get('/access-code/:transactionId', auth, paymentController.getAccessCode);
+
+// Route pour récupérer le code d'accès d'une transaction
 router.get('/transaction/:transactionId/access-code', auth, async (req, res) => {
   try {
     const { transactionId } = req.params;
