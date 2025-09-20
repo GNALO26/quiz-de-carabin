@@ -24,57 +24,6 @@ export class Payment {
         });
     }
 
-    // Méthode pour récupérer le code d'accès depuis le backend
-async retrieveAccessCode(transactionId) {
-  try {
-    const API_BASE_URL = await this.getActiveAPIUrl();
-    const token = this.auth.getToken();
-    
-    const response = await fetch(`${API_BASE_URL}/api/payment/access-code/${transactionId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.status === 401) {
-      this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
-      this.auth.logout();
-      return null;
-    }
-
-    const data = await response.json();
-
-    if (data.success) {
-      return data.accessCode;
-    } else {
-      this.showAlert(data.message || 'Erreur lors de la récupération du code', 'danger');
-      return null;
-    }
-  } catch (error) {
-    console.error('Error retrieving access code:', error);
-    this.showAlert('Erreur lors de la récupération du code. Veuillez réessayer.', 'danger');
-    return null;
-  }
-}
-
-// Modifiez la méthode initiatePayment pour stocker la transaction ID
-async initiatePayment() {
-  try {
-    // ... code existant ...
-    
-    if (data.success && data.invoiceURL) {
-      // Stocker l'ID de transaction pour plus tard
-      localStorage.setItem('lastTransactionId', data.transactionId);
-      console.log('Redirection vers:', data.invoiceURL);
-      window.location.href = data.invoiceURL;
-    }
-    // ... reste du code ...
-  } catch (error) {
-    // ... gestion d'erreur ...
-  }
-}
     async initiatePayment() {
         try {
             console.log('Initialisation du paiement...');
@@ -84,12 +33,6 @@ async initiatePayment() {
                 this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
                 return;
             }
-            if (data.success && data.invoiceURL) {
-      // Stocker l'ID de transaction pour plus tard
-      localStorage.setItem('lastTransactionId', data.transactionId);
-      console.log('Redirection vers:', data.invoiceURL);
-      window.location.href = data.invoiceURL;
-    }
 
             const user = this.auth.getUser();
             const token = this.auth.getToken();
