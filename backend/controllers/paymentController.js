@@ -159,72 +159,60 @@ exports.initiatePayment = async (req, res) => {
 // Gestionnaire de webhook
 exports.handleCallback = async (req, res) => {
   try {
-    console.log('📨 Webhook reçu de PayDunya:', JSON.stringify(req.body, null, 2));
-    
+    console.log('📨 Webhook reçu:', JSON.stringify(req.body));
+
     const data = req.body.data;
-    
-    if (!data) {
-      console.error('❌ Données manquantes dans le webhook');
-      return res.status(400).send('Données manquantes');
+    if (!data || !data.invoice) {
+      return res.status(400).send('Données invalides');
     }
-    
-    const token = data.invoice?.token;
-    
-    if (!token) {
-      console.error('❌ Token manquant dans le webhook:', data);
-      return res.status(400).send('Token manquant');
-    }
-    
+
+    const token = data.invoice.token;
     const transaction = await Transaction.findOne({ paydunyaInvoiceToken: token });
-    
+
     if (!transaction) {
-      console.error('Transaction non trouvée pour le token:', token);
       return res.status(404).send('Transaction non trouvée');
     }
-    
-    console.log('📊 Statut reçu du webhook:', data.status);
-    
+
+    console.log('💰 Statut du paiement:', data.status);
+
     if (data.status === 'completed') {
       transaction.status = 'completed';
       await transaction.save();
-      
+
       const user = await User.findById(transaction.userId);
       if (user) {
         const accessCode = generateCode();
         
+        // Sauvegarder le code
         const newAccessCode = new AccessCode({
           code: accessCode,
           email: user.email,
           userId: user._id,
           expiresAt: new Date(Date.now() + 30 * 60 * 1000)
         });
-        
         await newAccessCode.save();
-        
-        console.log('✅ Code d\'accès généré:', accessCode);
-        
-        // Envoyer l'email avec le code d'accès
-        const customerEmail = data.customer?.email || user.email;
-        const emailSent = await sendAccessCodeEmail(customerEmail, accessCode);
-        
-        if (!emailSent) {
-          // Sauvegarder le code dans la transaction pour affichage manuel
-          transaction.accessCode = accessCode;
+
+        // Envoyer l'email
+        try {
+          await sendAccessCodeEmail(user.email, accessCode);
+          console.log('✅ Email envoyé à:', user.email);
+        } catch (emailError) {
+          console.error('❌ Erreur envoi email:', emailError);
+          transaction.accessCode = accessCode; // Sauvegarder le code dans la transaction
           await transaction.save();
         }
+
+        // Mettre à jour le statut premium
+        user.isPremium = true;
+        user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+        await user.save();
       }
-      
-      console.log('✅ Paiement confirmé pour la transaction:', transaction.transactionId);
-    } else if (data.status === 'failed') {
-      transaction.status = 'failed';
-      await transaction.save();
-      console.log('❌ Paiement échoué pour la transaction:', transaction.transactionId);
     }
-    
-    res.status(200).send('Webhook traité avec succès');
+
+    res.status(200).send('OK');
   } catch (error) {
-    console.error('❌ Erreur dans handleCallback:', error);
-    res.status(500).send('Erreur de traitement du webhook');
+    console.error('❌ Erreur webhook:', error);
+    res.status(500).send('Erreur serveur');
   }
 };
 

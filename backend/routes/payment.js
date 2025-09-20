@@ -16,9 +16,6 @@ router.get('/status/:paymentId', auth, paymentController.checkPaymentStatus);
 router.post('/callback', paymentController.handleCallback);
 
 // Route pour récupérer le code d'accès d'une transaction
-router.get('/access-code/:transactionId', auth, paymentController.getAccessCode);
-
-// Route pour récupérer le code d'accès d'une transaction
 router.get('/transaction/:transactionId/access-code', auth, async (req, res) => {
   try {
     const { transactionId } = req.params;
@@ -54,6 +51,30 @@ router.get('/transaction/:transactionId/access-code', auth, async (req, res) => 
   }
 });
 
+router.get('/get-access-code', auth, async (req, res) => {
+  try {
+    const transaction = await Transaction.findOne({
+      userId: req.user._id,
+      status: 'completed'
+    }).sort({ createdAt: -1 });
 
+    if (!transaction || !transaction.accessCode) {
+      return res.status(404).json({
+        success: false,
+        message: "Aucun code d'accès trouvé"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      accessCode: transaction.accessCode
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur"
+    });
+  }
+});
 
 module.exports = router;
