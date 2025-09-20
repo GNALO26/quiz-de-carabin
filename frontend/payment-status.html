@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statut de Paiement - Quiz de Carabin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px 0;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .success-icon {
+            font-size: 5rem;
+            color: #28a745;
+        }
+        
+        .code-display {
+            font-size: 2rem;
+            font-weight: bold;
+            letter-spacing: 10px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-body text-center p-5">
+                <div id="loading" class="d-none">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+                    <p class="mt-3">Vérification du statut de votre paiement...</p>
+                </div>
+                
+                <div id="success" class="d-none">
+                    <i class="fas fa-check-circle success-icon"></i>
+                    <h2 class="mt-3">Paiement Réussi!</h2>
+                    <p>Votre abonnement premium a été activé avec succès.</p>
+                    
+                    <div class="mt-4">
+                        <p>Votre code d'accès:</p>
+                        <div id="accessCode" class="code-display my-3">XXXXXX</div>
+                        <p class="text-muted">Ce code expire dans 30 minutes.</p>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <a href="access-code.html" class="btn btn-primary me-2">
+                            <i class="fas fa-key me-1"></i>Valider le code
+                        </a>
+                        <a href="quiz.html" class="btn btn-success">
+                            <i class="fas fa-play me-1"></i>Commencer les quiz
+                        </a>
+                    </div>
+                </div>
+                
+                <div id="pending" class="d-none">
+                    <i class="fas fa-clock text-warning" style="font-size: 5rem;"></i>
+                    <h2 class="mt-3">Paiement en Attente</h2>
+                    <p>Votre paiement est en cours de traitement. Vous recevrez un email avec votre code d'accès une fois le paiement confirmé.</p>
+                    <a href="index.html" class="btn btn-primary mt-3">
+                        <i class="fas fa-home me-1"></i>Retour à l'accueil
+                    </a>
+                </div>
+                
+                <div id="error" class="d-none">
+                    <i class="fas fa-times-circle text-danger" style="font-size: 5rem;"></i>
+                    <h2 class="mt-3">Erreur de Paiement</h2>
+                    <p id="errorMessage">Une erreur s'est produite lors du traitement de votre paiement.</p>
+                    <a href="index.html" class="btn btn-primary mt-3">
+                        <i class="fas fa-home me-1"></i>Retour à l'accueil
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Payment } from './js/payment.js';
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            const loading = document.getElementById('loading');
+            const success = document.getElementById('success');
+            const pending = document.getElementById('pending');
+            const error = document.getElementById('error');
+            const accessCodeDisplay = document.getElementById('accessCode');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Afficher le chargement
+            loading.classList.remove('d-none');
+            
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const status = urlParams.get('status');
+                const transactionId = urlParams.get('transactionId');
+                
+                if (status === 'success') {
+                    // Attendre quelques secondes pour que le webhook soit traité
+                    setTimeout(async () => {
+                        const payment = new Payment();
+                        const accessCode = await payment.checkAccessCode();
+                        
+                        if (accessCode) {
+                            // Afficher le code d'accès
+                            accessCodeDisplay.textContent = accessCode;
+                            loading.classList.add('d-none');
+                            success.classList.remove('d-none');
+                            
+                            // Stocker le code pour pré-remplir le formulaire
+                            localStorage.setItem('pendingAccessCode', accessCode);
+                        } else {
+                            // Paiement réussi mais code pas encore disponible
+                            loading.classList.add('d-none');
+                            pending.classList.remove('d-none');
+                        }
+                    }, 3000);
+                } else {
+                    // Statut d'erreur
+                    loading.classList.add('d-none');
+                    error.classList.remove('d-none');
+                    errorMessage.textContent = 'Votre paiement a échoué ou a été annulé.';
+                }
+            } catch (err) {
+                console.error('Erreur:', err);
+                loading.classList.add('d-none');
+                error.classList.remove('d-none');
+                errorMessage.textContent = 'Une erreur s\'est produite lors de la vérification de votre paiement.';
+            }
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

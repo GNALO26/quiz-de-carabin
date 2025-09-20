@@ -107,7 +107,7 @@ exports.initiatePayment = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL;
     
     invoice.callbackURL = `${baseUrl}/api/payment/callback`;
-    invoice.returnURL = `${frontendUrl}/payment-callback.html?userId=${user._id}&transactionId=${transactionID}`;
+    invoice.returnURL = `${frontendUrl}/payment-status.html?userId=${user._id}&transactionId=${transactionID}`;
     invoice.cancelURL = `${frontendUrl}/payment-error.html`;
 
     invoice.addCustomData('user_id', req.user._id.toString());
@@ -156,19 +156,23 @@ exports.initiatePayment = async (req, res) => {
   }
 };
 
-// Remplacer la fonction handleCallback par cette version corrigée
+// Gestionnaire de webhook - VERSION CORRIGÉE
 exports.handleCallback = async (req, res) => {
   try {
     console.log('📨 Webhook reçu de PayDunya:', JSON.stringify(req.body, null, 2));
     
-    const data = req.body;
+    // PayDunya envoie les données différemment selon le mode
+    let data = req.body;
     
-    // Vérification plus robuste de la structure des données
+    // Vérification pour le mode test/live
+    if (req.body.data) {
+      data = req.body.data;
+    }
+    
     const token = data.invoice?.token || data.custom_data?.invoice_token;
-    const status = data.status || data.invoice?.status;
     
     if (!token) {
-      console.error('❌ Token manquant dans le webhook');
+      console.error('❌ Token manquant dans le webhook:', data);
       return res.status(400).send('Token manquant');
     }
     
@@ -179,33 +183,39 @@ exports.handleCallback = async (req, res) => {
       return res.status(404).send('Transaction non trouvée');
     }
     
-    console.log('📊 Statut reçu du webhook:', status);
+    console.log('📊 Statut reçu du webhook:', data.status);
     
-    if (status === 'completed') {
+    if (data.status === 'completed') {
       transaction.status = 'completed';
+      
+      // Générer et sauvegarder le code d'accès
+      const accessCode = generateCode();
+      transaction.accessCode = accessCode;
       await transaction.save();
       
+      console.log('✅ Code d\'accès généré et sauvegardé:', accessCode);
+      
+      // Récupérer l'utilisateur
       const user = await User.findById(transaction.userId);
       if (user) {
-        const accessCode = generateCode();
-        
-        // Sauvegarder le code dans la transaction
-        transaction.accessCode = accessCode;
-        await transaction.save();
-        
-        console.log('✅ Code d\'accès généré:', accessCode);
-        
         // Envoyer l'email avec le code d'accès
         const customerEmail = data.customer?.email || user.email;
         const emailSent = await sendAccessCodeEmail(customerEmail, accessCode);
         
         if (!emailSent) {
-          console.log('⚠ Email non envoyé, code sauvegardé dans la transaction');
+          console.log('⚠ Email non envoyé, mais code sauvegardé dans la transaction');
         }
+        
+        // Mettre à jour le statut premium de l'utilisateur
+        user.isPremium = true;
+        user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
+        await user.save();
+        
+        console.log('✅ Statut premium mis à jour pour l\'utilisateur:', user.email);
       }
       
       console.log('✅ Paiement confirmé pour la transaction:', transaction.transactionId);
-    } else if (status === 'failed') {
+    } else if (data.status === 'failed') {
       transaction.status = 'failed';
       await transaction.save();
       console.log('❌ Paiement échoué pour la transaction:', transaction.transactionId);
@@ -231,6 +241,36 @@ exports.validateAccessCode = async (req, res) => {
       });
     }
 
+    // Vérifier d'abord dans la transaction
+    const transaction = await Transaction.findOne({
+      userId: userId,
+      status: 'completed',
+      accessCode: code
+    });
+
+    if (transaction) {
+      // Marquer le code comme utilisé
+      transaction.accessCodeUsed = true;
+      await transaction.save();
+
+      // Mettre à jour l'utilisateur
+      const user = await User.findById(userId);
+      user.isPremium = true;
+      user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+      await user.save();
+
+      console.log('✅ Code d\'accès validé pour l\'utilisateur:', user.email);
+
+      return res.status(200).json({
+        success: true,
+        message: "Code validé avec succès. Votre compte est maintenant premium!",
+        premium: true,
+        premiumExpiresAt: user.premiumExpiresAt,
+        user: user
+      });
+    }
+
+    // Vérifier dans la table des codes d'accès (ancienne méthode)
     const accessCode = await AccessCode.findOne({
       code: code,
       userId: userId,
@@ -259,7 +299,8 @@ exports.validateAccessCode = async (req, res) => {
       success: true,
       message: "Code validé avec succès. Votre compte est maintenant premium!",
       premium: true,
-      premiumExpiresAt: user.premiumExpiresAt
+      premiumExpiresAt: user.premiumExpiresAt,
+      user: user
     });
 
   } catch (error) {
@@ -305,5 +346,36 @@ exports.checkPaymentStatus = async (req, res) => {
   }
 };
 
-// Ajoutez cette ligne à la fin du fichier pour exporter toutes les fonctions
-module.exports = exports;
+// Récupérer le code d'accès d'une transaction
+exports.getAccessCode = async (req, res) => {
+  try {
+    const transaction = await Transaction.findOne({
+      userId: req.user._id,
+      status: 'completed'
+    }).sort({ createdAt: -1 });
+
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: "Aucune transaction trouvée"
+      });
+    }
+
+    if (!transaction.accessCode) {
+      return res.status(404).json({
+        success: false,
+        message: "Aucun code d'accès généré pour cette transaction"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      accessCode: transaction.accessCode
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur"
+    });
+  }
+};
