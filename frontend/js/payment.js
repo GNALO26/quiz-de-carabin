@@ -73,64 +73,67 @@ export class Payment {
         }
     }
 
-    async initiatePayment() {
-        try {
-            console.log('Initialisation du paiement...');
-            
-            if (!this.auth.isAuthenticated()) {
-                this.auth.showLoginModal();
-                this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
-                return;
+   async initiatePayment() {
+    try {
+        console.log('Initialisation du paiement...');
+        
+        if (!this.auth.isAuthenticated()) {
+            this.auth.showLoginModal();
+            this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
+            return;
+        }
+
+        const user = this.auth.getUser();
+        const token = this.auth.getToken();
+        
+        console.log('Utilisateur:', user.email);
+        
+        const API_BASE_URL = await this.getActiveAPIUrl();
+        console.log('API URL:', API_BASE_URL);
+        
+        // Afficher l'indicateur de chargement
+        const subscribeBtn = document.getElementById('subscribe-btn');
+        const originalText = subscribeBtn.innerHTML;
+        subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...';
+        subscribeBtn.disabled = true;
+
+        const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             }
+        });
 
-            const user = this.auth.getUser();
-            const token = this.auth.getToken();
-            
-            console.log('Utilisateur:', user.email);
-            
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            console.log('API URL:', API_BASE_URL);
-            
-            // Afficher l'indicateur de chargement
-            const subscribeBtn = document.getElementById('subscribe-btn');
-            const originalText = subscribeBtn.innerHTML;
-            subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...';
-            subscribeBtn.disabled = true;
+        // Réinitialiser le bouton
+        subscribeBtn.innerHTML = originalText;
+        subscribeBtn.disabled = false;
 
-            const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+        const data = await response.json();
+        console.log('Réponse complète du serveur:', data);
 
-            // Réinitialiser le bouton
-            subscribeBtn.innerHTML = originalText;
-            subscribeBtn.disabled = false;
-
-            const data = await response.json();
-            console.log('Réponse complète du serveur:', data);
-
-            if (data.success && data.invoiceURL) {
-                console.log('Redirection vers:', data.invoiceURL);
-                window.location.href = data.invoiceURL;
-            } else if (data.transactionId) {
-                // Une transaction est déjà en cours, proposer des options
+        if (data.success && data.invoiceURL) {
+            if (data.existingTransaction) {
+                // Afficher un message informatif sur la transaction existante
                 this.showAlert(
-                    `Une transaction est déjà en cours. <a href="${data.invoiceURL}" class="alert-link">Cliquez ici pour continuer</a> ou attendez qu'elle expire.`,
-                    'warning',
+                    `Vous avez déjà une transaction en cours. <a href="${data.invoiceURL}" class="alert-link">Cliquez ici pour continuer</a> ou attendez qu'elle expire.`,
+                    'info',
                     10000
                 );
             } else {
-                console.error('Erreur du serveur:', data);
-                this.showAlert('Erreur lors de l\'initiation du paiement: ' + (data.message || 'Erreur inconnue'), 'danger');
+                // Nouvelle transaction, rediriger directement
+                console.log('Redirection vers:', data.invoiceURL);
+                window.location.href = data.invoiceURL;
             }
-        } catch (error) {
-            console.error('Error initiating payment:', error);
-            this.showAlert('Erreur lors de l\'initiation du paiement: ' + error.message, 'danger');
+        } else {
+            console.error('Erreur du serveur:', data);
+            this.showAlert('Erreur lors de l\'initiation du paiement: ' + (data.message || 'Erreur inconnue'), 'danger');
         }
+    } catch (error) {
+        console.error('Error initiating payment:', error);
+        this.showAlert('Erreur lors de l\'initiation du paiement: ' + error.message, 'danger');
     }
+}
 
     async validateAccessCode() {
         try {

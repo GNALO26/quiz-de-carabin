@@ -63,6 +63,7 @@ const sendAccessCodeEmail = async (email, accessCode, userName = '') => {
 };
 
 // Initier un paiement
+// Initier un paiement - VERSION CORRIGÉE
 exports.initiatePayment = async (req, res) => {
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
@@ -77,27 +78,54 @@ exports.initiatePayment = async (req, res) => {
       });
     }
 
-    // Vérifier s'il existe déjà une transaction en cours pour cet utilisateur
+    // Vérifier s'il existe déjà une transaction EN COURS pour cet utilisateur
+    // Seulement si elle a été créée dans les 10 dernières minutes
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    
     const existingTransaction = await Transaction.findOne({
       userId: user._id,
       status: 'pending',
-      createdAt: { $gt: new Date(Date.now() - 30 * 60 * 1000) } // dans les 30 dernières minutes
+      createdAt: { $gt: tenMinutesAgo } // seulement si créée il y a moins de 10 min
     });
 
     if (existingTransaction) {
-      return res.status(400).json({
-        success: false,
-        message: 'Une transaction est déjà en cours. Veuillez patienter ou annuler la transaction précédente.',
-        transactionId: existingTransaction.transactionId,
-        invoiceURL: existingTransaction.paydunyaInvoiceURL
-      });
+      console.log('Transaction en cours trouvée:', existingTransaction.transactionId);
+      
+      // Vérifier si l'URL de la facture est toujours valide
+      try {
+        const invoice = new Paydunya.CheckoutInvoice(setup, store);
+        const success = await invoice.confirm(existingTransaction.paydunyaInvoiceToken);
+        
+        if (success && invoice.status === 'completed') {
+          // La transaction a été payée entre-temps, la marquer comme complétée
+          existingTransaction.status = 'completed';
+          await existingTransaction.save();
+          console.log('Transaction marquée comme complétée après vérification');
+        } else if (success && invoice.status === 'pending') {
+          // La transaction est toujours en attente, renvoyer l'URL existante
+          return res.status(200).json({
+            success: true,
+            message: 'Une transaction est déjà en cours.',
+            invoiceURL: existingTransaction.paydunyaInvoiceURL,
+            transactionId: existingTransaction.transactionId,
+            existingTransaction: true
+          });
+        } else {
+          // La transaction a expiré ou échoué, permettre d'en créer une nouvelle
+          console.log('Transaction précédente a expiré ou échoué, création nouvelle');
+        }
+      } catch (invoiceError) {
+        console.error('Erreur vérification statut transaction:', invoiceError);
+        // En cas d'erreur, permettre de créer une nouvelle transaction
+      }
     }
 
+    // Créer une nouvelle transaction
     const transactionId = 'TXN_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
     const transaction = new Transaction({
       userId: user._id,
       transactionId: transactionId,
-      amount: 200, // 5000 FCFA
+      amount: 5000, // 5000 FCFA
       status: 'pending'
     });
 
@@ -105,12 +133,12 @@ exports.initiatePayment = async (req, res) => {
 
     const invoice = new Paydunya.CheckoutInvoice(setup, store);
     invoice.addItem('Abonnement Premium Quiz de Carabin', 1, 5000, 5000, 'Accès à tous les quiz premium pendant 1 an');
-    invoice.totalAmount = 200;
+    invoice.totalAmount = 5000;
     invoice.description = 'Abonnement Premium Quiz de Carabin';
 
     invoice.callbackURL = `${process.env.API_BASE_URL}/api/payment/callback`;
     invoice.returnURL = `${process.env.FRONTEND_URL}/payment-callback.html?transactionId=${transactionId}&userId=${user._id}`;
-    invoice.cancelURL = `${process.env.FRONTEND_URL}/payment-error.html`;
+    invoice.cancelURL =`${process.env.FRONTEND_URL}/payment-error.html`;
 
     invoice.addCustomData('user_id', user._id.toString());
     invoice.addCustomData('user_email', user.email);
@@ -129,7 +157,8 @@ exports.initiatePayment = async (req, res) => {
         success: true,
         message: "Paiement initié avec succès",
         invoiceURL: invoice.url,
-        transactionId: transactionId
+        transactionId: transactionId,
+        existingTransaction: false
       });
     } else {
       transaction.status = 'failed';
