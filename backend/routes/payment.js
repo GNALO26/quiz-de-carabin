@@ -51,17 +51,25 @@ router.get('/transaction/:transactionId/access-code', auth, async (req, res) => 
   }
 });
 
-router.get('/get-access-code', auth, async (req, res) => {
+// Ajouter cette route pour permettre aux utilisateurs de récupérer leur code
+router.get('/access-code', auth, async (req, res) => {
   try {
     const transaction = await Transaction.findOne({
       userId: req.user._id,
       status: 'completed'
     }).sort({ createdAt: -1 });
 
-    if (!transaction || !transaction.accessCode) {
+    if (!transaction) {
       return res.status(404).json({
         success: false,
-        message: "Aucun code d'accès trouvé"
+        message: "Aucune transaction trouvée"
+      });
+    }
+
+    if (!transaction.accessCode) {
+      return res.status(404).json({
+        success: false,
+        message: "Aucun code d'accès généré pour cette transaction"
       });
     }
 
