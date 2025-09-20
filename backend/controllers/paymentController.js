@@ -250,6 +250,133 @@ exports.handleCallback = async (req, res) => {
   }
 };
 
+// Vérifier et traiter un paiement après redirection
+exports.processPaymentReturn = async (req, res) => {
+  try {
+    const { transactionId, userId } = req.body;
+    
+    console.log('Processing payment return for transaction:', transactionId);
+    
+    // Trouver la transaction
+    const transaction = await Transaction.findOne({
+      transactionId: transactionId,
+      userId: userId
+    });
+    
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: "Transaction non trouvée"
+      });
+    }
+    
+    // Si la transaction est déjà complétée, renvoyer le code d'accès
+    if (transaction.status === 'completed') {
+      if (transaction.accessCode) {
+        return res.status(200).json({
+          success: true,
+          status: 'completed',
+          accessCode: transaction.accessCode,
+          message: "Paiement déjà traité"
+        });
+      } else {
+        // Générer un code d'accès si pour une raison quelconque il n'existe pas
+        const accessCode = generateCode();
+        transaction.accessCode = accessCode;
+        await transaction.save();
+        
+        // Envoyer l'email
+        const user = await User.findById(userId);
+        if (user) {
+          await sendAccessCodeEmail(user.email, accessCode);
+        }
+        
+        return res.status(200).json({
+          success: true,
+          status: 'completed',
+          accessCode: accessCode,
+          message: "Code d'accès généré et envoyé"
+        });
+      }
+    }
+    
+    // Si le paiement est en attente, vérifier avec PayDunya
+    if (transaction.paydunyaInvoiceToken) {
+      const invoice = new Paydunya.CheckoutInvoice(setup, store);
+      const success = await invoice.confirm(transaction.paydunyaInvoiceToken);
+      
+      if (success && invoice.status === 'completed') {
+        // Paiement confirmé, traiter comme dans handleCallback
+        transaction.status = 'completed';
+        
+        // Générer et sauvegarder le code d'accès
+        const accessCode = generateCode();
+        transaction.accessCode = accessCode;
+        await transaction.save();
+        
+        console.log('✅ Code d\'accès généré et sauvegardé:', accessCode);
+        
+        // Créer également un document AccessCode pour compatibilité
+        try {
+          const user = await User.findById(userId);
+          if (user) {
+            const accessCodeDoc = new AccessCode({
+              code: accessCode,
+              email: user.email,
+              userId: user._id,
+              expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+            });
+            await accessCodeDoc.save();
+            console.log('✅ Code d\'accès sauvegardé dans la collection AccessCode');
+            
+            // Envoyer l'email avec le code d'accès
+            const emailSent = await sendAccessCodeEmail(user.email, accessCode);
+            
+            if (emailSent) {
+              console.log('✅ Email envoyé avec succès à:', user.email);
+            } else {
+              console.log('❌ Échec de l\'envoi de l\'email à:', user.email);
+            }
+            
+            // Mettre à jour le statut premium de l'utilisateur
+            user.isPremium = true;
+            user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
+            await user.save();
+            
+            console.log('✅ Statut premium mis à jour pour l\'utilisateur:', user.email);
+          }
+        } catch (accessCodeError) {
+          console.error('❌ Erreur sauvegarde AccessCode:', accessCodeError);
+        }
+        
+        return res.status(200).json({
+          success: true,
+          status: 'completed',
+          accessCode: accessCode,
+          message: "Paiement confirmé avec succès"
+        });
+      } else {
+        // Paiement pas encore confirmé
+        return res.status(200).json({
+          success: false,
+          status: invoice.status || 'pending',
+          message: "Paiement en attente de confirmation"
+        });
+      }
+    }
+    
+    return res.status(400).json({
+      success: false,
+      message: "Impossible de vérifier le paiement"
+    });
+  } catch (error) {
+    console.error('❌ Erreur dans processPaymentReturn:', error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur lors du traitement du retour de paiement"
+    });
+  }
+};
 // Validation du code d'accès
 exports.validateAccessCode = async (req, res) => {
   try {

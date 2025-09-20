@@ -57,6 +57,9 @@ router.get('/transaction/:transactionId/access-code', auth, async (req, res) => 
   }
 });
 
+// Route pour traiter le retour de paiement
+router.post('/process-return', paymentController.processPaymentReturn);
+
 // Route pour renvoyer le code d'accès
 router.post('/resend-code', auth, async (req, res) => {
   try {
