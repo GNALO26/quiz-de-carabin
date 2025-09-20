@@ -115,23 +115,20 @@ export class Payment {
             if (data.success && data.invoiceURL) {
                 console.log('Redirection vers:', data.invoiceURL);
                 window.location.href = data.invoiceURL;
+            } else if (data.transactionId) {
+                // Une transaction est déjà en cours, proposer des options
+                this.showAlert(
+                    `Une transaction est déjà en cours. <a href="${data.invoiceURL}" class="alert-link">Cliquez ici pour continuer</a> ou attendez qu'elle expire.`,
+                    'warning',
+                    10000
+                );
             } else {
                 console.error('Erreur du serveur:', data);
-                
-                if (data.error && data.error.includes('Transaction Found')) {
-                    this.showAlert('Une transaction est déjà en cours. Veuillez réessayer dans quelques instants.', 'warning');
-                } else {
-                    this.showAlert('Erreur lors de l\'initiation du paiement: ' + (data.message || 'Erreur inconnue'), 'danger');
-                }
+                this.showAlert('Erreur lors de l\'initiation du paiement: ' + (data.message || 'Erreur inconnue'), 'danger');
             }
         } catch (error) {
             console.error('Error initiating payment:', error);
-            
-            if (error.message.includes('Transaction Found')) {
-                this.showAlert('Une transaction est déjà en cours. Veuillez réessayer dans quelques instants.', 'warning');
-            } else {
-                this.showAlert('Erreur lors de l\'initiation du paiement: ' + error.message, 'danger');
-            }
+            this.showAlert('Erreur lors de l\'initiation du paiement: ' + error.message, 'danger');
         }
     }
 
@@ -274,35 +271,35 @@ export class Payment {
     }
 
     // Nouvelle méthode pour vérifier le code d'accès
-async checkAccessCode() {
-    try {
-        const API_BASE_URL = await this.getActiveAPIUrl();
-        const token = this.auth.getToken();
-        
-        if (!token) {
-            console.error('No authentication token found');
+    async checkAccessCode() {
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const token = this.auth.getToken();
+            
+            if (!token) {
+                console.error('No authentication token found');
+                return null;
+            }
+            
+            const response = await fetch(`${API_BASE_URL}/api/payment/access-code`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    return data.accessCode;
+                }
+            }
+            return null;
+        } catch (error) {
+            console.error('Error checking access code:', error);
             return null;
         }
-        
-        const response = await fetch(`${API_BASE_URL}/api/payment/access-code`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-                return data.accessCode;
-            }
-        }
-        return null;
-    } catch (error) {
-        console.error('Error checking access code:', error);
-        return null;
     }
-}
 
     async getActiveAPIUrl() {
         try {
@@ -321,7 +318,7 @@ async checkAccessCode() {
         return CONFIG.API_BACKUP_URL;
     }
 
-    showAlert(message, type) {
+    showAlert(message, type, duration = 5000) {
         document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
         
         const alertDiv = document.createElement('div');
@@ -342,7 +339,7 @@ async checkAccessCode() {
             if (alertDiv.parentNode) {
                 alertDiv.parentNode.removeChild(alertDiv);
             }
-        }, 5000);
+        }, duration);
     }
 }
 
@@ -352,8 +349,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Pré-remplir le champ de code s'il y a un code en attente
     const pendingCode = localStorage.getItem('pendingAccessCode');
-    if (pendingCode && document.getElementById('code')) {
-        document.getElementById('code').value = pendingCode;
+    if (pendingCode && document.getElementById('accessCode')) {
+        document.getElementById('accessCode').value = pendingCode;
         localStorage.removeItem('pendingAccessCode');
+        
+        // Valider automatiquement si on est sur la page de validation
+        if (window.location.pathname.includes('access-code.html')) {
+            setTimeout(() => {
+                document.getElementById('validate-code').click();
+            }, 1000);
+        }
     }
 });
