@@ -130,4 +130,46 @@ router.get('/test-email', async (req, res) => {
   }
 });
 
+// Route de debug pour simuler un webhook PayDunya (à utiliser en développement seulement)
+router.post('/debug-webhook', async (req, res) => {
+  try {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(403).json({ error: 'Cette route n\'est disponible qu\'en mode développement' });
+    }
+    
+    const { transactionId, status } = req.body;
+    
+    if (!transactionId || !status) {
+      return res.status(400).json({ error: 'transactionId et status requis' });
+    }
+    
+    const transaction = await Transaction.findOne({ transactionId });
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction non trouvée' });
+    }
+    
+    // Simuler le webhook
+    const mockWebhook = {
+      status: status,
+      invoice: {
+        token: transaction.paydunyaInvoiceToken,
+        customer: {
+          email: 'test@example.com'
+        }
+      },
+      custom_data: {
+        user_id: transaction.userId.toString(),
+        transaction_id: transaction.transactionId
+      }
+    };
+    
+    req.body = mockWebhook;
+    
+    await paymentController.handleCallback(req, res);
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

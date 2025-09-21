@@ -90,6 +90,28 @@ function isValidEmail(email) {
   return emailRegex.test(email);
 }
 
+// Vérification de signature HMAC pour les webhooks
+const verifyWebhookSignature = (req, secret) => {
+  try {
+    const signature = req.headers['paydunya-signature'];
+    if (!signature) {
+      console.log('⚠ Signature HMAC manquante dans les headers');
+      return false;
+    }
+    
+    const payload = JSON.stringify(req.body);
+    const computedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(payload)
+      .digest('hex');
+    
+    return signature === computedSignature;
+  } catch (error) {
+    console.error('❌ Erreur vérification signature HMAC:', error);
+    return false;
+  }
+};
+
 // Initier un paiement
 exports.initiatePayment = async (req, res) => {
   try {
@@ -188,6 +210,12 @@ exports.handleCallback = async (req, res) => {
     console.log('Headers:', JSON.stringify(req.headers));
     console.log('Body:', JSON.stringify(req.body, null, 2));
     
+    // Vérifier la signature HMAC pour la sécurité
+    if (!verifyWebhookSignature(req, process.env.PAYDUNYA_MASTER_KEY)) {
+      console.error('❌ Signature HMAC invalide - Webhook rejeté');
+      return res.status(401).send('Signature invalide');
+    }
+    
     // PayDunya envoie les données différemment selon le mode
     let data = req.body;
     
@@ -209,10 +237,20 @@ exports.handleCallback = async (req, res) => {
       return res.status(400).send('Token manquant');
     }
     
+    console.log('🔍 Recherche transaction avec token:', token);
     const transaction = await Transaction.findOne({ paydunyaInvoiceToken: token });
     
     if (!transaction) {
-      console.error('Transaction non trouvée pour le token:', token);
+      console.error('❌ Transaction non trouvée pour le token:', token);
+      
+      // Log toutes les transactions pour debug
+      try {
+        const allTransactions = await Transaction.find({}).select('transactionId paydunyaInvoiceToken status').limit(10);
+        console.log('📋 10 dernières transactions:', allTransactions);
+      } catch (logError) {
+        console.error('Erreur lors de la récupération des transactions:', logError);
+      }
+      
       return res.status(404).send('Transaction non trouvée');
     }
     
@@ -260,7 +298,7 @@ exports.handleCallback = async (req, res) => {
             console.log('✅ Email envoyé avec succès à:', customerEmail);
           } else {
             console.log('❌ Échec de l\'envoi de l\'email à:', customerEmail);
-            // Log plus détaillé de l'erreur d'email
+            // Sauvegarder l'erreur pour suivi
           }
           
           // Mettre à jour le statut premium de l'utilisateur
@@ -302,7 +340,7 @@ exports.processPaymentReturn = async (req, res) => {
   try {
     const { transactionId, userId } = req.body;
     
-    console.log('Processing payment return for transaction:', transactionId);
+    console.log('🔄 Processing payment return for transaction:', transactionId);
     
     // Trouver la transaction
     const transaction = await Transaction.findOne({
