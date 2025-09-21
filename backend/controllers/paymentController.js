@@ -218,16 +218,9 @@ exports.handleCallback = async (req, res) => {
     //   return res.status(401).send('Signature invalide');
     // }
     
-    // PayDunya envoie les données différemment selon le mode
     let data = req.body;
     
-    // Validation basique des données
-    if (!data || (!data.invoice && !data.custom_data)) {
-      console.error('❌ Format de webhook invalide');
-      return res.status(400).send('Format de webhook invalide');
-    }
-    
-    // Vérification pour le mode test/live
+    // PayDunya envoie les données différemment selon le mode
     if (req.body.data) {
       data = req.body.data;
     }
