@@ -1,3 +1,4 @@
+// backend/routes/payment.js
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
@@ -6,11 +7,22 @@ const Transaction = require('../models/Transaction');
 const { sendAccessCodeEmail } = require('../controllers/paymentController');
 const AccessCode = require('../models/AccessCode');
 
+// Importez les middlewares nécessaires
+const verifyPaydunyaSignature = require('../middleware/verifyWebhook'); 
+const webhookLogger = require('../middleware/webhookLogger');
+
 // Route pour initier un paiement
 router.post('/initiate', auth, paymentController.initiatePayment);
 
 // Route pour les webhooks PayDunya
-router.post('/callback', paymentController.handleCallback);
+// Utilisez express.raw() pour parser le corps de la requête comme un buffer,
+// puis passez-le à votre middleware de vérification et à votre contrôleur.
+router.post('/callback', 
+  express.raw({ type: '/' }), 
+  webhookLogger,
+  verifyPaydunyaSignature, 
+  paymentController.handleCallback
+);
 
 // Route pour traiter le retour de paiement
 router.post('/process-return', paymentController.processPaymentReturn);
@@ -60,7 +72,6 @@ router.get('/latest-access-code', auth, paymentController.getLatestAccessCode);
 // Route pour renvoyer le code d'accès
 router.post('/resend-code', auth, async (req, res) => {
   try {
-    // Chercher d'abord dans les transactions
     const transaction = await Transaction.findOne({
       userId: req.user._id,
       status: 'completed'
@@ -82,7 +93,6 @@ router.post('/resend-code', auth, async (req, res) => {
       }
     }
 
-    // Si pas trouvé dans les transactions, chercher dans AccessCode
     const accessCode = await AccessCode.findOne({
       userId: req.user._id,
       used: false,
@@ -116,6 +126,7 @@ router.post('/resend-code', auth, async (req, res) => {
       message: "Erreur serveur"
     });
   }
+  
 });
 
 // Route de test pour vérifier l'envoi d'emails
@@ -151,7 +162,6 @@ router.post('/debug-webhook', async (req, res) => {
       return res.status(404).json({ error: 'Transaction non trouvée' });
     }
     
-    // Simuler le webhook
     const mockWebhook = {
       status: status,
       invoice: {

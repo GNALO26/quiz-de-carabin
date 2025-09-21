@@ -1,3 +1,4 @@
+// backend/middleware/verifyWebhook.js
 const crypto = require('crypto');
 
 const verifyPaydunyaSignature = (req, res, next) => {
@@ -10,16 +11,18 @@ const verifyPaydunyaSignature = (req, res, next) => {
       return res.status(403).send('Signature manquante');
     }
     
+    // Utilisez le corps brut de la requête pour la signature
+    const payload = req.rawBody ? req.rawBody.toString() : JSON.stringify(req.body);
+
     const computedSignature = crypto
       .createHmac('sha256', secret)
-      .update(JSON.stringify(req.body))
+      .update(payload)
       .digest('hex');
     
     if (computedSignature !== signature) {
       console.error('Signature invalide:', {
         computed: computedSignature,
-        received: signature,
-        body: req.body
+        received: signature
       });
       return res.status(403).send('Signature invalide');
     }

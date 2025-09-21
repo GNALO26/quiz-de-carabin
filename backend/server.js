@@ -109,6 +109,15 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   app.use(auth);
   app.use(sessionCheck);
 
+  // Middleware pour parser le JSON
+app.use(express.json({ 
+  limit: '1mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
+
+
   // Routes protégées (nécessitent une authentification)
   app.use('/api/quiz', quizRoutes);
   app.use('/api/payment', paymentRoutes);

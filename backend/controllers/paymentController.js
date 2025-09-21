@@ -204,23 +204,16 @@ exports.initiatePayment = async (req, res) => {
   }
 };
 
-// Gestionnaire de webhook - VERSION AMÉLIORÉE
+// Gestionnaire de webhook - VERSION CORRIGÉE
 exports.handleCallback = async (req, res) => {
   try {
-    console.log('=== NOUVEAU WEBHOOK REÇU ===');
+    console.log('=== NOUVEAU WEBHOOK REÇU ET VALIDÉ ===');
     console.log('Date:', new Date().toISOString());
     console.log('Headers:', JSON.stringify(req.headers));
     console.log('Body:', JSON.stringify(req.body, null, 2));
-    
-    // Accepter temporairement tous les webhooks pour debugging
-    // if (!verifyWebhookSignature(req, process.env.PAYDUNYA_MASTER_KEY)) {
-    //   console.error('❌ Signature HMAC invalide - Webhook rejeté');
-    //   return res.status(401).send('Signature invalide');
-    // }
-    
+
     let data = req.body;
     
-    // PayDunya envoie les données différemment selon le mode
     if (req.body.data) {
       data = req.body.data;
     }
@@ -238,7 +231,6 @@ exports.handleCallback = async (req, res) => {
     if (!transaction) {
       console.error('❌ Transaction non trouvée pour le token:', token);
       
-      // Log toutes les transactions pour debug
       try {
         const allTransactions = await Transaction.find({}).select('transactionId paydunyaInvoiceToken status').limit(10);
         console.log('📋 10 dernières transactions:', allTransactions);
@@ -249,7 +241,6 @@ exports.handleCallback = async (req, res) => {
       return res.status(404).send('Transaction non trouvée');
     }
     
-    // Vérifier si le paiement n'a pas déjà été traité (anti-doublon)
     if (transaction.status === 'completed') {
       console.log('⚠ Paiement déjà traité - Ignorer le webhook doublon');
       return res.status(200).send('Paiement déjà traité');
@@ -261,7 +252,6 @@ exports.handleCallback = async (req, res) => {
     if (data.status === 'completed') {
       transaction.status = 'completed';
       
-      // Générer et sauvegarder le code d'accès
       const accessCode = generateCode();
       transaction.accessCode = accessCode;
       await transaction.save();
@@ -271,7 +261,6 @@ exports.handleCallback = async (req, res) => {
       try {
         const user = await User.findById(transaction.userId);
         if (user) {
-          // Créer également un document AccessCode pour compatibilité
           const accessCodeDoc = new AccessCode({
             code: accessCode,
             email: user.email,
@@ -281,22 +270,18 @@ exports.handleCallback = async (req, res) => {
           await accessCodeDoc.save();
           console.log('✅ Code d\'accès sauvegardé dans la collection AccessCode');
           
-          // Valider et utiliser l'email
           const customerEmail = (data.customer?.email && isValidEmail(data.customer.email)) 
             ? data.customer.email 
             : user.email;
             
-          // Envoyer l'email avec le code d'accès
           const emailSent = await sendAccessCodeEmail(customerEmail, accessCode, user.name);
           
           if (emailSent) {
             console.log('✅ Email envoyé avec succès à:', customerEmail);
           } else {
             console.log('❌ Échec de l\'envoi de l\'email à:', customerEmail);
-            // Sauvegarder l'erreur pour suivi
           }
           
-          // Mettre à jour le statut premium de l'utilisateur
           user.isPremium = true;
           user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
           await user.save();
@@ -305,7 +290,6 @@ exports.handleCallback = async (req, res) => {
         }
       } catch (accessCodeError) {
         console.error('❌ Erreur sauvegarde AccessCode:', accessCodeError);
-        // Continuer quand même car le code est dans la transaction
       }
       
       console.log('✅ Paiement confirmé pour la transaction:', transaction.transactionId);
@@ -321,7 +305,6 @@ exports.handleCallback = async (req, res) => {
   } catch (error) {
     console.error('❌ Erreur dans handleCallback:', error);
     
-    // Gestion d'erreurs spécifiques
     if (error.name === 'MongoError' && error.code === 11000) {
       console.error('❌ Erreur de duplication de code');
     }
