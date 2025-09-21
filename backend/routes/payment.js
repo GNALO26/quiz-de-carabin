@@ -54,6 +54,9 @@ router.get('/transaction/:transactionId/access-code', auth, async (req, res) => 
   }
 });
 
+// Route pour obtenir le code d'accès de la dernière transaction
+router.get('/latest-access-code', auth, paymentController.getLatestAccessCode);
+
 // Route pour renvoyer le code d'accès
 router.post('/resend-code', auth, async (req, res) => {
   try {

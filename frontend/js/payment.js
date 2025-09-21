@@ -274,35 +274,35 @@ export class Payment {
     }
 
     // Nouvelle méthode pour vérifier le code d'accès
-async checkAccessCode() {
-    try {
-        const API_BASE_URL = await this.getActiveAPIUrl();
-        const token = this.auth.getToken();
-        
-        if (!token) {
-            console.error('No authentication token found');
+    async checkAccessCode() {
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const token = this.auth.getToken();
+            
+            if (!token) {
+                console.error('No authentication token found');
+                return null;
+            }
+            
+            const response = await fetch(`${API_BASE_URL}/api/payment/latest-access-code`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.accessCode) {
+                    return data.accessCode;
+                }
+            }
+            return null;
+        } catch (error) {
+            console.error('Error checking access code:', error);
             return null;
         }
-        
-        const response = await fetch(`${API_BASE_URL}/api/payment/access-code`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-                return data.accessCode;
-            }
-        }
-        return null;
-    } catch (error) {
-        console.error('Error checking access code:', error);
-        return null;
     }
-}
 
     async getActiveAPIUrl() {
         try {

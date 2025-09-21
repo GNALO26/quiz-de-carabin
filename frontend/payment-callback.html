@@ -143,22 +143,55 @@
             return true;
         }
         
+        // Vérifier le statut du paiement
+        async function checkPaymentStatus(transactionId, userId) {
+            try {
+                const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
+                const response = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ transactionId, userId })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.status === 'completed') {
+                    window.location.href = 'access-code.html';
+                } else {
+                    setTimeout(() => checkPaymentStatus(transactionId, userId), 3000);
+                }
+            } catch (error) {
+                setTimeout(() => checkPaymentStatus(transactionId, userId), 3000);
+            }
+        }
+        
         // Restaurer la session au chargement
         document.addEventListener('DOMContentLoaded', function() {
             if (restoreUserSession()) {
-                // Démarrer le compte à rebours
-                let seconds = 5;
-                const countdownElement = document.getElementById('countdown-value');
-                const countdownInterval = setInterval(() => {
-                    seconds--;
-                    countdownElement.textContent = seconds;
+                const urlParams = new URLSearchParams(window.location.search);
+                const transactionId = urlParams.get('transaction_id') || urlParams.get('transactionId');
+                const userId = urlParams.get('user_id') || urlParams.get('userId');
+                
+                if (transactionId && userId) {
+                    // Vérifier le statut du paiement
+                    checkPaymentStatus(transactionId, userId);
                     
-                    if (seconds <= 0) {
-                        clearInterval(countdownInterval);
-                        document.getElementById('loader').style.display = 'none';
-                        window.location.href = 'access-code.html';
-                    }
-                }, 1000);
+                    // Démarrer le compte à rebours
+                    let seconds = 5;
+                    const countdownElement = document.getElementById('countdown-value');
+                    const countdownInterval = setInterval(() => {
+                        seconds--;
+                        countdownElement.textContent = seconds;
+                        
+                        if (seconds <= 0) {
+                            clearInterval(countdownInterval);
+                            document.getElementById('loader').style.display = 'none';
+                            window.location.href = 'access-code.html';
+                        }
+                    }, 1000);
+                }
             }
         });
     </script>
