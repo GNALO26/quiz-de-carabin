@@ -9,17 +9,14 @@ const AccessCode = require('../models/AccessCode');
 // Route pour initier un paiement
 router.post('/initiate', auth, paymentController.initiatePayment);
 
-// Route pour valider un code d'accès
-router.post('/validate-access-code', auth, paymentController.validateAccessCode);
-
-// Route pour vérifier le statut d'un paiement
-router.get('/status/:paymentId', auth, paymentController.checkPaymentStatus);
-
 // Route pour les webhooks PayDunya
 router.post('/callback', paymentController.handleCallback);
 
-// Route pour récupérer le code d'accès d'une transaction
-router.get('/access-code', auth, paymentController.getAccessCode);
+// Route pour traiter le retour de paiement
+router.post('/process-return', paymentController.processPaymentReturn);
+
+// Route pour vérifier manuellement une transaction
+router.get('/transaction/:transactionId/status', paymentController.checkTransactionStatus);
 
 // Route pour récupérer le code d'accès d'une transaction spécifique
 router.get('/transaction/:transactionId/access-code', auth, async (req, res) => {
@@ -57,9 +54,6 @@ router.get('/transaction/:transactionId/access-code', auth, async (req, res) => 
   }
 });
 
-// Route pour traiter le retour de paiement
-router.post('/process-return', paymentController.processPaymentReturn);
-
 // Route pour renvoyer le code d'accès
 router.post('/resend-code', auth, async (req, res) => {
   try {
@@ -70,7 +64,7 @@ router.post('/resend-code', auth, async (req, res) => {
     }).sort({ createdAt: -1 });
 
     if (transaction && transaction.accessCode) {
-      const emailSent = await sendAccessCodeEmail(req.user.email, transaction.accessCode);
+      const emailSent = await sendAccessCodeEmail(req.user.email, transaction.accessCode, req.user.name);
       
       if (emailSent) {
         return res.status(200).json({
@@ -99,7 +93,7 @@ router.post('/resend-code', auth, async (req, res) => {
       });
     }
 
-    const emailSent = await sendAccessCodeEmail(req.user.email, accessCode.code);
+    const emailSent = await sendAccessCodeEmail(req.user.email, accessCode.code, req.user.name);
     
     if (emailSent) {
       res.status(200).json({
@@ -118,6 +112,21 @@ router.post('/resend-code', auth, async (req, res) => {
       success: false,
       message: "Erreur serveur"
     });
+  }
+});
+
+// Route de test pour vérifier l'envoi d'emails
+router.get('/test-email', async (req, res) => {
+  try {
+    const result = await sendAccessCodeEmail('test@example.com', 'TEST123', 'Test User');
+    
+    if (result) {
+      res.json({ success: true, message: 'Email de test envoyé avec succès' });
+    } else {
+      res.status(500).json({ success: false, message: 'Erreur lors de l\'envoi de l\'email' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

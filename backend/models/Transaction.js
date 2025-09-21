@@ -17,7 +17,7 @@ const transactionSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'completed', 'failed', 'cancelled'],
+    enum: ['pending', 'completed', 'failed'],
     default: 'pending'
   },
   paydunyaInvoiceToken: {
@@ -28,7 +28,6 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  // CHAMPS AJOUTÉS
   accessCode: {
     type: String,
     default: null
@@ -39,18 +38,18 @@ const transactionSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now,
-    expires: 86400 // Suppression automatique après 24 heures
+    default: Date.now
   },
-  retryCount: {
-    type: Number,
-    default: 0
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-// Index pour les recherches rapides
-transactionSchema.index({ userId: 1, status: 1 });
-transactionSchema.index({ transactionId: 1 }, { unique: true });
-transactionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 });
+// Middleware pour mettre à jour la date de modification
+transactionSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+});
 
 module.exports = mongoose.model('Transaction', transactionSchema);

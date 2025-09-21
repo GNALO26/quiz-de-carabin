@@ -34,43 +34,61 @@ const generateUniqueReference = () => {
 };
 
 // Fonction pour envoyer des emails avec code d'accès
-// Remplacer la fonction sendAccessCodeEmail existante par :
 const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') => {
   try {
+    console.log('🔄 Tentative d\'envoi d\'email à:', email);
+    
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
       subject: 'Votre code d\'accès Premium - 🩺 Quiz de Carabin',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #13a718ff;">Félicitations ${userName}!</h2>
-          <p>Votre abonnement premium a été activé avec succès.</p>
-          <p>Voici votre code d'accès unique:</p>
-          <div style="text-align: center; margin: 20px 0;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #1e53a2ff; background: #f8f9fa; padding: 15px; border-radius: 8px; display: inline-block;">
-              ${accessCode}
-            </span>
+          <div style="background: #13a718ff; color: white; padding: 20px; text-align: center;">
+            <h1>Quiz de Carabin</h1>
           </div>
-          <p>Ce code expire dans <strong>30 minutes</strong>.</p>
-          <p>Utilisez-le sur la page de validation pour activer votre compte premium.</p>
-          <br>
-          <p>Merci pour votre confiance!</p>
-          <p>L'équipe 🩺 Quiz de Carabin 🩺</p>
+          
+          <div style="padding: 20px;">
+            <h2 style="color: #13a718ff;">Félicitations ${userName}!</h2>
+            <p>Votre abonnement premium a été activé avec succès.</p>
+            
+            <p>Voici votre code d'accès unique:</p>
+            <div style="text-align: center; margin: 20px 0;">
+              <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #1e53a2ff; background: #f8f9fa; padding: 15px; border-radius: 8px; display: inline-block;">
+                ${accessCode}
+              </span>
+            </div>
+            
+            <p><strong>Ce code expire dans 30 minutes.</strong></p>
+            <p>Utilisez-le sur la page de validation pour activer votre compte premium.</p>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+              <p>Merci pour votre confiance!</p>
+              <p>L'équipe 🩺 Quiz de Carabin 🩺</p>
+              <p><small>Si vous n'avez pas effectué cette demande, veuillez ignorer cet email.</small></p>
+            </div>
+          </div>
         </div>
       `
     };
     
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Email avec code d\'accès envoyé à:', email);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email envoyé avec succès. Message ID:', info.messageId);
     return true;
   } catch (error) {
-    console.error('❌ Erreur envoi email:', error);
+    console.error('❌ Erreur détaillée envoi email:', error);
     return false;
   }
 };
 
 // Exporter la fonction
 exports.sendAccessCodeEmail = sendAccessCodeEmail;
+
+// Fonction de validation d'email
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
 
 // Initier un paiement
 exports.initiatePayment = async (req, res) => {
@@ -165,7 +183,10 @@ exports.initiatePayment = async (req, res) => {
 // Gestionnaire de webhook - VERSION AMÉLIORÉE
 exports.handleCallback = async (req, res) => {
   try {
-    console.log('📨 Webhook reçu de PayDunya:', JSON.stringify(req.body, null, 2));
+    console.log('=== NOUVEAU WEBHOOK REÇU ===');
+    console.log('Date:', new Date().toISOString());
+    console.log('Headers:', JSON.stringify(req.headers));
+    console.log('Body:', JSON.stringify(req.body, null, 2));
     
     // PayDunya envoie les données différemment selon le mode
     let data = req.body;
@@ -214,10 +235,10 @@ exports.handleCallback = async (req, res) => {
       
       console.log('✅ Code d\'accès généré et sauvegardé:', accessCode);
       
-      // Créer également un document AccessCode pour compatibilité
       try {
         const user = await User.findById(transaction.userId);
         if (user) {
+          // Créer également un document AccessCode pour compatibilité
           const accessCodeDoc = new AccessCode({
             code: accessCode,
             email: user.email,
@@ -239,7 +260,7 @@ exports.handleCallback = async (req, res) => {
             console.log('✅ Email envoyé avec succès à:', customerEmail);
           } else {
             console.log('❌ Échec de l\'envoi de l\'email à:', customerEmail);
-            // Ici tu pourrais logger l'erreur pour suivi
+            // Log plus détaillé de l'erreur d'email
           }
           
           // Mettre à jour le statut premium de l'utilisateur
@@ -270,18 +291,11 @@ exports.handleCallback = async (req, res) => {
     // Gestion d'erreurs spécifiques
     if (error.name === 'MongoError' && error.code === 11000) {
       console.error('❌ Erreur de duplication de code');
-      // Ici, tu pourrais régénérer un code et réessayer
     }
     
     res.status(500).send('Erreur de traitement du webhook');
   }
 };
-
-// Fonction de validation d'email
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
 
 // Vérifier et traiter un paiement après redirection
 exports.processPaymentReturn = async (req, res) => {
@@ -321,7 +335,7 @@ exports.processPaymentReturn = async (req, res) => {
         // Envoyer l'email
         const user = await User.findById(userId);
         if (user) {
-          await sendAccessCodeEmail(user.email, accessCode);
+          await sendAccessCodeEmail(user.email, accessCode, user.name);
         }
         
         return res.status(200).json({
@@ -349,7 +363,6 @@ exports.processPaymentReturn = async (req, res) => {
         
         console.log('✅ Code d\'accès généré et sauvegardé:', accessCode);
         
-        // Créer également un document AccessCode pour compatibilité
         try {
           const user = await User.findById(userId);
           if (user) {
@@ -363,7 +376,7 @@ exports.processPaymentReturn = async (req, res) => {
             console.log('✅ Code d\'accès sauvegardé dans la collection AccessCode');
             
             // Envoyer l'email avec le code d'accès
-            const emailSent = await sendAccessCodeEmail(user.email, accessCode);
+            const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name);
             
             if (emailSent) {
               console.log('✅ Email envoyé avec succès à:', user.email);
@@ -386,182 +399,64 @@ exports.processPaymentReturn = async (req, res) => {
           success: true,
           status: 'completed',
           accessCode: accessCode,
-          message: "Paiement confirmé avec succès"
+          message: "Paiement confirmé et code d'accès généré"
         });
       } else {
-        // Paiement pas encore confirmé
         return res.status(200).json({
           success: false,
-          status: invoice.status || 'pending',
+          status: 'pending',
           message: "Paiement en attente de confirmation"
         });
       }
     }
     
-    return res.status(400).json({
+    return res.status(200).json({
       success: false,
-      message: "Impossible de vérifier le paiement"
+      status: transaction.status,
+      message: `Statut de la transaction: ${transaction.status}`
     });
   } catch (error) {
     console.error('❌ Erreur dans processPaymentReturn:', error);
     res.status(500).json({
       success: false,
-      message: "Erreur lors du traitement du retour de paiement"
-    });
-  }
-};
-// Validation du code d'accès
-exports.validateAccessCode = async (req, res) => {
-  try {
-    const { code } = req.body;
-    const userId = req.user._id;
-
-    if (!code) {
-      return res.status(400).json({
-        success: false,
-        message: "Le code d'accès est requis"
-      });
-    }
-
-    // Vérifier d'abord dans la transaction
-    const transaction = await Transaction.findOne({
-      userId: userId,
-      status: 'completed',
-      accessCode: code,
-      accessCodeUsed: false
-    });
-
-    if (transaction) {
-      // Marquer le code comme utilisé
-      transaction.accessCodeUsed = true;
-      await transaction.save();
-
-      // Mettre à jour l'utilisateur
-      const user = await User.findById(userId);
-      user.isPremium = true;
-      user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-      await user.save();
-
-      console.log('✅ Code d\'accès validé pour l\'utilisateur:', user.email);
-
-      return res.status(200).json({
-        success: true,
-        message: "Code validé avec succès. Votre compte est maintenant premium!",
-        premium: true,
-        premiumExpiresAt: user.premiumExpiresAt,
-        user: user
-      });
-    }
-
-    // Vérifier dans la table des codes d'accès (ancienne méthode)
-    const accessCode = await AccessCode.findOne({
-      code: code,
-      userId: userId,
-      used: false,
-      expiresAt: { $gt: new Date() }
-    });
-
-    if (!accessCode) {
-      return res.status(400).json({
-        success: false,
-        message: "Code d'accès invalide, expiré ou déjà utilisé"
-      });
-    }
-
-    accessCode.used = true;
-    await accessCode.save();
-
-    const user = await User.findById(userId);
-    user.isPremium = true;
-    user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-    await user.save();
-
-    console.log('✅ Code d\'accès validé pour l\'utilisateur:', user.email);
-
-    res.status(200).json({
-      success: true,
-      message: "Code validé avec succès. Votre compte est maintenant premium!",
-      premium: true,
-      premiumExpiresAt: user.premiumExpiresAt,
-      user: user
-    });
-
-  } catch (error) {
-    console.error('❌ Erreur dans validateAccessCode:', error);
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la validation du code"
+      message: "Erreur serveur lors du traitement du retour de paiement"
     });
   }
 };
 
-// Vérifier le statut d'un paiement
-exports.checkPaymentStatus = async (req, res) => {
+// Vérifier manuellement le statut d'une transaction
+exports.checkTransactionStatus = async (req, res) => {
   try {
-    const { paymentId } = req.params;
-
-    const transaction = await Transaction.findOne({ 
-      transactionId: paymentId,
-      userId: req.user._id 
-    });
-
+    const { transactionId } = req.params;
+    
+    const transaction = await Transaction.findOne({ transactionId });
     if (!transaction) {
-      return res.status(404).json({
-        success: false,
-        message: "Transaction non trouvée"
-      });
+      return res.status(404).json({ error: 'Transaction non trouvée' });
     }
-
-    res.status(200).json({
+    
+    // Si la transaction est complétée mais pas d'email envoyé
+    if (transaction.status === 'completed' && transaction.accessCode) {
+      const user = await User.findById(transaction.userId);
+      if (user) {
+        const emailSent = await sendAccessCodeEmail(user.email, transaction.accessCode, user.name);
+        
+        return res.json({
+          success: true,
+          transactionStatus: transaction.status,
+          accessCode: transaction.accessCode,
+          emailSent: emailSent,
+          message: emailSent ? 'Email envoyé' : 'Erreur d\'envoi d\'email'
+        });
+      }
+    }
+    
+    res.json({
       success: true,
-      status: transaction.status,
-      transactionId: transaction.transactionId,
-      amount: transaction.amount,
-      createdAt: transaction.createdAt,
-      accessCode: transaction.accessCode
+      transactionStatus: transaction.status,
+      accessCode: transaction.accessCode,
+      message: `Statut: ${transaction.status}`
     });
   } catch (error) {
-    console.error('❌ Erreur dans checkPaymentStatus:', error);
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la vérification du statut"
-    });
+    res.status(500).json({ error: error.message });
   }
 };
-
-// Récupérer le code d'accès d'une transaction
-exports.getAccessCode = async (req, res) => {
-  try {
-    const transaction = await Transaction.findOne({
-      userId: req.user._id,
-      status: 'completed'
-    }).sort({ createdAt: -1 });
-
-    if (!transaction) {
-      return res.status(404).json({
-        success: false,
-        message: "Aucune transaction trouvée"
-      });
-    }
-
-    if (!transaction.accessCode) {
-      return res.status(404).json({
-        success: false,
-        message: "Aucun code d'accès généré pour cette transaction"
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      accessCode: transaction.accessCode
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur"
-    });
-  }
-};
-
-// Fonction pour renvoyer le code d'accès (à utiliser dans les routes)
-exports.sendAccessCodeEmail = sendAccessCodeEmail;
