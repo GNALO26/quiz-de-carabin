@@ -1,3 +1,4 @@
+// backend/controllers/paymentController.js
 const Paydunya = require('paydunya');
 const User = require('../models/User');
 const AccessCode = require('../models/AccessCode');
@@ -89,30 +90,6 @@ function isValidEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
-
-// Vérification de signature HMAC pour les webhooks
-const verifyWebhookSignature = (req, secret) => {
-  try {
-    const signature = req.headers['paydunya-signature'] || req.headers['signature'];
-    if (!signature) {
-      console.log('⚠ Signature HMAC manquante dans les headers');
-      return true; // Accepter temporairement pour debugging
-    }
-    
-    const payload = req.rawBody ? req.rawBody.toString() : JSON.stringify(req.body);
-    const computedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(payload)
-      .digest('hex');
-    
-    const isValid = signature === computedSignature;
-    console.log('Signature validation:', isValid);
-    return isValid;
-  } catch (error) {
-    console.error('❌ Erreur vérification signature HMAC:', error);
-    return false;
-  }
-};
 
 // Initier un paiement
 exports.initiatePayment = async (req, res) => {
@@ -211,7 +188,7 @@ exports.handleCallback = async (req, res) => {
     console.log('Date:', new Date().toISOString());
     console.log('Headers:', JSON.stringify(req.headers));
     console.log('Body:', JSON.stringify(req.body, null, 2));
-
+    
     let data = req.body;
     
     if (req.body.data) {
@@ -320,7 +297,6 @@ exports.processPaymentReturn = async (req, res) => {
     
     console.log('🔄 Processing payment return for transaction:', transactionId);
     
-    // Trouver la transaction
     const transaction = await Transaction.findOne({
       transactionId: transactionId,
       userId: userId
@@ -333,7 +309,6 @@ exports.processPaymentReturn = async (req, res) => {
       });
     }
     
-    // Si la transaction est déjà complétée, renvoyer le code d'accès
     if (transaction.status === 'completed') {
       if (transaction.accessCode) {
         return res.status(200).json({
@@ -343,12 +318,10 @@ exports.processPaymentReturn = async (req, res) => {
           message: "Paiement déjà traité"
         });
       } else {
-        // Générer un code d'accès si pour une raison quelconque il n'existe pas
         const accessCode = generateCode();
         transaction.accessCode = accessCode;
         await transaction.save();
         
-        // Envoyer l'email
         const user = await User.findById(userId);
         if (user) {
           await sendAccessCodeEmail(user.email, accessCode, user.name);
@@ -363,16 +336,13 @@ exports.processPaymentReturn = async (req, res) => {
       }
     }
     
-    // Si le paiement est en attente, vérifier avec PayDunya
     if (transaction.paydunyaInvoiceToken) {
       const invoice = new Paydunya.CheckoutInvoice(setup, store);
       const success = await invoice.confirm(transaction.paydunyaInvoiceToken);
       
       if (success && invoice.status === 'completed') {
-        // Paiement confirmé, traiter comme dans handleCallback
         transaction.status = 'completed';
         
-        // Générer et sauvegarder le code d'accès
         const accessCode = generateCode();
         transaction.accessCode = accessCode;
         await transaction.save();
@@ -386,12 +356,11 @@ exports.processPaymentReturn = async (req, res) => {
               code: accessCode,
               email: user.email,
               userId: user._id,
-              expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+              expiresAt: new Date(Date.now() + 30 * 60 * 1000)
             });
             await accessCodeDoc.save();
             console.log('✅ Code d\'accès sauvegardé dans la collection AccessCode');
             
-            // Envoyer l'email avec le code d'accès
             const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name);
             
             if (emailSent) {
@@ -400,9 +369,8 @@ exports.processPaymentReturn = async (req, res) => {
               console.log('❌ Échec de l\'envoi de l\'email à:', user.email);
             }
             
-            // Mettre à jour le statut premium de l'utilisateur
             user.isPremium = true;
-            user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
+            user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
             await user.save();
             
             console.log('✅ Statut premium mis à jour pour l\'utilisateur:', user.email);
@@ -450,7 +418,6 @@ exports.checkTransactionStatus = async (req, res) => {
       return res.status(404).json({ error: 'Transaction non trouvée' });
     }
     
-    // Si la transaction est complétée mais pas d'email envoyé
     if (transaction.status === 'completed' && transaction.accessCode) {
       const user = await User.findById(transaction.userId);
       if (user) {

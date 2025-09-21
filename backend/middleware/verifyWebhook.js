@@ -11,7 +11,7 @@ const verifyPaydunyaSignature = (req, res, next) => {
       return res.status(403).send('Signature manquante');
     }
     
-    // Utilisez le corps brut de la requête pour la signature
+    // Le corps brut (rawBody) est la source fiable pour la signature du webhook.
     const payload = req.rawBody ? req.rawBody.toString() : JSON.stringify(req.body);
 
     const computedSignature = crypto

@@ -7,7 +7,7 @@ const Transaction = require('../models/Transaction');
 const { sendAccessCodeEmail } = require('../controllers/paymentController');
 const AccessCode = require('../models/AccessCode');
 
-// Importez les middlewares nécessaires
+// Importation des middlewares pour le webhook
 const verifyPaydunyaSignature = require('../middleware/verifyWebhook'); 
 const webhookLogger = require('../middleware/webhookLogger');
 
@@ -15,8 +15,10 @@ const webhookLogger = require('../middleware/webhookLogger');
 router.post('/initiate', auth, paymentController.initiatePayment);
 
 // Route pour les webhooks PayDunya
-// Utilisez express.raw() pour parser le corps de la requête comme un buffer,
-// puis passez-le à votre middleware de vérification et à votre contrôleur.
+// 1. express.raw() : garantit que le corps de la requête est disponible pour la vérification de signature.
+// 2. webhookLogger : log le contenu du webhook pour le débogage.
+// 3. verifyPaydunyaSignature : vérifie l'authenticité de la requête.
+// 4. paymentController.handleCallback : traite la logique de paiement si la signature est valide.
 router.post('/callback', 
   express.raw({ type: '/' }), 
   webhookLogger,
@@ -126,7 +128,6 @@ router.post('/resend-code', auth, async (req, res) => {
       message: "Erreur serveur"
     });
   }
-  
 });
 
 // Route de test pour vérifier l'envoi d'emails

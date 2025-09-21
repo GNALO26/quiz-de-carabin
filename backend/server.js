@@ -1,3 +1,4 @@
+// backend/server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -36,7 +37,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
         // Test d'envoi d'email
         transporter.sendMail({
           from: process.env.EMAIL_USER,
-          to: process.env.EMAIL_USER, // Envoyer à soi-même pour le test
+          to: process.env.EMAIL_USER,
           subject: 'Test de configuration email - Quiz de Carabin',
           text: 'Ceci est un email de test pour vérifier la configuration.'
         }, (err, info) => {
@@ -54,7 +55,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   require('./models/User');
   require('./models/Quiz');
   require('./models/PasswordReset');
-  require('./models/Session'); // Nouveau modèle de session
+  require('./models/Session');
   require('./models/Transaction');
   require('./models/AccessCode');
   
@@ -108,15 +109,6 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   // Middleware d'authentification (pour les routes suivantes)
   app.use(auth);
   app.use(sessionCheck);
-
-  // Middleware pour parser le JSON
-app.use(express.json({ 
-  limit: '1mb',
-  verify: (req, res, buf) => {
-    req.rawBody = buf;
-  }
-}));
-
 
   // Routes protégées (nécessitent une authentification)
   app.use('/api/quiz', quizRoutes);
