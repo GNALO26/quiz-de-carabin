@@ -105,6 +105,11 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 
   // Routes d'authentification (publiques)
   app.use('/api/auth', authRoutes);
+  
+  // ✅ CORRECTION MAJEURE: Le webhook PayDunya doit être une route publique pour fonctionner.
+  // Nous la déclarons avant le middleware d'authentification.
+  app.post('/api/payment/callback', paymentRoutes.handleCallback);
+
 
   // Middleware d'authentification (pour les routes suivantes)
   app.use(auth);

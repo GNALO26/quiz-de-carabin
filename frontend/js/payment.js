@@ -1,3 +1,4 @@
+// frontend/payment.js
 import { CONFIG } from './config.js';
 import { Auth } from './auth.js';
 
@@ -5,7 +6,7 @@ export class Payment {
     constructor() {
         this.auth = new Auth();
         this.setupEventListeners();
-        this.checkPendingPayment();
+        this.checkPaymentReturn(); // ✅ Nouvelle fonction pour gérer le retour de paiement
     }
 
     setupEventListeners() {
@@ -23,53 +24,70 @@ export class Payment {
         document.getElementById('resend-code')?.addEventListener('click', () => {
             this.resendAccessCode();
         });
-        
-        // Vérification automatique du code après paiement
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('payment') === 'success') {
-            setTimeout(() => this.checkForAccessCode(), 3000);
-        }
     }
 
-    // Vérifier s'il y a un paiement en attente au chargement de la page
-    async checkPendingPayment() {
+    // ✅ Nouvelle fonction pour gérer le retour de paiement
+    async checkPaymentReturn() {
         const urlParams = new URLSearchParams(window.location.search);
-        const paymentStatus = urlParams.get('status');
         const transactionId = urlParams.get('transactionId');
+        const userId = urlParams.get('userId');
         
-        if (paymentStatus === 'success' && transactionId) {
-            this.showAlert('Paiement confirmé! Vérification du code d\'accès...', 'info');
+        if (transactionId && userId) {
+            console.log('Détection d\'un retour de paiement. Vérification du statut...');
+            this.showAlert('Paiement en cours de confirmation. Veuillez patienter...', 'info');
             
-            // Attendre un peu pour laisser le webhook traiter le paiement
-            setTimeout(async () => {
-                const accessCode = await this.checkAccessCode();
-                if (accessCode) {
-                    this.showAlert('Votre code d\'accès a été généré avec succès!', 'success');
-                    // Stocker le code pour pré-remplir le formulaire
-                    localStorage.setItem('pendingAccessCode', accessCode);
-                    
-                    // Rediriger vers la page de validation du code
-                    setTimeout(() => {
-                        window.location.href = 'access-code.html';
-                    }, 2000);
-                } else {
-                    this.showAlert('Paiement confirmé! Vérifiez votre email pour le code d\'accès.', 'info');
-                }
-            }, 5000);
+            // Lancer la vérification du statut du paiement avec un intervalle
+            this.checkStatusAndRedirect(transactionId, userId, 0);
         }
     }
+    
+    // ✅ Fonction récursive pour vérifier le statut de la transaction
+    async checkStatusAndRedirect(transactionId, userId, attempt) {
+        const MAX_ATTEMPTS = 5;
+        const DELAY = 3000; // 3 secondes
 
-    // Vérifier périodiquement si un code d'accès est disponible
-    async checkForAccessCode() {
-        console.log('Vérification du code d\'accès...');
-        const accessCode = await this.checkAccessCode();
-        if (accessCode) {
-            this.showAlert('Code d\'accès disponible! Redirection...', 'success');
-            localStorage.setItem('pendingAccessCode', accessCode);
-            window.location.href = 'access-code.html';
-        } else {
-            // Réessayer après 5 secondes
-            setTimeout(() => this.checkForAccessCode(), 5000);
+        try {
+            console.log(`Vérification du statut de la transaction... (Tentative ${attempt + 1}/${MAX_ATTEMPTS})`);
+            const token = this.auth.getToken();
+            
+            if (!token) {
+                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'danger');
+                return;
+            }
+
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const response = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ transactionId, userId })
+            });
+
+            const data = await response.json();
+            console.log('Réponse de process-return:', data);
+
+            if (data.success && data.status === 'completed' && data.accessCode) {
+                console.log('Paiement confirmé, code d\'accès reçu.');
+                this.showAlert('Votre paiement a été confirmé! Redirection...', 'success');
+                localStorage.setItem('pendingAccessCode', data.accessCode);
+                window.location.href = 'access-code.html';
+                return;
+            } else if (data.status === 'pending' && attempt < MAX_ATTEMPTS) {
+                console.log('Paiement toujours en attente, nouvelle tentative...');
+                setTimeout(() => this.checkStatusAndRedirect(transactionId, userId, attempt + 1), DELAY);
+            } else {
+                console.error('Échec de la confirmation du paiement après plusieurs tentatives.');
+                this.showAlert('Le paiement n\'a pas pu être confirmé. Vérifiez votre email ou contactez le support.', 'warning');
+            }
+        } catch (error) {
+            console.error('Erreur lors de la vérification du paiement:', error);
+            if (attempt < MAX_ATTEMPTS) {
+                setTimeout(() => this.checkStatusAndRedirect(transactionId, userId, attempt + 1), DELAY);
+            } else {
+                this.showAlert('Erreur de connexion. Veuillez réessayer plus tard.', 'danger');
+            }
         }
     }
 
@@ -273,35 +291,10 @@ export class Payment {
         }
     }
 
-    // Nouvelle méthode pour vérifier le code d'accès
+    // Ancienne fonction de vérification qui sera remplacée par la nouvelle
+    // checkAccessCode() et checkPendingPayment() sont redondantes
     async checkAccessCode() {
-        try {
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            const token = this.auth.getToken();
-            
-            if (!token) {
-                console.error('No authentication token found');
-                return null;
-            }
-            
-            const response = await fetch(`${API_BASE_URL}/api/payment/latest-access-code`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.accessCode) {
-                    return data.accessCode;
-                }
-            }
-            return null;
-        } catch (error) {
-            console.error('Error checking access code:', error);
-            return null;
-        }
+        // ... cette fonction est maintenant obsolète et peut être supprimée
     }
 
     async getActiveAPIUrl() {
