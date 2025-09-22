@@ -1,33 +1,34 @@
 const AccessCode = require('../models/AccessCode');
 const User = require('../models/User');
-const Transaction = require('../models/Transaction'); // Ajoutez cette ligne
+const Transaction = require('../models/Transaction');
+const { sendAccessCodeEmail } = require('./paymentController');
+const mongoose = require('mongoose');
 
+// Logique pour valider un code d'accès
 exports.validateAccessCode = async (req, res) => {
   try {
     const { code } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     console.log('Validation du code d\'accès:', { code, userId });
 
     // Vérifier d'abord dans les transactions
     const transaction = await Transaction.findOne({
-      userId: userId,
+      userId: new mongoose.Types.ObjectId(userId), // Assurez-vous que l'ID est un ObjectId
       accessCode: code,
       accessCodeUsed: false,
       status: 'completed'
     });
 
     if (transaction) {
-      // Marquer le code comme utilisé dans la transaction
       transaction.accessCodeUsed = true;
       await transaction.save();
 
-      // Activer l'accès premium pour l'utilisateur
       const user = await User.findByIdAndUpdate(
         userId,
         {
           isPremium: true,
-          premiumExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 an
+          premiumExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
         },
         { new: true }
       ).select('-password');
@@ -50,7 +51,7 @@ exports.validateAccessCode = async (req, res) => {
     // Si pas trouvé dans les transactions, vérifier dans AccessCode
     const accessCode = await AccessCode.findOne({
       code,
-      userId,
+      userId: new mongoose.Types.ObjectId(userId), // Assurez-vous que l'ID est un ObjectId
       used: false,
       expiresAt: { $gt: new Date() }
     });
@@ -63,16 +64,14 @@ exports.validateAccessCode = async (req, res) => {
       });
     }
 
-    // Marquer le code comme utilisé
     accessCode.used = true;
     await accessCode.save();
 
-    // Activer l'accès premium pour l'utilisateur
     const user = await User.findByIdAndUpdate(
       userId,
       {
         isPremium: true,
-        premiumExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 an
+        premiumExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
       },
       { new: true }
     ).select('-password');
@@ -102,9 +101,9 @@ exports.validateAccessCode = async (req, res) => {
 // Fonction pour renvoyer un code d'accès
 exports.resendAccessCode = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const user = await User.findById(userId);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -112,14 +111,12 @@ exports.resendAccessCode = async (req, res) => {
       });
     }
 
-    // Vérifier d'abord dans les transactions
     const transaction = await Transaction.findOne({
-      userId: userId,
+      userId: new mongoose.Types.ObjectId(userId),
       status: 'completed'
     }).sort({ createdAt: -1 });
 
     if (transaction && transaction.accessCode) {
-      // Réutiliser le code de la transaction
       const transporter = require('../config/email');
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
@@ -145,15 +142,13 @@ exports.resendAccessCode = async (req, res) => {
       });
     }
 
-    // Vérifier si l'utilisateur a déjà un code actif dans AccessCode
     const existingCode = await AccessCode.findOne({
-      userId,
+      userId: new mongoose.Types.ObjectId(userId),
       used: false,
       expiresAt: { $gt: new Date() }
     });
 
     if (existingCode) {
-      // Réutiliser le code existant
       const transporter = require('../config/email');
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
@@ -179,20 +174,17 @@ exports.resendAccessCode = async (req, res) => {
       });
     }
 
-    // Générer un nouveau code
     const newCode = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Créer un nouveau code d'accès
     const accessCode = new AccessCode({
       code: newCode,
       email: user.email,
       userId: user._id,
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000)
     });
 
     await accessCode.save();
 
-    // Envoyer le code par email
     try {
       const transporter = require('../config/email');
       await transporter.sendMail({
