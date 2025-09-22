@@ -1,3 +1,4 @@
+// backend/server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -106,7 +107,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   // Routes d'authentification (publiques)
   app.use('/api/auth', authRoutes);
   
-  // ✅ CORRECTION MAJEURE: Le webhook PayDunya doit être une route publique pour fonctionner.
+  // ✅ CORRECTION MAJEURE: Le webhook PayDunya est une route publique.
   // Nous l'ajoutons en utilisant son propre routeur, avant le middleware d'authentification.
   app.use('/api/payment', webhookRoutes);
 

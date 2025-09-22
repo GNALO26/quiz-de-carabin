@@ -8,29 +8,20 @@ const { sendAccessCodeEmail } = require('../controllers/paymentController');
 const AccessCode = require('../models/AccessCode');
 
 // Importation des middlewares pour le webhook
-const verifyPaydunyaSignature = require('../middleware/verifyWebhook'); 
-const webhookLogger = require('../middleware/webhookLogger');
+// ✅ Ces imports ne sont plus nécessaires car la route est déplacée
+// const verifyPaydunyaSignature = require('../middleware/verifyWebhook'); 
+// const webhookLogger = require('../middleware/webhookLogger');
 
 // Route pour initier un paiement
 router.post('/initiate', auth, paymentController.initiatePayment);
 
-// Route pour les webhooks PayDunya
-// 1. express.raw() : garantit que le corps de la requête est disponible pour la vérification de signature.
-// 2. webhookLogger : log le contenu du webhook pour le débogage.
-// 3. verifyPaydunyaSignature : vérifie l'authenticité de la requête.
-// 4. paymentController.handleCallback : traite la logique de paiement si la signature est valide.
-router.post('/callback', 
-  express.raw({ type: '/' }), 
-  webhookLogger,
-  verifyPaydunyaSignature, 
-  paymentController.handleCallback
-);
+// ✅ La route /callback a été déplacée dans le fichier webhook.js
 
 // Route pour traiter le retour de paiement
-router.post('/process-return', paymentController.processPaymentReturn);
+router.post('/process-return', auth, paymentController.processPaymentReturn);
 
 // Route pour vérifier manuellement une transaction
-router.get('/transaction/:transactionId/status', paymentController.checkTransactionStatus);
+router.get('/transaction/:transactionId/status', auth, paymentController.checkTransactionStatus);
 
 // Route pour récupérer le code d'accès d'une transaction spécifique
 router.get('/transaction/:transactionId/access-code', auth, async (req, res) => {
