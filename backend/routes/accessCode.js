@@ -1,12 +1,13 @@
+// backend/routes/accessCode.js
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
-const { validateAccessCode, resendAccessCode } = require('../controllers/accessCodeController');
+const accessCodeController = require('../controllers/accessCodeController');
+const auth = require('../middleware/auth'); // Middleware d'authentification
 
-// Valider un code d'accès
-router.post('/validate', auth, validateAccessCode);
+// Route pour valider un code d'accès
+router.post('/validate', auth, accessCodeController.validateCode);
 
-// Renvoyer un code d'accès
-router.post('/resend', auth, resendAccessCode);
+// Route pour renvoyer un code d'accès
+router.post('/resend', auth, accessCodeController.resendCode);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-// frontend/payment.js
+// frontend/js/payment.js
 import { CONFIG } from './config.js';
 import { Auth } from './auth.js';
 
@@ -6,27 +6,23 @@ export class Payment {
     constructor() {
         this.auth = new Auth();
         this.setupEventListeners();
-        this.checkPaymentReturn(); // ✅ Nouvelle fonction pour gérer le retour de paiement
+        this.checkPaymentReturn();
     }
 
     setupEventListeners() {
-        // Bouton d'abonnement
         document.getElementById('subscribe-btn')?.addEventListener('click', () => {
             this.initiatePayment();
         });
         
-        // Validation du code d'accès
         document.getElementById('validate-code')?.addEventListener('click', () => {
             this.validateAccessCode();
         });
         
-        // Renvoi du code
         document.getElementById('resend-code')?.addEventListener('click', () => {
             this.resendAccessCode();
         });
     }
 
-    // ✅ Nouvelle fonction pour gérer le retour de paiement
     async checkPaymentReturn() {
         const urlParams = new URLSearchParams(window.location.search);
         const transactionId = urlParams.get('transactionId');
@@ -35,16 +31,13 @@ export class Payment {
         if (transactionId && userId) {
             console.log('Détection d\'un retour de paiement. Vérification du statut...');
             this.showAlert('Paiement en cours de confirmation. Veuillez patienter...', 'info');
-            
-            // Lancer la vérification du statut du paiement avec un intervalle
             this.checkStatusAndRedirect(transactionId, userId, 0);
         }
     }
     
-    // ✅ Fonction récursive pour vérifier le statut de la transaction
     async checkStatusAndRedirect(transactionId, userId, attempt) {
         const MAX_ATTEMPTS = 5;
-        const DELAY = 3000; // 3 secondes
+        const DELAY = 3000;
 
         try {
             console.log(`Vérification du statut de la transaction... (Tentative ${attempt + 1}/${MAX_ATTEMPTS})`);
@@ -109,7 +102,6 @@ export class Payment {
             const API_BASE_URL = await this.getActiveAPIUrl();
             console.log('API URL:', API_BASE_URL);
             
-            // Afficher l'indicateur de chargement
             const subscribeBtn = document.getElementById('subscribe-btn');
             const originalText = subscribeBtn.innerHTML;
             subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...';
@@ -123,7 +115,6 @@ export class Payment {
                 }
             });
 
-            // Réinitialiser le bouton
             subscribeBtn.innerHTML = originalText;
             subscribeBtn.disabled = false;
 
@@ -172,7 +163,6 @@ export class Payment {
                 return;
             }
             
-            // Afficher l'indicateur de chargement
             const validateButton = document.getElementById('validate-code');
             const originalText = validateButton.innerHTML;
             validateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Validation...';
@@ -187,7 +177,6 @@ export class Payment {
                 body: JSON.stringify({ code })
             });
 
-            // Réinitialiser le bouton
             validateButton.innerHTML = originalText;
             validateButton.disabled = false;
 
@@ -198,7 +187,8 @@ export class Payment {
             }
 
             if (!response.ok) {
-                throw new Error(`HTTP error ${response.status}`);
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
             }
 
             const data = await response.json();
@@ -206,26 +196,22 @@ export class Payment {
             if (data.success) {
                 this.showAlert(data.message, 'success');
                 
-                // Mettre à jour les informations utilisateur
                 if (data.user) {
                     localStorage.setItem('quizUser', JSON.stringify(data.user));
                     this.auth.user = data.user;
                     this.auth.updateUI();
                 }
                 
-                // Fermer le modal après 2 secondes
                 setTimeout(() => {
                     const codeModal = bootstrap.Modal.getInstance(document.getElementById('codeModal'));
                     if (codeModal) {
                         codeModal.hide();
                     }
                     
-                    // Recharger les quiz pour afficher les quiz premium
                     if (window.quiz && typeof window.quiz.loadQuizzes === 'function') {
                         window.quiz.loadQuizzes();
                     }
                     
-                    // Rediriger vers la page quiz si on est sur la page de validation
                     if (window.location.pathname.includes('access-code.html')) {
                         window.location.href = 'quiz.html';
                     }
@@ -235,7 +221,7 @@ export class Payment {
             }
         } catch (error) {
             console.error('Error validating access code:', error);
-            this.showAlert('Erreur lors de la validation du code. Veuillez réessayer.', 'danger');
+            this.showAlert('Erreur lors de la validation du code: ' + error.message, 'danger');
         }
     }
 
@@ -264,7 +250,6 @@ export class Payment {
                 }
             });
 
-            // Réinitialiser le bouton
             resendBtn.innerHTML = originalText;
             resendBtn.disabled = false;
 
@@ -290,13 +275,7 @@ export class Payment {
             this.showAlert('Erreur lors de l\'envoi du code. Veuillez réessayer.', 'danger');
         }
     }
-
-    // Ancienne fonction de vérification qui sera remplacée par la nouvelle
-    // checkAccessCode() et checkPendingPayment() sont redondantes
-    async checkAccessCode() {
-        // ... cette fonction est maintenant obsolète et peut être supprimée
-    }
-
+    
     async getActiveAPIUrl() {
         try {
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
@@ -339,14 +318,12 @@ export class Payment {
     }
 }
 
-// Initialisation automatique quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
     window.payment = new Payment();
     
-    // Pré-remplir le champ de code s'il y a un code en attente
     const pendingCode = localStorage.getItem('pendingAccessCode');
-    if (pendingCode && document.getElementById('code')) {
-        document.getElementById('code').value = pendingCode;
+    if (pendingCode && document.getElementById('accessCode')) {
+        document.getElementById('accessCode').value = pendingCode;
         localStorage.removeItem('pendingAccessCode');
     }
 });
