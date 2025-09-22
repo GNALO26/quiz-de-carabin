@@ -182,225 +182,131 @@ exports.initiatePayment = async (req, res) => {
 };
 
 // Gestionnaire de webhook - VERSION CORRIGÉE
+// backend/controllers/paymentController.js
+
+// ... (le reste du code est inchangé)
+
+// Fonction de gestion du webhook PayDunya
 exports.handleCallback = async (req, res) => {
   try {
-    console.log('=== NOUVEAU WEBHOOK REÇU ET VALIDÉ ===');
-    console.log('Date:', new Date().toISOString());
-    console.log('Headers:', JSON.stringify(req.headers));
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-    
-    let data = req.body;
-    
-    if (req.body.data) {
-      data = req.body.data;
-    }
-    
+    console.log(`[${new Date().toISOString()}] [WEBHOOK] === Début du traitement du webhook ===`);
+    console.log(`[${new Date().toISOString()}] [WEBHOOK] Données reçues: ${JSON.stringify(req.body, null, 2)}`);
+
+    let data = req.body.data || req.body;
     const token = data.invoice?.token || data.custom_data?.invoice_token || data.token;
-    
+
     if (!token) {
-      console.error('❌ Token manquant dans le webhook:', data);
+      console.error(`[${new Date().toISOString()}] [ERREUR] Webhook: Token manquant. Données: ${JSON.stringify(data)}`);
       return res.status(400).send('Token manquant');
     }
-    
-    console.log('🔍 Recherche transaction avec token:', token);
+
+    console.log(`[${new Date().toISOString()}] [WEBHOOK] Recherche de la transaction avec le token: ${token}`);
     const transaction = await Transaction.findOne({ paydunyaInvoiceToken: token });
-    
+
     if (!transaction) {
-      console.error('❌ Transaction non trouvée pour le token:', token);
-      
-      try {
-        const allTransactions = await Transaction.find({}).select('transactionId paydunyaInvoiceToken status').limit(10);
-        console.log('📋 10 dernières transactions:', allTransactions);
-      } catch (logError) {
-        console.error('Erreur lors de la récupération des transactions:', logError);
-      }
-      
+      console.error(`[${new Date().toISOString()}] [ERREUR] Webhook: Transaction non trouvée pour le token: ${token}`);
       return res.status(404).send('Transaction non trouvée');
     }
-    
+
     if (transaction.status === 'completed') {
-      console.log('⚠ Paiement déjà traité - Ignorer le webhook doublon');
+      console.warn(`[${new Date().toISOString()}] [AVERTISSEMENT] Webhook: Paiement déjà traité pour la transaction ${transaction.transactionId}.`);
       return res.status(200).send('Paiement déjà traité');
     }
-    
-    console.log('📊 Statut reçu du webhook:', data.status);
-    console.log(`🔍 Webhook traitement: transaction ${transaction._id}, user ${transaction.userId}`);
-    
+
+    console.log(`[${new Date().toISOString()}] [WEBHOOK] Statut PayDunya: ${data.status}`);
+
     if (data.status === 'completed') {
+      console.log(`[${new Date().toISOString()}] [INFO] Webhook: Paiement confirmé. Génération du code d'accès...`);
       transaction.status = 'completed';
-      
       const accessCode = generateCode();
       transaction.accessCode = accessCode;
       await transaction.save();
-      
-      console.log('✅ Code d\'accès généré et sauvegardé:', accessCode);
-      
-      try {
-        const user = await User.findById(transaction.userId);
-        if (user) {
-          const accessCodeDoc = new AccessCode({
-            code: accessCode,
-            email: user.email,
-            userId: user._id,
-            expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
-          });
-          await accessCodeDoc.save();
-          console.log('✅ Code d\'accès sauvegardé dans la collection AccessCode');
-          
-          const customerEmail = (data.customer?.email && isValidEmail(data.customer.email)) 
-            ? data.customer.email 
-            : user.email;
-            
-          const emailSent = await sendAccessCodeEmail(customerEmail, accessCode, user.name);
-          
-          if (emailSent) {
-            console.log('✅ Email envoyé avec succès à:', customerEmail);
-          } else {
-            console.log('❌ Échec de l\'envoi de l\'email à:', customerEmail);
-          }
-          
-          user.isPremium = true;
-          user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
-          await user.save();
-          
-          console.log('✅ Statut premium mis à jour pour l\'utilisateur:', user.email);
-        }
-      } catch (accessCodeError) {
-        console.error('❌ Erreur sauvegarde AccessCode:', accessCodeError);
+
+      console.log(`[${new Date().toISOString()}] [INFO] Webhook: Code d'accès généré et sauvegardé dans la transaction: ${accessCode}`);
+
+      const user = await User.findById(transaction.userId);
+      if (user) {
+        console.log(`[${new Date().toISOString()}] [INFO] Webhook: Utilisateur trouvé. Envoi de l'email...`);
+        const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name);
+        console.log(`[${new Date().toISOString()}] [INFO] Webhook: Email envoyé avec succès: ${emailSent}`);
       }
       
-      console.log('✅ Paiement confirmé pour la transaction:', transaction.transactionId);
-    } else if (data.status === 'failed') {
-      transaction.status = 'failed';
-      await transaction.save();
-      console.log('❌ Paiement échoué pour la transaction:', transaction.transactionId);
+      console.log(`[${new Date().toISOString()}] [INFO] Webhook: Fin du traitement du webhook pour la transaction ${transaction.transactionId}.`);
     } else {
-      console.log('ℹ Statut non géré:', data.status);
+      console.log(`[${new Date().toISOString()}] [INFO] Webhook: Statut de paiement non géré: ${data.status}`);
     }
     
     res.status(200).send('Webhook traité avec succès');
   } catch (error) {
-    console.error('❌ Erreur dans handleCallback:', error);
-    
-    if (error.name === 'MongoError' && error.code === 11000) {
-      console.error('❌ Erreur de duplication de code');
-    }
-    
+    console.error(`[${new Date().toISOString()}] [ERREUR] Webhook: Erreur dans le gestionnaire de webhook: ${error.message}`);
     res.status(500).send('Erreur de traitement du webhook');
   }
 };
 
-// Vérifier et traiter un paiement après redirection
+
+// Fonction de traitement du retour de paiement
 exports.processPaymentReturn = async (req, res) => {
   try {
-    const { transactionId, userId } = req.body;
+    const { transactionId } = req.body;
     
-    console.log('🔄 Processing payment return for transaction:', transactionId);
+    console.log(`[${new Date().toISOString()}] [RETOUR] === Début du traitement du retour de paiement ===`);
+    console.log(`[${new Date().toISOString()}] [RETOUR] ID de la transaction: ${transactionId}`);
     
-    const transaction = await Transaction.findOne({
-      transactionId: transactionId,
-      userId: userId
-    });
+    const transaction = await Transaction.findOne({ transactionId });
     
     if (!transaction) {
-      return res.status(404).json({
-        success: false,
-        message: "Transaction non trouvée"
-      });
+      console.error(`[${new Date().toISOString()}] [ERREUR] Retour: Transaction non trouvée: ${transactionId}`);
+      return res.status(404).json({ success: false, message: 'Transaction non trouvée' });
     }
     
     if (transaction.status === 'completed') {
+      console.log(`[${new Date().toISOString()}] [INFO] Retour: Transaction déjà confirmée par le webhook.`);
+      
       if (transaction.accessCode) {
         return res.status(200).json({
           success: true,
           status: 'completed',
           accessCode: transaction.accessCode,
-          message: "Paiement déjà traité"
-        });
-      } else {
-        const accessCode = generateCode();
-        transaction.accessCode = accessCode;
-        await transaction.save();
-        
-        const user = await User.findById(userId);
-        if (user) {
-          await sendAccessCodeEmail(user.email, accessCode, user.name);
-        }
-        
-        return res.status(200).json({
-          success: true,
-          status: 'completed',
-          accessCode: accessCode,
-          message: "Code d'accès généré et envoyé"
+          message: "Paiement déjà traité et code disponible"
         });
       }
     }
     
-    if (transaction.paydunyaInvoiceToken) {
-      const invoice = new Paydunya.CheckoutInvoice(setup, store);
-      const success = await invoice.confirm(transaction.paydunyaInvoiceToken);
+    // Si le webhook a échoué, on confirme manuellement le paiement
+    console.log(`[${new Date().toISOString()}] [RETOUR] Confirmation manuelle du paiement...`);
+    const invoice = new Paydunya.CheckoutInvoice(setup, store);
+    const success = await invoice.confirm(transaction.paydunyaInvoiceToken);
+    
+    if (success && invoice.status === 'completed') {
+      console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement confirmé manuellement. Génération du code d'accès...`);
+      transaction.status = 'completed';
+      const accessCode = generateCode();
+      transaction.accessCode = accessCode;
+      await transaction.save();
       
-      if (success && invoice.status === 'completed') {
-        transaction.status = 'completed';
-        
-        const accessCode = generateCode();
-        transaction.accessCode = accessCode;
-        await transaction.save();
-        
-        console.log('✅ Code d\'accès généré et sauvegardé:', accessCode);
-        
-        try {
-          const user = await User.findById(userId);
-          if (user) {
-            const accessCodeDoc = new AccessCode({
-              code: accessCode,
-              email: user.email,
-              userId: user._id,
-              expiresAt: new Date(Date.now() + 30 * 60 * 1000)
-            });
-            await accessCodeDoc.save();
-            console.log('✅ Code d\'accès sauvegardé dans la collection AccessCode');
-            
-            const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name);
-            
-            if (emailSent) {
-              console.log('✅ Email envoyé avec succès à:', user.email);
-            } else {
-              console.log('❌ Échec de l\'envoi de l\'email à:', user.email);
-            }
-            
-            user.isPremium = true;
-            user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-            await user.save();
-            
-            console.log('✅ Statut premium mis à jour pour l\'utilisateur:', user.email);
-          }
-        } catch (accessCodeError) {
-          console.error('❌ Erreur sauvegarde AccessCode:', accessCodeError);
-        }
-        
-        return res.status(200).json({
-          success: true,
-          status: 'completed',
-          accessCode: accessCode,
-          message: "Paiement confirmé et code d'accès généré"
-        });
-      } else {
-        return res.status(200).json({
-          success: false,
-          status: 'pending',
-          message: "Paiement en attente de confirmation"
-        });
+      const user = await User.findById(transaction.userId);
+      if (user) {
+        console.log(`[${new Date().toISOString()}] [INFO] Retour: Envoi de l'email avec le code généré...`);
+        await sendAccessCodeEmail(user.email, accessCode, user.name);
+        console.log(`[${new Date().toISOString()}] [INFO] Retour: Email de confirmation de paiement envoyé.`);
       }
+      
+      return res.status(200).json({
+        success: true,
+        status: 'completed',
+        accessCode: accessCode,
+        message: "Paiement confirmé et code d'accès généré"
+      });
+    } else {
+      console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement toujours en attente.`);
+      return res.status(200).json({
+        success: false,
+        status: 'pending',
+        message: "Paiement en attente de confirmation"
+      });
     }
-    
-    return res.status(200).json({
-      success: false,
-      status: transaction.status,
-      message: `Statut de la transaction: ${transaction.status}`
-    });
   } catch (error) {
-    console.error('❌ Erreur dans processPaymentReturn:', error);
+    console.error(`[${new Date().toISOString()}] [ERREUR] Retour: Erreur lors du traitement du retour de paiement: ${error.message}`);
     res.status(500).json({
       success: false,
       message: "Erreur serveur lors du traitement du retour de paiement"
