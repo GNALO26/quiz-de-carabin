@@ -71,7 +71,7 @@ exports.validateAccessCode = async (req, res) => {
       userId,
       {
         isPremium: true,
-        premiumExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        premiumExpiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000)
       },
       { new: true }
     ).select('-password');
