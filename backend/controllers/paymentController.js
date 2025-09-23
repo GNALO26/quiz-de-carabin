@@ -1,4 +1,3 @@
-// backend/controllers/paymentController.js
 const Paydunya = require('paydunya');
 const User = require('../models/User');
 const AccessCode = require('../models/AccessCode');
@@ -24,6 +23,13 @@ const store = new Paydunya.Store({
   websiteURL: process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app",
   logoURL: process.env.STORE_LOGO_URL || "https://quiz-de-carabin.netlify.app/assets/images/logo.png"
 });
+
+// Définition des options d'abonnement
+const pricing = {
+  '1-month': { amount: 5000, description: "Abonnement Premium 1 mois", duration: 1 },
+  '3-months': { amount: 12000, description: "Abonnement Premium 3 mois", duration: 3 },
+  '10-months': { amount: 25000, description: "Abonnement Premium 10 mois", duration: 10 }
+};
 
 // Fonctions utilitaires
 const generateUniqueTransactionID = () => {
@@ -60,7 +66,7 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') 
               </span>
             </div>
             
-            <p><strong>Ce code expire dans 30 minutes.</strong></p>
+            <p><strong>Ce code est valable pendant 30 minutes.</strong></p>
             <p>Utilisez-le sur la page de validation pour activer votre compte premium.</p>
             
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
@@ -96,6 +102,15 @@ exports.initiatePayment = async (req, res) => {
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
     
+    // Récupérer le plan et le montant du corps de la requête
+    const { planId, amount } = req.body;
+    const plan = pricing[planId];
+    
+    if (!plan || plan.amount !== parseInt(amount)) {
+      console.error('❌ Erreur: Plan d\'abonnement ou montant invalide:', { planId, amount });
+      return res.status(400).json({ success: false, message: 'Plan d\'abonnement ou montant invalide.' });
+    }
+
     const user = req.user;
     const uniqueReference = generateUniqueReference();
 
@@ -110,7 +125,8 @@ exports.initiatePayment = async (req, res) => {
     const transaction = new Transaction({
       userId: req.user._id,
       transactionId: transactionID,
-      amount: 5000,
+      amount: plan.amount,
+      durationInMonths: plan.duration,
       status: 'pending'
     });
 
@@ -118,15 +134,15 @@ exports.initiatePayment = async (req, res) => {
 
     const invoice = new Paydunya.CheckoutInvoice(setup, store);
     invoice.addItem(
-      `Abonnement Premium - ${uniqueReference}`,
+      `Abonnement Premium - ${plan.description}`,
       1,
-      200.00,
-      200.00,
+      plan.amount,
+      plan.amount,
       `Accès illimité à tous les quiz premium - Référence: ${uniqueReference}`
     );
 
-    invoice.totalAmount = 200.00;
-    invoice.description = `Abonnement Premium Quiz de Carabin - ${uniqueReference}`;
+    invoice.totalAmount = plan.amount;
+    invoice.description = `${plan.description} - ${uniqueReference}`;
 
     const baseUrl = process.env.API_BASE_URL;
     const frontendUrl = process.env.FRONTEND_URL;
@@ -141,8 +157,9 @@ exports.initiatePayment = async (req, res) => {
     invoice.addCustomData('transaction_id', transactionID);
     invoice.addCustomData('unique_reference', uniqueReference);
     invoice.addCustomData('timestamp', Date.now().toString());
+    invoice.addCustomData('plan_id', planId);
 
-    console.log('Création de la facture PayDunya...');
+    console.log('Création de la facture PayDunya pour le plan', planId, '...');
     
     const created = await invoice.create();
     
@@ -242,108 +259,128 @@ exports.handleCallback = async (req, res) => {
 
 // Fonction de traitement du retour de paiement
 exports.processPaymentReturn = async (req, res) => {
-  try {
-    const { transactionId } = req.body;
-    
-    console.log(`[${new Date().toISOString()}] [RETOUR] === Début du traitement du retour de paiement ===`);
-    console.log(`[${new Date().toISOString()}] [RETOUR] ID de la transaction: ${transactionId}`);
-    
-    const transaction = await Transaction.findOne({ transactionId });
-    
-    if (!transaction) {
-      console.error(`[${new Date().toISOString()}] [ERREUR] Retour: Transaction non trouvée: ${transactionId}`);
-      return res.status(404).json({ success: false, message: 'Transaction non trouvée' });
-    }
-    
-    if (transaction.status === 'completed') {
-      console.log(`[${new Date().toISOString()}] [INFO] Retour: Transaction déjà confirmée par le webhook.`);
-      
-      if (transaction.accessCode) {
-        return res.status(200).json({
-          success: true,
-          status: 'completed',
-          accessCode: transaction.accessCode,
-          message: "Paiement déjà traité et code disponible"
+    try {
+        const { transactionId } = req.body;
+        
+        console.log(`[${new Date().toISOString()}] [RETOUR] === Début du traitement du retour de paiement ===`);
+        console.log(`[${new Date().toISOString()}] [RETOUR] ID de la transaction: ${transactionId}`);
+        
+        const transaction = await Transaction.findOne({ transactionId });
+        
+        if (!transaction) {
+            console.error(`[${new Date().toISOString()}] [ERREUR] Retour: Transaction non trouvée: ${transactionId}`);
+            return res.status(404).json({ success: false, message: 'Transaction non trouvée' });
+        }
+        
+        if (transaction.status === 'completed') {
+            console.log(`[${new Date().toISOString()}] [INFO] Retour: Transaction déjà confirmée par le webhook.`);
+            
+            if (transaction.accessCode) {
+                return res.status(200).json({
+                    success: true,
+                    status: 'completed',
+                    accessCode: transaction.accessCode,
+                    message: "Paiement déjà traité et code disponible"
+                });
+            }
+        }
+        
+        // Si le webhook a échoué, on confirme manuellement le paiement
+        console.log(`[${new Date().toISOString()}] [RETOUR] Confirmation manuelle du paiement...`);
+        const invoice = new Paydunya.CheckoutInvoice(setup, store);
+        const success = await invoice.confirm(transaction.paydunyaInvoiceToken);
+        
+        if (success && invoice.status === 'completed') {
+            console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement confirmé manuellement. Génération du code d'accès...`);
+            transaction.status = 'completed';
+            const accessCode = generateCode();
+            transaction.accessCode = accessCode;
+            await transaction.save();
+            
+            const user = await User.findById(transaction.userId);
+            if (user) {
+                console.log(`[${new Date().toISOString()}] [INFO] Retour: Envoi de l'email avec le code généré...`);
+                await sendAccessCodeEmail(user.email, accessCode, user.name);
+                console.log(`[${new Date().toISOString()}] [INFO] Retour: Email de confirmation de paiement envoyé.`);
+            }
+            
+            return res.status(200).json({
+                success: true,
+                status: 'completed',
+                accessCode: accessCode,
+                message: "Paiement confirmé et code d'accès généré"
+            });
+        } else {
+            console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement toujours en attente.`);
+            return res.status(200).json({
+                success: false,
+                status: 'pending',
+                message: "Paiement en attente de confirmation"
+            });
+        }
+    } catch (error) {
+        console.error(`[${new Date().toISOString()}] [ERREUR] Retour: Erreur lors du traitement du retour de paiement: ${error.message}`);
+        res.status(500).json({
+            success: false,
+            message: "Erreur serveur lors du traitement du retour de paiement"
         });
-      }
     }
-    
-    // Si le webhook a échoué, on confirme manuellement le paiement
-    console.log(`[${new Date().toISOString()}] [RETOUR] Confirmation manuelle du paiement...`);
-    const invoice = new Paydunya.CheckoutInvoice(setup, store);
-    const success = await invoice.confirm(transaction.paydunyaInvoiceToken);
-    
-    if (success && invoice.status === 'completed') {
-      console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement confirmé manuellement. Génération du code d'accès...`);
-      transaction.status = 'completed';
-      const accessCode = generateCode();
-      transaction.accessCode = accessCode;
-      await transaction.save();
-      
-      const user = await User.findById(transaction.userId);
-      if (user) {
-        console.log(`[${new Date().toISOString()}] [INFO] Retour: Envoi de l'email avec le code généré...`);
-        await sendAccessCodeEmail(user.email, accessCode, user.name);
-        console.log(`[${new Date().toISOString()}] [INFO] Retour: Email de confirmation de paiement envoyé.`);
-      }
-      
-      return res.status(200).json({
-        success: true,
-        status: 'completed',
-        accessCode: accessCode,
-        message: "Paiement confirmé et code d'accès généré"
-      });
-    } else {
-      console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement toujours en attente.`);
-      return res.status(200).json({
-        success: false,
-        status: 'pending',
-        message: "Paiement en attente de confirmation"
-      });
-    }
-  } catch (error) {
-    console.error(`[${new Date().toISOString()}] [ERREUR] Retour: Erreur lors du traitement du retour de paiement: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors du traitement du retour de paiement"
-    });
-  }
 };
 
 // Vérifier manuellement le statut d'une transaction
 exports.checkTransactionStatus = async (req, res) => {
-  try {
-    const { transactionId } = req.params;
-    
-    const transaction = await Transaction.findOne({ transactionId });
-    if (!transaction) {
-      return res.status(404).json({ error: 'Transaction non trouvée' });
-    }
-    
-    if (transaction.status === 'completed' && transaction.accessCode) {
-      const user = await User.findById(transaction.userId);
-      if (user) {
-        const emailSent = await sendAccessCodeEmail(user.email, transaction.accessCode, user.name);
+    try {
+        const { transactionId } = req.params;
         
-        return res.json({
-          success: true,
-          transactionStatus: transaction.status,
-          accessCode: transaction.accessCode,
-          emailSent: emailSent,
-          message: emailSent ? 'Email envoyé' : 'Erreur d\'envoi d\'email'
+        const transaction = await Transaction.findOne({ transactionId, userId: req.user._id });
+        if (!transaction) {
+            return res.status(404).json({ success: false, message: 'Transaction non trouvée' });
+        }
+        
+        // Vérifier si la transaction est déjà terminée et si un code a été généré
+        if (transaction.status === 'completed' && transaction.accessCode) {
+            return res.status(200).json({
+                success: true,
+                transactionStatus: 'completed',
+                accessCode: transaction.accessCode,
+                message: 'Paiement confirmé.'
+            });
+        }
+        
+        // Sinon, vérifier le statut directement auprès de PayDunya
+        const invoice = new Paydunya.CheckoutInvoice(setup, store);
+        const confirmed = await invoice.confirm(transaction.paydunyaInvoiceToken);
+        
+        if (confirmed && invoice.status === 'completed') {
+            transaction.status = 'completed';
+            const accessCode = generateCode();
+            transaction.accessCode = accessCode;
+            await transaction.save();
+            
+            const user = await User.findById(transaction.userId);
+            if (user) {
+                await sendAccessCodeEmail(user.email, accessCode, user.name);
+            }
+            
+            return res.status(200).json({
+                success: true,
+                transactionStatus: 'completed',
+                accessCode: accessCode,
+                message: 'Paiement confirmé et code d\'accès généré.'
+            });
+        }
+        
+        // Si la transaction n'est ni terminée, ni confirmée par PayDunya
+        res.status(200).json({
+            success: true,
+            transactionStatus: transaction.status,
+            accessCode: null,
+            message: `Statut: ${transaction.status}`
         });
-      }
+    } catch (error) {
+        console.error('Erreur dans checkTransactionStatus:', error);
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
-    
-    res.json({
-      success: true,
-      transactionStatus: transaction.status,
-      accessCode: transaction.accessCode,
-      message: `Statut: ${transaction.status}`
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 };
 
 // Obtenir le code d'accès de la dernière transaction

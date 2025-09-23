@@ -14,7 +14,7 @@ exports.validateAccessCode = async (req, res) => {
 
     // Vérifier d'abord dans les transactions
     const transaction = await Transaction.findOne({
-      userId: new mongoose.Types.ObjectId(userId), // Assurez-vous que l'ID est un ObjectId
+      userId: new mongoose.Types.ObjectId(userId), 
       accessCode: code,
       accessCodeUsed: false,
       status: 'completed'
@@ -28,7 +28,7 @@ exports.validateAccessCode = async (req, res) => {
         userId,
         {
           isPremium: true,
-          premiumExpiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000)
+          premiumExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
         },
         { new: true }
       ).select('-password');
@@ -51,7 +51,7 @@ exports.validateAccessCode = async (req, res) => {
     // Si pas trouvé dans les transactions, vérifier dans AccessCode
     const accessCode = await AccessCode.findOne({
       code,
-      userId: new mongoose.Types.ObjectId(userId), // Assurez-vous que l'ID est un ObjectId
+      userId: new mongoose.Types.ObjectId(userId), 
       used: false,
       expiresAt: { $gt: new Date() }
     });
@@ -71,7 +71,7 @@ exports.validateAccessCode = async (req, res) => {
       userId,
       {
         isPremium: true,
-        premiumExpiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000)
+        premiumExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
       },
       { new: true }
     ).select('-password');
@@ -157,7 +157,7 @@ exports.resendAccessCode = async (req, res) => {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #4CAF50;">Code d'accès Quiz de Carabin</h2>
-            <p>Votre code d'accès est :</p>
+            <p>Votre code d\'accès est :</p>
             <div style="text-align: center; margin: 20px 0;">
               <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #4CAF50;">${existingCode.code}</span>
             </div>
@@ -194,7 +194,7 @@ exports.resendAccessCode = async (req, res) => {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #4CAF50;">Code d'accès Quiz de Carabin</h2>
-            <p>Votre code d'accès est :</p>
+            <p>Votre code d\'accès est :</p>
             <div style="text-align: center; margin: 20px 0;">
               <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #4CAF50;">${newCode}</span>
             </div>

@@ -36,6 +36,10 @@ const transactionSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  durationInMonths: {
+    type: Number,
+    required: true
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -46,7 +50,6 @@ const transactionSchema = new mongoose.Schema({
   }
 });
 
-// Middleware pour mettre à jour la date de modification
 transactionSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();

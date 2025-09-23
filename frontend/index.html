@@ -7,6 +7,326 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        :root {
+            --primary: #1a4b8c;
+            --secondary: #4a90e2;
+            --accent: #e63946;
+            --success: #2a9d8f;
+            --warning: #f4a261;
+            --info: #17a2b8;
+            --purple: #6f42c1;
+            --pink: #e83e8c;
+            --teal: #20c997;
+            
+            --card-1-color: #4a90e2;
+            --card-2-color: #2a9d8f;
+            --card-3-color: #e83e8c;
+            
+            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, #2a5a8c 100%);
+        }
+        
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        /* Section Abonnement améliorée */
+        .pricing-section {
+            padding: 5rem 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pricing-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" opacity="0.05"><path d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%231a4b8c"/></svg>');
+        }
+        
+        .section-title {
+            position: relative;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: var(--card-2-color);
+            border-radius: 2px;
+        }
+        
+        .section-subtitle {
+            color: #6c757d;
+            margin-bottom: 3rem;
+        }
+        
+        /* Cartes de prix compactes et colorées */
+        .pricing-card {
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            height: auto; /* Hauteur automatique pour réduire la taille */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            position: relative;
+            background: white;
+            margin-bottom: 1.5rem;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+        
+        .pricing-card.popular {
+            border: 3px solid var(--card-2-color);
+            transform: scale(1.02);
+        }
+        
+        .pricing-card.popular:hover {
+            transform: scale(1.02) translateY(-5px);
+        }
+        
+        .popular-badge {
+            position: absolute;
+            top: -10px;
+            right: 20px;
+            background: var(--card-2-color);
+            color: white;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            z-index: 2;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* En-têtes de cartes avec différentes couleurs */
+        .pricing-card-header.card-1 {
+            background: linear-gradient(135deg, var(--card-1-color) 0%, #6ba2e7 100%);
+        }
+        
+        .pricing-card-header.card-2 {
+            background: linear-gradient(135deg, var(--card-2-color) 0%, #34c9a8 100%);
+        }
+        
+        .pricing-card-header.card-3 {
+            background: linear-gradient(135deg, var(--card-3-color) 0%, #f06292 100%);
+        }
+        
+        .pricing-card-header {
+            color: white;
+            padding: 1.2rem 1rem; /* Réduction du padding */
+            text-align: center;
+            position: relative;
+        }
+        
+        .pricing-card-header h3 {
+            margin: 0;
+            font-weight: 700;
+            font-size: 1.2rem; /* Taille de police réduite */
+        }
+        
+        .pricing-card-header small {
+            opacity: 0.9;
+            font-size: 0.8rem;
+        }
+        
+        .pricing-card-body {
+            padding: 1.5rem 1rem; /* Réduction du padding */
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .price {
+            text-align: center;
+            margin-bottom: 1rem; /* Réduction de la marge */
+        }
+        
+        .price-amount {
+            font-size: 2rem; /* Taille réduite */
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+        }
+        
+        .price-currency {
+            font-size: 1.2rem; /* Taille réduite */
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .price-period {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .pricing-features {
+            flex-grow: 1;
+            margin-bottom: 1.5rem; /* Réduction de la marge */
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.7rem; /* Réduction de la marge */
+            font-size: 0.85rem; /* Taille de police réduite */
+        }
+        
+        .feature-icon {
+            width: 20px; /* Taille réduite */
+            height: 20px; /* Taille réduite */
+            border-radius: 50%;
+            background: #e8f4ff;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.7rem; /* Réduction de la marge */
+            font-size: 0.7rem; /* Taille réduite */
+            flex-shrink: 0;
+        }
+        
+        /* Couleurs différentes pour les icônes selon la carte */
+        .card-1 .feature-icon {
+            background: #e3f2fd;
+            color: var(--card-1-color);
+        }
+        
+        .card-2 .feature-icon {
+            background: #e8f5e9;
+            color: var(--card-2-color);
+        }
+        
+        .card-3 .feature-icon {
+            background: #fce4ec;
+            color: var(--card-3-color);
+        }
+        
+        .savings-badge {
+            display: inline-block;
+            background: #e8f5e9;
+            color: var(--success);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-top: 0.3rem;
+        }
+        
+        .subscribe-btn {
+            border: none;
+            color: white;
+            padding: 0.8rem 1.5rem; /* Réduction du padding */
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9rem; /* Taille réduite */
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: auto;
+        }
+        
+        /* Boutons avec couleurs correspondant aux cartes */
+        .card-1 .subscribe-btn {
+            background: linear-gradient(135deg, var(--card-1-color) 0%, #6ba2e7 100%);
+        }
+        
+        .card-2 .subscribe-btn {
+            background: linear-gradient(135deg, var(--card-2-color) 0%, #34c9a8 100%);
+        }
+        
+        .card-3 .subscribe-btn {
+            background: linear-gradient(135deg, var(--card-3-color) 0%, #f06292 100%);
+        }
+        
+        .subscribe-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+            opacity: 0.9;
+        }
+        
+        /* Animation d'apparition */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fadeInUp {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+        
+        .delay-100 {
+            animation-delay: 0.1s;
+        }
+        
+        .delay-200 {
+            animation-delay: 0.2s;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .pricing-card.popular {
+                transform: scale(1);
+            }
+            
+            .pricing-card.popular:hover {
+                transform: translateY(-5px);
+            }
+            
+            .price-amount {
+                font-size: 1.8rem;
+            }
+            
+            .pricing-section {
+                padding: 3rem 0;
+            }
+        }
+        
+        /* Garantie de satisfaction */
+        .satisfaction-guarantee {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .guarantee-icon {
+            font-size: 2.5rem;
+            color: var(--success);
+            margin-bottom: 0.8rem;
+        }
+        
+        .satisfaction-guarantee h4 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .satisfaction-guarantee p {
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+    </style>
 </head>
 <!-- Ajoutez ce code juste avant la balise </body> -->
 <div id="protection-overlay" style="display: none;">
@@ -310,41 +630,159 @@
     </section>
 
     <!-- Pricing Section -->
-    <section class="py-5">
+ <section class="pricing-section" id="pricing-section">
         <div class="container">
             <div class="row text-center mb-5">
                 <div class="col">
-                    <h2 class="fw-bold">Abonnement Premium</h2>
-                    <p class="lead">Accédez à tous les quiz pendant 30 jours</p>
+                    <h2 class="section-title">Abonnement Premium</h2>
+                    <p class="section-subtitle">Accédez à tous les quiz avec une de nos formules</p>
                 </div>
             </div>
             <div class="row justify-content-center">
-                <div class="col-md-6">
-                    <div class="card border-0 shadow-lg">
-                        <div class="card-header bg-primary text-white text-center py-4">
-                            <h3 class="my-0">Accès Complet</h3>
+                <!-- Carte 1 Mois - Bleu -->
+                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp">
+                    <div class="pricing-card card-1">
+                        <div class="pricing-card-header card-1">
+                            <h3>Accès 1 Mois</h3>
                         </div>
-                        <div class="card-body p-5">
-                            <div class="text-center">
-                                <span class="display-4 fw-bold">5.000</span>
-                                <span class="h4">XOF</span>
-                                <span class="text-muted">/ 30 jours</span>
+                        <div class="pricing-card-body">
+                            <div class="price">
+                                <span class="price-amount">5.000</span>
+                                <span class="price-currency">XOF</span>
+                                <span class="price-period d-block">/ mois</span>
                             </div>
-                            <ul class="list-unstyled my-4">
-                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Accès à tous les quiz premium</li>
-                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Tableau de bord détaillé</li>
-                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Historique de progression</li>
-                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Certificats de réussite</li>
-                                <li class="mb-3"><i class="fas fa-check text-success me-2"></i> Support technique prioritaire</li>
-                            </ul>
-                            <button class="btn btn-primary btn-lg w-100" id="subscribe-btn">S'abonner maintenant</button>
+                            <p class="text-center text-muted" style="font-size: 0.9rem;">La formule la plus flexible pour commencer.</p>
+                            <div class="pricing-features">
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Accès à tous les quiz premium</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Tableau de bord de suivi</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Support technique</span>
+                                </div>
+                            </div>
+                            <button class="btn subscribe-btn" data-plan-id="1-month" data-plan-price="5000">
+                                S'abonner maintenant
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte 3 Mois (Populaire) - Vert -->
+                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-100">
+                    <div class="pricing-card card-2 popular">
+                        <div class="popular-badge">Le plus populaire</div>
+                        <div class="pricing-card-header card-2">
+                            <h3>Accès 3 Mois</h3>
+                        </div>
+                        <div class="pricing-card-body">
+                            <div class="price">
+                                <span class="price-amount">12.000</span>
+                                <span class="price-currency">XOF</span>
+                                <span class="price-period d-block">/ 3 mois</span>
+                                <span class="savings-badge">Économisez 3.000 XOF</span>
+                            </div>
+                            <p class="text-center text-muted" style="font-size: 0.9rem;">Idéal pour une préparation intensive.</p>
+                            <div class="pricing-features">
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Accès à tous les quiz premium</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Tableau de bord de suivi</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Support technique</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Historique des performances</span>
+                                </div>
+                            </div>
+                            <button class="btn subscribe-btn" data-plan-id="3-months" data-plan-price="12000">
+                                Choisir cette offre
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte 10 Mois - Rose -->
+                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-200">
+                    <div class="pricing-card card-3">
+                        <div class="pricing-card-header card-3">
+                            <h3>Accès 10 Mois</h3>
+                            <small>(9 mois + 1 mois offert)</small>
+                        </div>
+                        <div class="pricing-card-body">
+                            <div class="price">
+                                <span class="price-amount">25.000</span>
+                                <span class="price-currency">XOF</span>
+                                <span class="price-period d-block">/ 10 mois</span>
+                                <span class="savings-badge">Économisez 25.000 XOF</span>
+                            </div>
+                            <p class="text-center text-muted" style="font-size: 0.9rem;">La solution complète pour votre année.</p>
+                            <div class="pricing-features">
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Accès à tous les quiz premium</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Tableau de bord de suivi</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Support technique prioritaire</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Historique complet des quiz</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Accès aux nouvelles fonctionnalités</span>
+                                </div>
+                            </div>
+                            <button class="btn subscribe-btn" data-plan-id="10-months" data-plan-price="25000">
+                                Optez pour l'excellence
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
 
+    </section>
     <!-- Enter Code Modal -->
     <div class="modal fade" id="codeModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
