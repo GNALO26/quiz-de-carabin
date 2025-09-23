@@ -220,7 +220,6 @@ async function addLoginHistory(req, email, success, reason) {
 }
 
 // Fonction de déconnexion
-// Fonction de déconnexion
 exports.logout = async (req, res) => {
   try {
     // Désactiver la session active

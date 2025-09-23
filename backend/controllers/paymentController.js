@@ -181,10 +181,6 @@ exports.initiatePayment = async (req, res) => {
   }
 };
 
-// Gestionnaire de webhook - VERSION CORRIGÉE
-// backend/controllers/paymentController.js
-
-// ... (le reste du code est inchangé)
 
 // Fonction de gestion du webhook PayDunya
 exports.handleCallback = async (req, res) => {
