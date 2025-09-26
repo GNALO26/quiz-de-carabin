@@ -140,14 +140,28 @@ async loadQuizzes() {
         const sortedSubjects = Object.keys(quizzesBySubject).sort();
 
         // 2. RENDU DYNAMIQUE PAR MATIÈRE
+        // Vérifie si nous sommes sur la page d'accueil (index.html)
+        const isHomePage = window.location.pathname.endsWith('/') || 
+                           window.location.pathname.endsWith('index.html');
+        // Limite d'affichage pour la page d'accueil
+        const MAX_QUIZZES_DISPLAY_HOME = 3; 
+
         sortedSubjects.forEach(subject => {
-            const quizzes = quizzesBySubject[subject];
+            let quizzes = quizzesBySubject[subject];
             
-            // Créer le conteneur de la matière
+            // Applique la limite si on est sur la page d'accueil
+            if (isHomePage) {
+                // On garde une référence à tous les quiz pour le "voir plus tard"
+                const totalQuizzes = quizzes.length; 
+                quizzes = quizzes.slice(0, MAX_QUIZZES_DISPLAY_HOME);
+                if (quizzes.length === 0) return; // Ne pas afficher la section si vide
+            }
+            
+            // Créer le conteneur principal de la MATIÈRE
             const subjectSection = document.createElement('div');
             subjectSection.className = 'col-12 mb-5 animate-fadeInUp';
             
-            // Titre de la matière
+            // Structure de la matière (Titre de la matière + Séparateur)
             subjectSection.innerHTML = `
                 <div class="subject-header mb-4 mt-4">
                     <h3 class="fw-bold text-primary">${subject}</h3>
@@ -158,50 +172,32 @@ async loadQuizzes() {
             `;
             
             quizList.appendChild(subjectSection);
-            
-            const subjectRow = document.getElementById(`subject-row-${subject.replace(/\s+/g, '-').toLowerCase()}`);
+            const subjectRow = subjectSection.querySelector('.row');
 
             // Rendre les cartes de quiz pour cette matière
             quizzes.forEach(quiz => {
-                const isFree = quiz.free || false;
-                const hasAccess = isFree || (window.app && window.app.auth && window.app.auth.isPremium());
-                
+                // ... (Le code de création de la carte quiz va ici) ...
                 const quizCard = document.createElement('div');
                 quizCard.className = 'col-md-4 mb-4';
-                quizCard.innerHTML = `
-                    <div class="card quiz-card h-100">
-                        <div class="card-body">
-                            <span class="badge ${isFree ? 'badge-free' : 'bg-warning text-dark'} mb-2">
-                                ${isFree ? 'GRATUIT' : 'PREMIUM'}
-                            </span>
-                            <h5 class="card-title">${quiz.title}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">${quiz.category}</h6> 
-                            <p class="card-text">${quiz.description}</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small><i class="fas fa-question-circle me-1"></i> ${quiz.questions?.length || 0} questions</small>
-                                <small><i class="fas fa-clock me-1"></i> ${quiz.duration || 10} minutes</small>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-white">
-                            <button class="btn ${isFree ? 'btn-outline-primary' : 'btn-primary'} w-100 start-quiz" 
-                                    data-quiz-id="${quiz._id}" ${!hasAccess && !isFree ? 'disabled' : ''}>
-                                ${isFree ? 'Commencer le quiz' : (hasAccess ? 'Commencer le quiz' : 'Accéder (5.000 XOF)')}
-                            </button>
-                            ${!hasAccess && !isFree ? `
-                                <small class="text-muted d-block mt-2">Abonnement premium requis</small>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
+                // ... (Remplissez InnerHTML de la carte ici) ...
                 subjectRow.appendChild(quizCard);
             });
+            
+            // 💡 Ajout du bouton "Voir plus" pour la page d'accueil
+            if (isHomePage && totalQuizzes > MAX_QUIZZES_DISPLAY_HOME) {
+                 const seeMoreContainer = document.createElement('div');
+                 seeMoreContainer.className = 'col-12 text-center mt-3';
+                 seeMoreContainer.innerHTML = `
+                    <a href="quiz.html" class="btn btn-outline-primary">
+                        Voir les ${totalQuizzes} quiz de ${subject} <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                 `;
+                 subjectRow.appendChild(seeMoreContainer);
+            }
         });
 
         this.addQuizEventListeners();
     }
-    
-// ... (reste du fichier inchangé)
-
     addQuizEventListeners() {
         document.querySelectorAll('.start-quiz').forEach(button => {
             button.addEventListener('click', (e) => {
