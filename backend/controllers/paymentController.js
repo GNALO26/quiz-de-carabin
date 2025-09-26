@@ -41,10 +41,12 @@ const generateUniqueReference = () => {
 };
 
 // Fonction pour envoyer des emails avec code d'accès
+
 const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') => {
   try {
-    console.log('🔄 Tentative d\'envoi d\'email à:', email);
+    console.log(`[EMAIL] 🔄 Tentative d'envoi de code d'accès (${accessCode}) à: ${email}`);
     
+    // Assurez-vous que le 'transporter' est celui importé au début du fichier
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -80,10 +82,11 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') 
     };
     
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email envoyé avec succès. Message ID:', info.messageId);
+    console.log(`[EMAIL] ✅ Code envoyé avec succès. Message ID: ${info.messageId}`);
     return true;
   } catch (error) {
-    console.error('❌ Erreur détaillée envoi email:', error);
+    // 🛑 LOGGING CRITIQUE : Affiche l'erreur complète du transporteur SMTP
+    console.error(`[EMAIL] ❌ ERREUR FATALE ENVOI DE CODE D'ACCÈS à ${email}:`, error);
     return false;
   }
 };
