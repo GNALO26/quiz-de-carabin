@@ -99,10 +99,7 @@ async loadQuizzes() {
     }
 }
 
-    // js/quiz.js (Méthode displayQuizzes)
-
-// ... (code précédent)
-
+    //  (Méthode displayQuizzes)
     displayQuizzes() {
         const quizList = document.getElementById('quiz-list');
         if (!quizList) {
