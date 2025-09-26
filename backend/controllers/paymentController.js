@@ -4,7 +4,7 @@ const AccessCode = require('../models/AccessCode');
 const generateCode = require('../utils/generateCode');
 const Transaction = require('../models/Transaction');
 const crypto = require('crypto');
-const transporter = require('../config/email');
+const transporter = require('../config/email'); // Doit être importé ici
 
 // Configuration PayDunya
 const setup = new Paydunya.Setup({
@@ -40,13 +40,11 @@ const generateUniqueReference = () => {
   return 'REF_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 };
 
-// Fonction pour envoyer des emails avec code d'accès
-
+// Fonction pour envoyer des emails avec code d'accès (CORRIGÉ POUR LE LOGGING DÉTAILLÉ)
 const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') => {
   try {
     console.log(`[EMAIL] 🔄 Tentative d'envoi de code d'accès (${accessCode}) à: ${email}`);
     
-    // Assurez-vous que le 'transporter' est celui importé au début du fichier
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -85,7 +83,7 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') 
     console.log(`[EMAIL] ✅ Code envoyé avec succès. Message ID: ${info.messageId}`);
     return true;
   } catch (error) {
-    // 🛑 LOGGING CRITIQUE : Affiche l'erreur complète du transporteur SMTP
+    // 🛑 LOGGING CRITIQUE: Affiche l'erreur complète du transporteur SMTP
     console.error(`[EMAIL] ❌ ERREUR FATALE ENVOI DE CODE D'ACCÈS à ${email}:`, error);
     return false;
   }
@@ -202,7 +200,7 @@ exports.initiatePayment = async (req, res) => {
 };
 
 
-// Fonction de gestion du webhook PayDunya
+// Fonction de gestion du webhook PayDunya (MODIFIÉ POUR LOG CRITIQUE D'E-MAIL)
 exports.handleCallback = async (req, res) => {
   try {
     console.log(`[${new Date().toISOString()}] [WEBHOOK] === Début du traitement du webhook ===`);
@@ -242,9 +240,15 @@ exports.handleCallback = async (req, res) => {
 
       const user = await User.findById(transaction.userId);
       if (user) {
-        console.log(`[${new Date().toISOString()}] [INFO] Webhook: Utilisateur trouvé. Envoi de l'email...`);
+        console.log(`[${new Date().toISOString()}] [INFO] Webhook: Utilisateur trouvé. Tentative d'envoi de l'email...`);
         const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name);
-        console.log(`[${new Date().toISOString()}] [INFO] Webhook: Email envoyé avec succès: ${emailSent}`);
+        
+        // 🛑 LOG CRITIQUE D'ÉCHEC
+        if (!emailSent) {
+             console.error(`[${new Date().toISOString()}] [ALERTE CRITIQUE] Webhook: L'email de code d'accès a échoué pour ${user.email}. Le client ne l'a pas reçu.`);
+        } else {
+             console.log(`[${new Date().toISOString()}] [INFO] Webhook: Email envoyé avec succès: ${emailSent}`);
+        }
       }
       
       console.log(`[${new Date().toISOString()}] [INFO] Webhook: Fin du traitement du webhook pour la transaction ${transaction.transactionId}.`);
@@ -260,7 +264,7 @@ exports.handleCallback = async (req, res) => {
 };
 
 
-// Fonction de traitement du retour de paiement
+// Fonction de traitement du retour de paiement (MODIFIÉ POUR LOG CRITIQUE D'E-MAIL)
 exports.processPaymentReturn = async (req, res) => {
     try {
         const { transactionId } = req.body;
@@ -279,6 +283,7 @@ exports.processPaymentReturn = async (req, res) => {
             console.log(`[${new Date().toISOString()}] [INFO] Retour: Transaction déjà confirmée par le webhook.`);
             
             if (transaction.accessCode) {
+                // Le code est toujours renvoyé ici, même si l'email a échoué.
                 return res.status(200).json({
                     success: true,
                     status: 'completed',
@@ -302,11 +307,17 @@ exports.processPaymentReturn = async (req, res) => {
             
             const user = await User.findById(transaction.userId);
             if (user) {
-                console.log(`[${new Date().toISOString()}] [INFO] Retour: Envoi de l'email avec le code généré...`);
-                await sendAccessCodeEmail(user.email, accessCode, user.name);
-                console.log(`[${new Date().toISOString()}] [INFO] Retour: Email de confirmation de paiement envoyé.`);
+                console.log(`[${new Date().toISOString()}] [INFO] Retour: Tentative d'envoi de l'email avec le code généré...`);
+                // 🛑 MODIFICATION POUR VÉRIFIER L'ÉCHEC DE L'ENVOI
+                const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name);
+                if (!emailSent) {
+                    console.error(`[${new Date().toISOString()}] [ALERTE CRITIQUE] Retour: L'email de code d'accès a échoué pour ${user.email}. Le client dépendra de l'API.`);
+                } else {
+                    console.log(`[${new Date().toISOString()}] [INFO] Retour: Email de confirmation de paiement envoyé.`);
+                }
             }
             
+            // Le code est TOUJOURS renvoyé au frontend comme filet de sécurité
             return res.status(200).json({
                 success: true,
                 status: 'completed',
@@ -329,6 +340,7 @@ exports.processPaymentReturn = async (req, res) => {
         });
     }
 };
+
 
 // Vérifier manuellement le statut d'une transaction
 exports.checkTransactionStatus = async (req, res) => {
