@@ -5,13 +5,19 @@ const {
   submitQuiz,
   getQuizHistory
 } = require('../controllers/quizController');
-const auth = require('../middleware/auth');
+const auth = require('../middleware/auth'); // Middleware d'authentification
+const checkPremiumStatus = require('../middleware/checkPremiumStatus'); // NOUVEAU
+
 const router = express.Router();
 
-router.get('/', auth, getAllQuizzes);
-router.get('/:id', auth, getQuiz);
-router.post('/:id/submit', auth, submitQuiz);
-router.get('/history/user', auth, getQuizHistory);
+// Appliquer le check de statut après l'authentification sur TOUTES les routes de quiz
+router.use(auth, checkPremiumStatus);
+
+// Toutes les routes passent maintenant par 'auth' et 'checkPremiumStatus'
+router.get('/', getAllQuizzes); 
+router.get('/:id', getQuiz);
+router.post('/:id/submit', submitQuiz);
+router.get('/history/user', getQuizHistory);
 
 module.exports = router;
 /*const express = require('express');

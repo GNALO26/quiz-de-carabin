@@ -24,11 +24,16 @@ exports.validateAccessCode = async (req, res) => {
       transaction.accessCodeUsed = true;
       await transaction.save();
 
+      // ✅ CORRECTION 1 : CALCUL DE LA DATE D'EXPIRATION EN UTILISANT durationInMonths
+      const expirationDate = new Date();
+      // Ajoute le nombre de mois de la transaction à la date actuelle
+      expirationDate.setMonth(expirationDate.getMonth() + transaction.durationInMonths); 
+
       const user = await User.findByIdAndUpdate(
         userId,
         {
           isPremium: true,
-          premiumExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+          premiumExpiresAt: expirationDate // Utilisation de la date calculée
         },
         { new: true }
       ).select('-password');
@@ -67,11 +72,15 @@ exports.validateAccessCode = async (req, res) => {
     accessCode.used = true;
     await accessCode.save();
 
+    // ✅ CORRECTION 2 : DÉFINITION D'UNE EXPIRATION PAR DÉFAUT (ex: 1 mois) pour les AccessCode non liés aux transactions
+    const defaultExpiration = new Date();
+    defaultExpiration.setMonth(defaultExpiration.getMonth() + 1); // Expiration de 1 mois par défaut
+
     const user = await User.findByIdAndUpdate(
       userId,
       {
         isPremium: true,
-        premiumExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        premiumExpiresAt: defaultExpiration // Utilisation de la nouvelle date
       },
       { new: true }
     ).select('-password');
@@ -97,6 +106,7 @@ exports.validateAccessCode = async (req, res) => {
     });
   }
 };
+
 
 // Fonction pour renvoyer un code d'accès
 exports.resendAccessCode = async (req, res) => {

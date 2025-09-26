@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema({
   },
   premiumExpiresAt: {
     type: Date,
-    default: 0
+    default: null
   },
   tokenVersion: {
     type: Number,

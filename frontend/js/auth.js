@@ -453,7 +453,38 @@ export class Auth {
     }
 
     isPremium() {
-        return (this.user && this.user.isPremium) || localStorage.getItem('userIsPremium') === 'true';
+        const user = this.getUser();
+        
+        // Vérifie si l'utilisateur existe et s'il est marqué comme premium
+        if (user && user.isPremium) 
+            // S'il n'y a pas de date d'expiration (ancien bug ou mauvaise donnée), on suppose que l'abonnement est invalide
+            if (!user.premiumExpiresAt) {
+                return false; 
+            }
+            
+            try {
+                const expirationDate = new Date(user.premiumExpiresAt);
+                const now = new Date();
+                
+                // Si la date d'expiration est postérieure à la date actuelle
+                if (expirationDate > now) {
+                    return true;
+                } else {
+                    // L'abonnement est expiré côté client. 
+                    console.log(`Abonnement premium expiré pour ${user.email} (Fin: ${user.premiumExpiresAt})`);
+                    
+                    // Mise à jour de l'objet local pour éviter de nouvelles vérifications client
+                    // (La correction finale dans la DB sera faite par le middleware backend)
+                    this.user.isPremium = false;
+                    // On appelle updateUI pour masquer immédiatement le badge "Premium"
+                         this.updateUI(); 
+                    
+                    return false;
+                }
+            } catch (e) {
+                console.error("Erreur de parsing de la date d'expiration:", e);
+                return false;
+            }
     }
 
     getUser() {
