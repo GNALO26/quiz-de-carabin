@@ -1,22 +1,7 @@
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 
 const QuestionSchema = new mongoose.Schema({
-  text: {
-    type: String,
-    required: true
-  },
-  options: [{
-    type: String,
-    required: false
-  }],
-  correctAnswers: [{
-    type: Number,
-    required: true
-  }],
-  justification: {
-    type: String,
-    default: ''
-  }
+// ... (QuestionSchema inchangé)
 });
 
 const QuizSchema = new mongoose.Schema({
@@ -31,6 +16,11 @@ const QuizSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true
+  },
+  // NOUVEAU CHAMP : Pour la matière générale (Anatomie, Physiologie, Histologie...)
+  subject: { 
+    type: String,
+    required: true 
   },
   free: {
     type: Boolean,

@@ -99,6 +99,10 @@ async loadQuizzes() {
     }
 }
 
+    // js/quiz.js (Méthode displayQuizzes)
+
+// ... (code précédent)
+
     displayQuizzes() {
         const quizList = document.getElementById('quiz-list');
         if (!quizList) {
@@ -113,9 +117,10 @@ async loadQuizzes() {
         quizList.innerHTML = '';
 
         if (this.quizzes.length === 0) {
+            // ... (Message d'aucun quiz inchangé)
             quizList.innerHTML = `
                 <div class="col-12 text-center">
-                    < class="alert alert-info">
+                    <div class="alert alert-info">
                         Aucun quiz disponible pour le moment.
                         (Veuillez actualiser la page)
                     </div>
@@ -124,41 +129,81 @@ async loadQuizzes() {
             return;
         }
 
-        this.quizzes.forEach(quiz => {
-            const isFree = quiz.free || false;
-            const hasAccess = isFree || (window.app && window.app.auth && window.app.auth.isPremium());
+        // 1. REGROUPEMENT PAR MATIÈRE (SUBJECT)
+        const quizzesBySubject = this.quizzes.reduce((acc, quiz) => {
+            const subject = quiz.subject || 'Autres'; // Utiliser 'Autres' si le champ est manquant
+            if (!acc[subject]) {
+                acc[subject] = [];
+            }
+            acc[subject].push(quiz);
+            return acc;
+        }, {});
+        
+        // Trier les matières (optionnel)
+        const sortedSubjects = Object.keys(quizzesBySubject).sort();
+
+        // 2. RENDU DYNAMIQUE PAR MATIÈRE
+        sortedSubjects.forEach(subject => {
+            const quizzes = quizzesBySubject[subject];
             
-            const quizCard = document.createElement('div');
-            quizCard.className = 'col-md-4 mb-4';
-            quizCard.innerHTML = `
-                <div class="card quiz-card h-100">
-                    <div class="card-body">
-                        <span class="badge ${isFree ? 'badge-free' : 'bg-warning text-dark'} mb-2">
-                            ${isFree ? 'GRATUIT' : 'PREMIUM'}
-                        </span>
-                        <h5 class="card-title">${quiz.title}</h5>
-                        <p class="card-text">${quiz.description}</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small><i class="fas fa-question-circle me-1"></i> ${quiz.questions?.length || 0} questions</small>
-                            <small><i class="fas fa-clock me-1"></i> ${quiz.duration || 10} minutes</small>
+            // Créer le conteneur de la matière
+            const subjectSection = document.createElement('div');
+            subjectSection.className = 'col-12 mb-5 animate-fadeInUp';
+            
+            // Titre de la matière
+            subjectSection.innerHTML = `
+                <div class="subject-header mb-4 mt-4">
+                    <h3 class="fw-bold text-primary">${subject}</h3>
+                    <hr class="mt-2 mb-4" style="border-top: 3px solid var(--secondary); opacity: 1;">
+                </div>
+                <div class="row" id="subject-row-${subject.replace(/\s+/g, '-').toLowerCase()}">
+                    </div>
+            `;
+            
+            quizList.appendChild(subjectSection);
+            
+            const subjectRow = document.getElementById(`subject-row-${subject.replace(/\s+/g, '-').toLowerCase()}`);
+
+            // Rendre les cartes de quiz pour cette matière
+            quizzes.forEach(quiz => {
+                const isFree = quiz.free || false;
+                const hasAccess = isFree || (window.app && window.app.auth && window.app.auth.isPremium());
+                
+                const quizCard = document.createElement('div');
+                quizCard.className = 'col-md-4 mb-4';
+                quizCard.innerHTML = `
+                    <div class="card quiz-card h-100">
+                        <div class="card-body">
+                            <span class="badge ${isFree ? 'badge-free' : 'bg-warning text-dark'} mb-2">
+                                ${isFree ? 'GRATUIT' : 'PREMIUM'}
+                            </span>
+                            <h5 class="card-title">${quiz.title}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">${quiz.category}</h6> 
+                            <p class="card-text">${quiz.description}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small><i class="fas fa-question-circle me-1"></i> ${quiz.questions?.length || 0} questions</small>
+                                <small><i class="fas fa-clock me-1"></i> ${quiz.duration || 10} minutes</small>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white">
+                            <button class="btn ${isFree ? 'btn-outline-primary' : 'btn-primary'} w-100 start-quiz" 
+                                    data-quiz-id="${quiz._id}" ${!hasAccess && !isFree ? 'disabled' : ''}>
+                                ${isFree ? 'Commencer le quiz' : (hasAccess ? 'Commencer le quiz' : 'Accéder (5.000 XOF)')}
+                            </button>
+                            ${!hasAccess && !isFree ? `
+                                <small class="text-muted d-block mt-2">Abonnement premium requis</small>
+                            ` : ''}
                         </div>
                     </div>
-                    <div class="card-footer bg-white">
-                        <button class="btn ${isFree ? 'btn-outline-primary' : 'btn-primary'} w-100 start-quiz" 
-                                data-quiz-id="${quiz._id}" ${!hasAccess && !isFree ? 'disabled' : ''}>
-                            ${isFree ? 'Commencer le quiz' : (hasAccess ? 'Commencer le quiz' : 'Accéder (5.000 XOF)')}
-                        </button>
-                        ${!hasAccess && !isFree ? `
-                            <small class="text-muted d-block mt-2">Abonnement premium requis</small>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-            quizList.appendChild(quizCard);
+                `;
+                subjectRow.appendChild(quizCard);
+            });
         });
 
         this.addQuizEventListeners();
     }
+    
+// ... (reste du fichier inchangé)
 
     addQuizEventListeners() {
         document.querySelectorAll('.start-quiz').forEach(button => {

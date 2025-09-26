@@ -6,8 +6,11 @@ const path = require('path');
 const mammoth = require('mammoth');
 require('dotenv').config();
 
-// Fonction pour parser les fichiers DOCX
+// Fonction pour parser les fichiers DOCX (aucune modification ici)
 async function parseDocxFile(filePath, category, isFree = true) {
+  // ... (Fonction parseDocxFile inchangée)
+  // [CONSERVEZ LE CODE COMPLET DE parseDocxFile TEL QU'IL EST DANS VOTRE PROMPT]
+  // ...
   try {
     const { value } = await mammoth.extractRawText({ path: filePath });
     const allText = value;
@@ -95,83 +98,89 @@ async function parseDocxFile(filePath, category, isFree = true) {
 // Fonction principale
 async function seedFromDocx() {
   try {
-    const docxConfig = [
-      {
-        path: path.join(__dirname, '../uploads/physiologie-renale.docx'),
-        category: 'physiologie-renale',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-epithelial1.docx'),
-        category: 'tissu-epithelial1',
-        free: true
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-epithelial2.docx'),
-        category: 'tissu-epithelial2',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-conjonctif1.docx'),
-        category: 'tissu-conjonctif1',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-conjonctif2.docx'),
-        category: 'tissu-conjonctif2',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-cartilagineux.docx'),
-        category: 'tissu-cartilagineux',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/echange.docx'),
-        category: 'echange',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-musculaire1.docx'),
-        category: 'tissu-musculaire1',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-musculaire2.docx'),
-        category: 'tissu-musculaire2',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-nerveux1.docx'),
-        category: 'tissu-nerveux1',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-nerveux2.docx'),
-        category: 'tissu-nerveux2',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-osseux1.docx'),
-        category: 'tissu-osseux1',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/tissu-osseux2.docx'),
-        category: 'tissu-osseux2',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/physiologie-musculaire.docx'),
-        category: 'physiologie-musculaire',
-        free: false
-      },
-      {
-        path: path.join(__dirname, '../uploads/physiologie-respiratoire.docx'),
-        category: 'physiologie-respiratoire',
-        free: false
-      }
-    ];
+    // NOUVELLE STRUCTURE DE CONFIGURATION PAR MATIÈRE
+    const docxSubjects = {
+      'Physiologie': [
+        {
+          path: path.join(__dirname, '../uploads/physiologie-renale.docx'),
+          category: 'physiologie-renale',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/echange.docx'),
+          category: 'echange',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/physiologie-musculaire.docx'),
+          category: 'physiologie-musculaire',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/physiologie-respiratoire.docx'),
+          category: 'physiologie-respiratoire',
+          free: false
+        }
+      ],
+      'Histologie': [
+        {
+          path: path.join(__dirname, '../uploads/tissu-epithelial1.docx'),
+          category: 'tissu-epithelial1',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-epithelial2.docx'),
+          category: 'tissu-epithelial2',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-conjonctif1.docx'),
+          category: 'tissu-conjonctif1',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-conjonctif2.docx'),
+          category: 'tissu-conjonctif2',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-cartilagineux.docx'),
+          category: 'tissu-cartilagineux',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-osseux1.docx'),
+          category: 'tissu-osseux1',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-osseux2.docx'),
+          category: 'tissu-osseux2',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-musculaire1.docx'),
+          category: 'tissu-musculaire1',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-musculaire2.docx'),
+          category: 'tissu-musculaire2',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-nerveux1.docx'),
+          category: 'tissu-nerveux1',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-nerveux2.docx'),
+          category: 'tissu-nerveux2',
+          free: true
+        }
+      ]
+      // Ajoutez d'autres matières ici (Anatomie, Bactériologie, etc.)
+    };
 
     console.log('🗑 Suppression des anciens quizzes...');
     await Quiz.deleteMany({});
@@ -180,31 +189,42 @@ async function seedFromDocx() {
     let totalQuizzes = 0;
     let totalQuestions = 0;
 
-    for (const config of docxConfig) {
-      if (fs.existsSync(config.path)) {
-        console.log(`\n📖 Lecture de ${path.basename(config.path)}`);
-        console.log(`   Catégorie: ${config.category}`);
-        console.log(`   Statut: ${config.free ? 'GRATUIT' : 'PAYANT'}`);
+    // PARCOURIR PAR MATIÈRE
+    for (const [subject, configs] of Object.entries(docxSubjects)) {
+      console.log(`\n============== Démarrage de la matière : ${subject} ==============`);
 
-        const quizzes = await parseDocxFile(config.path, config.category, config.free);
+      for (const config of configs) {
+        if (fs.existsSync(config.path)) {
+          console.log(`\n📖 Lecture de ${path.basename(config.path)}`);
+          console.log(`   Sous-Catégorie: ${config.category}`);
+          console.log(`   Statut: ${config.free ? 'GRATUIT' : 'PAYANT'}`);
 
-        if (quizzes.length > 0) {
-          await Quiz.insertMany(quizzes);
-          console.log(`✅ ${quizzes.length} quizzes ajoutés`);
+          const quizzes = await parseDocxFile(config.path, config.category, config.free);
 
-          totalQuizzes += quizzes.length;
-          quizzes.forEach(quiz => {
-            totalQuestions += quiz.questions.length;
-            console.log(`   - "${quiz.title}" avec ${quiz.questions.length} questions`);
-          });
+          if (quizzes.length > 0) {
+            // AJOUT DE LA MATIÈRE avant insertion
+            const quizzesWithSubject = quizzes.map(quiz => ({
+              ...quiz,
+              subject: subject, // Ajout de la matière
+            }));
+
+            await Quiz.insertMany(quizzesWithSubject);
+            console.log(`✅ ${quizzesWithSubject.length} quizzes ajoutés (Matière: ${subject})`);
+
+            totalQuizzes += quizzesWithSubject.length;
+            quizzesWithSubject.forEach(quiz => {
+              totalQuestions += quiz.questions.length;
+              console.log(`   - "${quiz.title}" avec ${quiz.questions.length} questions`);
+            });
+          } else {
+            console.log('❌ Aucun quiz trouvé dans ce fichier');
+          }
         } else {
-          console.log('❌ Aucun quiz trouvé dans ce fichier');
+          console.log(`❌ Fichier non trouvé: ${path.basename(config.path)}`);
         }
-      } else {
-        console.log(`❌ Fichier non trouvé: ${path.basename(config.path)}`);
       }
     }
-
+    
     console.log('\n🎉 Base de données peuplée avec succès!');
     console.log(`📊 ${totalQuizzes} quizzes et ${totalQuestions} questions ajoutés`);
 
