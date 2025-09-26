@@ -1,13 +1,16 @@
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: false, // Doit rester 'false' pour le port 587
+  host: process.env.EMAIL_HOST, // Probablement smtp.gmail.com
+  port: process.env.EMAIL_PORT || 465, // Utilisation du port 465 par défaut
+  secure: true, // 🛑 CHANGEMENT: Utiliser TLS implicite pour le port 465
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  // Augmenter le timeout pour donner plus de chance à la connexion (Optionnel)
+  // timeout: 30000, 
+  // connectionTimeout: 30000,
 });
 
 // Vérification de la configuration email au démarrage
