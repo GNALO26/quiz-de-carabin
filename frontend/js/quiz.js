@@ -375,19 +375,32 @@ export class Quiz {
         this.currentQuestionIndex = index;
 
         let optionsHTML = '';
-        question.options.forEach((option, i) => {
-            const isSelected = this.userAnswers[index].includes(i);
+        
+        // CORRECTION CLÉ : Utiliser (question.options || []) pour éviter l'erreur si 'options' est undefined
+        (question.options || []).forEach((option, i) => {
+            // S'assurer que les réponses sont un tableau d'indices
+            const isSelected = this.userAnswers[index] && this.userAnswers[index].includes(i); 
+            
             optionsHTML += `
-                <div class="option">
-                    <input type="checkbox" id="option-${i}" data-index="${i}" ${isSelected ? 'checked' : ''}>
-                    <label for="option-${i}">${option}</label>
+                <div class="option-item option-item-standard mb-3 p-3 rounded" data-index="${i}">
+                    <input type="checkbox" id="option-${index}-${i}" data-index="${i}" ${isSelected ? 'checked' : ''} style="display: none;">
+                    <label for="option-${index}-${i}" class="w-100 d-block cursor-pointer">
+                        <i class="fas fa-square me-2" style="font-size: 0.8rem;"></i>
+                        ${option}
+                    </label>
                 </div>
             `;
         });
 
+        // Mise à jour du contenu de la question
         questionContainer.innerHTML = `
-            <div class="question">Question ${index + 1}/${this.currentQuiz.questions.length}: ${question.text}</div>
-            <div class="options">${optionsHTML}</div>
+            <div class="question-card">
+                <p class="text-muted mb-2">Question ${index + 1}/${this.currentQuiz.questions.length}</p>
+                <h4 class="fw-bold">${question.text}</h4>
+            </div>
+            <div id="options-list" class="mt-4">
+                ${optionsHTML}
+            </div>
         `;
 
         // Mise à jour de la navigation
