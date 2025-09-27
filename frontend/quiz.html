@@ -18,7 +18,6 @@
             --info: #17a2b8;
             --purple: #6f42c1;
             --pink: #e83e8c;
-            --teal: #20c997;
             
             --card-1-color: #4a90e2;
             --card-2-color: #2a9d8f;
@@ -79,7 +78,7 @@
             border-radius: 15px;
             overflow: hidden;
             transition: all 0.4s ease;
-            height: auto; /* Hauteur automatique pour réduire la taille */
+            height: auto; 
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
             position: relative;
             background: white;
@@ -129,7 +128,7 @@
         
         .pricing-card-header {
             color: white;
-            padding: 1.2rem 1rem; /* Réduction du padding */
+            padding: 1.2rem 1rem; 
             text-align: center;
             position: relative;
         }
@@ -137,7 +136,7 @@
         .pricing-card-header h3 {
             margin: 0;
             font-weight: 700;
-            font-size: 1.2rem; /* Taille de police réduite */
+            font-size: 1.2rem; 
         }
         
         .pricing-card-header small {
@@ -146,7 +145,7 @@
         }
         
         .pricing-card-body {
-            padding: 1.5rem 1rem; /* Réduction du padding */
+            padding: 1.5rem 1rem; 
             display: flex;
             flex-direction: column;
             height: 100%;
@@ -154,18 +153,18 @@
         
         .price {
             text-align: center;
-            margin-bottom: 1rem; /* Réduction de la marge */
+            margin-bottom: 1rem; 
         }
         
         .price-amount {
-            font-size: 2rem; /* Taille réduite */
+            font-size: 2rem; 
             font-weight: 700;
             color: var(--primary);
             line-height: 1;
         }
         
         .price-currency {
-            font-size: 1.2rem; /* Taille réduite */
+            font-size: 1.2rem; 
             font-weight: 600;
             color: var(--primary);
         }
@@ -177,27 +176,27 @@
         
         .pricing-features {
             flex-grow: 1;
-            margin-bottom: 1.5rem; /* Réduction de la marge */
+            margin-bottom: 1.5rem; 
         }
         
         .feature-item {
             display: flex;
             align-items: center;
-            margin-bottom: 0.7rem; /* Réduction de la marge */
-            font-size: 0.85rem; /* Taille de police réduite */
+            margin-bottom: 0.7rem; 
+            font-size: 0.85rem; 
         }
         
         .feature-icon {
-            width: 20px; /* Taille réduite */
-            height: 20px; /* Taille réduite */
+            width: 20px; 
+            height: 20px; 
             border-radius: 50%;
             background: #e8f4ff;
             color: var(--secondary);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 0.7rem; /* Réduction de la marge */
-            font-size: 0.7rem; /* Taille réduite */
+            margin-right: 0.7rem; 
+            font-size: 0.7rem; 
             flex-shrink: 0;
         }
         
@@ -231,10 +230,10 @@
         .subscribe-btn {
             border: none;
             color: white;
-            padding: 0.8rem 1.5rem; /* Réduction du padding */
+            padding: 0.8rem 1.5rem; 
             border-radius: 50px;
             font-weight: 600;
-            font-size: 0.9rem; /* Taille réduite */
+            font-size: 0.9rem; 
             transition: all 0.3s ease;
             width: 100%;
             margin-top: auto;
@@ -780,7 +779,7 @@
     </style>
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-light sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
     <div class="container">
         <a class="navbar-brand" href="index.html">
             <img src="assets/images/logo.png" style="border-radius: 50%;" alt="Quiz de Carabin" height="42" class="d-inline-block align-text-top me-2">
@@ -802,13 +801,11 @@
                 </li>
             </ul>
             
-            <!-- Boutons de connexion (visibles quand non connecté) -->
             <div class="d-flex" id="auth-buttons">
                 <a href="#" class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Se connecter</a>
                 <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">Créer un compte</a>
             </div>
             
-            <!-- Menu utilisateur (visible quand connecté) -->
             <div id="user-menu" style="display: none;">
                 <div class="dropdown">
                     <button class="btn btn-outline-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -828,7 +825,6 @@
     </div>
 </nav>
 
-    <!-- Quiz Hero Section améliorée -->
     <section class="quiz-hero text-white">
         <div class="container position-relative z-2">
             <div class="row">
@@ -839,9 +835,7 @@
             </div>
         </div>
     </section>
-
-    <!-- Quiz List Section améliorée -->
-    <section class="py-5">
+    <section class="py-5" id="quiz-list-section">
         <div class="container">
             <div class="row mb-4">
                 <div class="col">
@@ -860,8 +854,7 @@
             </div>
         </div>
     </section>
-     <!-- Quiz Interface améliorée -->
-    <section id="quiz-interface" class="py-5" style="display: none;">
+     <section id="quiz-interface" class="py-5" style="display: none;">
         <div class="container">
             <div class="quiz-container">
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -874,8 +867,7 @@
                 </div>
                 
                 <div id="question-container">
-                    <!-- Questions will be loaded here -->
-                </div>
+                    </div>
                 <div class="d-flex justify-content-between mt-4">
                     <button class="btn btn-secondary" id="prev-btn" disabled>Précédent</button>
                     <button class="btn btn-primary" id="next-btn">Suivant</button>
@@ -893,8 +885,7 @@
                     <p id="score-description">Vous avez bien répondu aux questions</p>
                 </div>
                 <div id="results-content">
-                    <!-- Results will be displayed here -->
-                </div>
+                    </div>
                 <div class="text-center mt-4">
                     <button class="btn btn-primary me-2" id="review-btn">Revoir les réponses</button>
                     <button class="btn btn-outline-secondary" id="back-to-quizzes">Retour aux quiz</button>
@@ -912,7 +903,6 @@
                 </div>
             </div>
             <div class="row justify-content-center">
-                <!-- Carte 1 Mois - Bleu -->
                 <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp">
                     <div class="pricing-card card-1">
                         <div class="pricing-card-header card-1">
@@ -952,7 +942,6 @@
                     </div>
                 </div>
 
-                <!-- Carte 3 Mois (Populaire) - Vert -->
                 <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-100">
                     <div class="pricing-card card-2 popular">
                         <div class="popular-badge">Le plus populaire</div>
@@ -1000,7 +989,6 @@
                     </div>
                 </div>
 
-                <!-- Carte 10 Mois - Rose -->
                 <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-200">
                     <div class="pricing-card card-3">
                         <div class="pricing-card-header card-3">
@@ -1056,9 +1044,6 @@
             </div>
 
     </section>
-
-   
-    <!-- Footer amélioré -->
     <footer class="footer">
         <div class="container">
             <div class="row">
@@ -1105,7 +1090,6 @@
             </div>
         </div>
     </footer>
-<!-- Login Modal -->
 <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1136,7 +1120,6 @@
     </div>
 </div>
 
-<!-- Register Modal -->
 <div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1166,11 +1149,10 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                 <button type="button" class="btn btn-primary" id="register-btn">Créer le compte</button>
             </div>
-        </div>
+            </div>
     </div>
 </div>
 
-<!-- Code Modal -->
 <div class="modal fade" id="codeModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
