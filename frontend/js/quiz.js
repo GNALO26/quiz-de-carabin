@@ -376,14 +376,14 @@ export class Quiz {
 
         let optionsHTML = '';
         question.options.forEach((option, i) => {
-            const isSelected = this.userAnswers[index].includes(i);
-            optionsHTML += `
-                <div class="option">
-                    <input type="checkbox" id="option-${i}" data-index="${i}" ${isSelected ? 'checked' : ''}>
-                    <label for="option-${i}">${option}</label>
-                </div>
-            `;
-        });
+    const isSelected = this.userAnswers[index].includes(i);
+    optionsHTML += `
+        <div class="option">
+            <input type="checkbox" id="option-${i}" data-index="${i}" ${isSelected ? 'checked' : ''}>
+            <label for="option-${i}">${option.text}</label>
+        </div>
+    `;
+});
 
         questionContainer.innerHTML = `
             <div class="question">Question ${index + 1}/${this.currentQuiz.questions.length}: ${question.text}</div>
