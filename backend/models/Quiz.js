@@ -1,9 +1,37 @@
 const mongoose = require('mongoose');
 
-const QuestionSchema = new mongoose.Schema({
-// ... (QuestionSchema inchangé)
+// Schéma pour les options de réponse (a, b, c, d, e)
+const OptionSchema = new mongoose.Schema({
+    // Le texte de l'option (e.g., "Diaphragme")
+    text: { 
+        type: String, 
+        required: true // Reste requis
+    }
 });
 
+// Schéma pour une question unique
+const QuestionSchema = new mongoose.Schema({
+    // Le corps de la question
+    text: {
+        type: String, 
+        required: true 
+    },
+    // Le tableau des options de réponse
+    options: [OptionSchema], 
+    // Les indices des réponses correctes [0, 1, 2, ...]
+    correctAnswers: { 
+        type: [Number],
+        required: true 
+    },
+    // L'explication détaillée de la réponse (Justification)
+    justification: {
+        type: String,
+        default: ''
+    }
+});
+
+
+// Schéma pour l'ensemble du Quiz (l'objet qui sera stocké)
 const QuizSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -17,7 +45,6 @@ const QuizSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  // NOUVEAU CHAMP : Pour la matière générale (Anatomie, Physiologie, Histologie...)
   subject: { 
     type: String,
     required: true 
