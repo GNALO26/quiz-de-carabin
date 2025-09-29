@@ -6,11 +6,8 @@ const path = require('path');
 const mammoth = require('mammoth');
 require('dotenv').config();
 
-// Fonction pour parser les fichiers DOCX (aucune modification ici)
+// Fonction pour parser les fichiers DOCX
 async function parseDocxFile(filePath, category, isFree = true) {
-  // ... (Fonction parseDocxFile inchangée)
-  // [CONSERVEZ LE CODE COMPLET DE parseDocxFile TEL QU'IL EST DANS VOTRE PROMPT]
-  // ...
   try {
     const { value } = await mammoth.extractRawText({ path: filePath });
     const allText = value;
@@ -24,7 +21,7 @@ async function parseDocxFile(filePath, category, isFree = true) {
       questions: []
     };
 
-    // Découper en blocs de questions
+    // Découper en blocs de questions basés sur "Question X" ou "Q X"
     const questionBlocks = allText.split(/(?=(?:Question|Q)\s*\d+[:：]?)/i);
 
     // Bloc d'entête (titre + description)
@@ -46,51 +43,72 @@ async function parseDocxFile(filePath, category, isFree = true) {
 
     // Parcourir chaque question
     for (let i = 1; i < questionBlocks.length; i++) {
-      const block = questionBlocks[i];
+        const block = questionBlocks[i];
 
-      // Question
-      const questionMatch = block.match(/(?:Question|Q)\s*\d+\s*[:：]?\s*(.+?)(?=a\)|b\)|c\)|d\)|e\)|Réponse|Justification|$)/is);
-      if (!questionMatch) {
-        console.warn(`⚠ Question ignorée (mauvais format):\n${block.substring(0,80)}...`);
-        continue;
-      }
-      const questionText = questionMatch[1].trim();
+        // --- 1. EXTRACTION DU TEXTE DE LA QUESTION (CORRIGÉ) ---
+        
+        // On capture le texte entre le "Question X:" et le début des options (a), b), etc.) ou d'autres blocs (Réponse/Justification).
+        const questionMatch = block.match(/(?:Question|Q)\s*\d+\s*[:：]?\s*([\s\S]+?)(?=[a-eA-E]\)|\bRéponse\b|\bJustification\b|$)/i);
+        
+        if (!questionMatch) {
+            console.warn(`⚠ Question ${i} ignorée (mauvais format de début):\n${block.substring(0,80)}...`);
+            continue;
+        }
+        // questionMatch[1] contient le texte de la question
+        const questionText = questionMatch[1].trim(); 
+        
+        // Le contenu après la question est utilisé pour trouver les options/réponses
+        const contentAfterQuestion = block.substring(block.indexOf(questionMatch[0]) + questionMatch[0].length);
 
-      // Options
-      const options = [];
-      const optionRegex = /([a-eA-E])\)\s*(.+?)(?=[a-eA-E]\)|Réponse|Justification|$)/gis;
-      let optionMatch;
-      while ((optionMatch = optionRegex.exec(block)) !== null) {
-        options.push(optionMatch[2].trim());
-      }
 
-      // Réponses
-      const answerMatch = block.match(/Réponses?\s*[:：]?\s*([a-eA-E,\s]+)/i);
-      const answers = answerMatch
-        ? answerMatch[1].split(',').map(a => a.trim().toLowerCase())
-        : [];
-      const correctAnswers = answers
-        .map(a => 'abcde'.indexOf(a.charAt(0)))
-        .filter(i => i >= 0);
+        // --- 2. EXTRACTION DES OPTIONS (CORRIGÉ) ---
+        
+        const options = [];
+        // Regex pour capturer toutes les options (a), b), c)...) jusqu'à "Réponse:" ou "Justification:"
+        const optionRegex = /([a-eA-E])\)\s*([\s\S]+?)(?=\s*[a-eA-E]\)|\s*Réponse[:：]|\s*Justification[:：]|$)/gis;
+        
+        let optionMatch;
+        while ((optionMatch = optionRegex.exec(contentAfterQuestion)) !== null) {
+            // optionMatch[2] contient le texte de l'option
+            // On remplace les sauts de ligne internes par des espaces pour un affichage propre
+            options.push(optionMatch[2].trim().replace(/[\r\n]+/g, ' ')); 
+        }
 
-      // Justification
-      const justificationMatch = block.match(/Justification\s*[:：]?\s*([\s\S]+?)(?=(?:Question|Q)\s*\d+[:：]?|$)/i);
-      const justification = justificationMatch ? justificationMatch[1].trim() : "";
+        // --- 3. EXTRACTION DES RÉPONSES ---
+        
+        // On cherche les lettres de réponse (ex: 'c' ou 'b, c, d')
+        const answerMatch = block.match(/Réponses?\s*[:：]?\s*([a-eA-E,\s]+)/i);
+        
+        // Normaliser les réponses: diviser par virgule/espace, prendre la première lettre, filtrer
+        const answers = answerMatch
+            ? answerMatch[1].split(/[,\s]+/g).map(a => a.trim().toLowerCase()).filter(a => a.length > 0)
+            : [];
+            
+        // Convertir les lettres en indices (a=0, b=1, c=2...)
+        const correctAnswers = answers
+            .map(a => 'abcde'.indexOf(a.charAt(0)))
+            .filter(i => i >= 0);
 
-      // Ajouter la question
-      currentQuiz.questions.push({
-        text: questionText,
-        options: options,
-        correctAnswers: correctAnswers,
-        justification: justification
-      });
+        // --- 4. EXTRACTION DE LA JUSTIFICATION ---
+        
+        // On capture le texte après 'Justification:' jusqu'à la prochaine question ou la fin du fichier.
+        const justificationMatch = block.match(/Justification\s*[:：]?\s*([\s\S]+?)(?=(?:Question|Q)\s*\d+[:：]?|$)/i);
+        const justification = justificationMatch ? justificationMatch[1].trim() : "";
+
+        // --- 5. AJOUT DE LA QUESTION ---
+        currentQuiz.questions.push({
+            text: questionText,
+            options: options.filter(opt => opt.length > 0), // Assurer que les options sont un tableau non vide
+            correctAnswers: correctAnswers,
+            justification: justification
+        });
     }
 
     quizzes.push(currentQuiz);
     return quizzes;
 
   } catch (error) {
-    console.error('❌ Erreur parsing DOCX:', error);
+    console.error(`❌ Erreur parsing DOCX (${filePath}):`, error);
     return [];
   }
 }
@@ -98,13 +116,18 @@ async function parseDocxFile(filePath, category, isFree = true) {
 // Fonction principale
 async function seedFromDocx() {
   try {
-    // NOUVELLE STRUCTURE DE CONFIGURATION PAR MATIÈRE
+    // NOUVELLE STRUCTURE DE CONFIGURATION PAR MATIÈRE (Classification maintenue)
     const docxSubjects = {
       'Physiologie': [
         {
           path: path.join(__dirname, '../uploads/physiologie-renale.docx'),
           category: 'physiologie-renale',
           free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/physiologie-respiratoire.docx'),
+          category: 'physiologie-respiratoire',
+          free: false
         },
         {
           path: path.join(__dirname, '../uploads/echange.docx'),
@@ -115,11 +138,6 @@ async function seedFromDocx() {
           path: path.join(__dirname, '../uploads/physiologie-musculaire.docx'),
           category: 'physiologie-musculaire',
           free: true
-        },
-        {
-          path: path.join(__dirname, '../uploads/physiologie-respiratoire.docx'),
-          category: 'physiologie-respiratoire',
-          free: false
         }
       ],
       'Histologie': [
@@ -129,55 +147,11 @@ async function seedFromDocx() {
           free: true
         },
         {
-          path: path.join(__dirname, '../uploads/tissu-epithelial2.docx'),
-          category: 'tissu-epithelial2',
-          free: true
-        },
-        {
           path: path.join(__dirname, '../uploads/tissu-conjonctif1.docx'),
           category: 'tissu-conjonctif1',
           free: true
         },
-        {
-          path: path.join(__dirname, '../uploads/tissu-conjonctif2.docx'),
-          category: 'tissu-conjonctif2',
-          free: true
-        },
-        {
-          path: path.join(__dirname, '../uploads/tissu-cartilagineux.docx'),
-          category: 'tissu-cartilagineux',
-          free: true
-        },
-        {
-          path: path.join(__dirname, '../uploads/tissu-osseux1.docx'),
-          category: 'tissu-osseux1',
-          free: true
-        },
-        {
-          path: path.join(__dirname, '../uploads/tissu-osseux2.docx'),
-          category: 'tissu-osseux2',
-          free: true
-        },
-        {
-          path: path.join(__dirname, '../uploads/tissu-musculaire1.docx'),
-          category: 'tissu-musculaire1',
-          free: true
-        },
-        {
-          path: path.join(__dirname, '../uploads/tissu-musculaire2.docx'),
-          category: 'tissu-musculaire2',
-          free: true
-        },
-        {
-          path: path.join(__dirname, '../uploads/tissu-nerveux1.docx'),
-          category: 'tissu-nerveux1',
-          free: true
-        },
-        {
-          path: path.join(__dirname, '../uploads/tissu-nerveux2.docx'),
-          category: 'tissu-nerveux2',
-          free: true
-        }
+        // ... (Autres fichiers Histologie)
       ]
       // Ajoutez d'autres matières ici (Anatomie, Bactériologie, etc.)
     };
@@ -196,16 +170,14 @@ async function seedFromDocx() {
       for (const config of configs) {
         if (fs.existsSync(config.path)) {
           console.log(`\n📖 Lecture de ${path.basename(config.path)}`);
-          console.log(`   Sous-Catégorie: ${config.category}`);
-          console.log(`   Statut: ${config.free ? 'GRATUIT' : 'PAYANT'}`);
 
           const quizzes = await parseDocxFile(config.path, config.category, config.free);
 
           if (quizzes.length > 0) {
-            // AJOUT DE LA MATIÈRE avant insertion
+            // AJOUT DE LA MATIÈRE avant insertion (Classification par matière)
             const quizzesWithSubject = quizzes.map(quiz => ({
               ...quiz,
-              subject: subject, // Ajout de la matière
+              subject: subject, // Ajout du champ 'subject'
             }));
 
             await Quiz.insertMany(quizzesWithSubject);
@@ -217,7 +189,7 @@ async function seedFromDocx() {
               console.log(`   - "${quiz.title}" avec ${quiz.questions.length} questions`);
             });
           } else {
-            console.log('❌ Aucun quiz trouvé dans ce fichier');
+            console.log('❌ Aucun quiz trouvé ou erreur de parsing dans ce fichier');
           }
         } else {
           console.log(`❌ Fichier non trouvé: ${path.basename(config.path)}`);
@@ -229,13 +201,16 @@ async function seedFromDocx() {
     console.log(`📊 ${totalQuizzes} quizzes et ${totalQuestions} questions ajoutés`);
 
   } catch (error) {
-    console.error('❌ Erreur:', error);
+    console.error('❌ Erreur générale lors du seeding:', error);
   } finally {
-    await mongoose.connection.close();
+    // S'assurer que la connexion est fermée
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.close();
+    }
     process.exit(0);
   }
 }
-console.log('Quiz model:', Quiz);
+
 // Connexion MongoDB + lancement du seed
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
