@@ -8,6 +8,30 @@ export class Payment {
         this.checkPaymentReturn();
     }
 
+    // ✅ FONCTION AJOUTÉE: getActiveAPIUrl manquante
+    async getActiveAPIUrl() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
+                method: 'GET',
+                cache: 'no-cache',
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                return CONFIG.API_BASE_URL;
+            }
+        } catch (error) {
+            console.warn('URL principale inaccessible:', error.message);
+        }
+        
+        return CONFIG.API_BACKUP_URL;
+    }
+
     setupEventListeners() {
         document.querySelectorAll('.subscribe-btn').forEach(button => {
             button.addEventListener('click', (e) => {
@@ -26,26 +50,9 @@ export class Payment {
         });
     }
 
-    async getActiveAPIUrl() {
-        try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
-                method: 'GET',
-                cache: 'no-cache'
-            });
-            
-            if (response.ok) {
-                return CONFIG.API_BASE_URL;
-            }
-        } catch (error) {
-            console.warn('URL principale inaccessible, tentative avec URL de secours:', error);
-        }
-        
-        return CONFIG.API_BACKUP_URL;
-    }
-
     async initiatePayment(planId, amount) {
         try {
-            console.log(`Initialisation du paiement pour le plan: ${planId} avec un montant de ${amount}`);
+            console.log(`💰 Initialisation paiement: ${planId} - ${amount} FCFA`);
             
             if (!this.auth.isAuthenticated()) {
                 this.auth.showLoginModal();
@@ -56,14 +63,14 @@ export class Payment {
             const user = this.auth.getUser();
             const token = this.auth.getToken();
             
-            console.log('Utilisateur:', user.email);
+            console.log('👤 Utilisateur:', user.email);
             
             const API_BASE_URL = await this.getActiveAPIUrl();
-            console.log('API URL:', API_BASE_URL);
+            console.log('🌐 API utilisée:', API_BASE_URL);
             
             const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
             const originalText = subscribeBtn.innerHTML;
-            subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...';
+            subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traitement...';
             subscribeBtn.disabled = true;
 
             const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
@@ -72,35 +79,35 @@ export class Payment {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ planId, amount })
+                body: JSON.stringify({ 
+                    planId, 
+                    amount: parseInt(amount)
+                })
             });
+
+            const data = await response.json();
+            console.log('📨 Réponse serveur:', data);
 
             subscribeBtn.innerHTML = originalText;
             subscribeBtn.disabled = false;
 
-            const data = await response.json();
-            console.log('Réponse complète du serveur:', data);
-
             if (data.success && data.invoiceURL) {
-                console.log('Redirection vers:', data.invoiceURL);
+                console.log('✅ Redirection vers PayDunya:', data.invoiceURL);
                 window.location.href = data.invoiceURL;
             } else {
-                console.error('Erreur du serveur:', data);
-                
-                if (data.error && data.error.includes('Transaction Found')) {
-                    this.showAlert('Une transaction est déjà en cours. Veuillez réessayer dans quelques instants.', 'warning');
-                } else {
-                    this.showAlert('Erreur lors de l\'initiation du paiement: ' + (data.message || 'Erreur inconnue'), 'danger');
-                }
+                console.error('❌ Erreur serveur:', data);
+                this.showAlert(data.message || 'Erreur lors du paiement', 'danger');
             }
         } catch (error) {
-            console.error('Error initiating payment:', error);
+            console.error('💥 Erreur initiatePayment:', error);
             
-            if (error.message.includes('Transaction Found')) {
-                this.showAlert('Une transaction est déjà en cours. Veuillez réessayer dans quelques instants.', 'warning');
-            } else {
-                this.showAlert('Erreur lors de l\'initiation du paiement: ' + error.message, 'danger');
+            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
+            if (subscribeBtn) {
+                subscribeBtn.innerHTML = 'S\'abonner';
+                subscribeBtn.disabled = false;
             }
+            
+            this.showAlert('Erreur de connexion. Vérifiez votre internet.', 'danger');
         }
     }
 
@@ -110,7 +117,7 @@ export class Payment {
         const userId = urlParams.get('userId');
         
         if (transactionId && userId) {
-            console.log('Détection d\'un retour de paiement. Vérification du statut...');
+            console.log('🔄 Détection retour paiement. Vérification statut...');
             this.showAlert('Paiement en cours de confirmation. Veuillez patienter...', 'info');
             this.checkStatusAndRedirect(transactionId, userId, 0);
         }
@@ -121,7 +128,7 @@ export class Payment {
         const DELAY = 3000;
 
         try {
-            console.log(`Vérification du statut de la transaction... (Tentative ${attempt + 1}/${MAX_ATTEMPTS})`);
+            console.log(`🔍 Vérification statut transaction... (Tentative ${attempt + 1}/${MAX_ATTEMPTS})`);
             const token = this.auth.getToken();
             
             if (!token) {
@@ -139,10 +146,10 @@ export class Payment {
             });
 
             const data = await response.json();
-            console.log('Réponse de check-status:', data);
+            console.log('📨 Réponse check-status:', data);
 
             if (data.success && data.transactionStatus === 'completed') {
-                console.log('Paiement confirmé, code d\'accès reçu.');
+                console.log('✅ Paiement confirmé, code d\'accès reçu.');
                 this.showAlert('Votre paiement a été confirmé! Un code d\'accès vous a été envoyé par email.', 'success');
                 const accessCodeModal = new bootstrap.Modal(document.getElementById('codeModal'));
                 accessCodeModal.show();
@@ -152,14 +159,14 @@ export class Payment {
                 }
                 return;
             } else if (data.transactionStatus === 'pending' && attempt < MAX_ATTEMPTS) {
-                console.log('Paiement toujours en attente, nouvelle tentative...');
+                console.log('⏳ Paiement en attente, nouvelle tentative...');
                 setTimeout(() => this.checkStatusAndRedirect(transactionId, userId, attempt + 1), DELAY);
             } else {
-                console.error('Échec de la confirmation du paiement après plusieurs tentatives.');
+                console.error('❌ Échec confirmation paiement après plusieurs tentatives.');
                 this.showAlert('Le paiement n\'a pas pu être confirmé. Vérifiez votre email ou contactez le support.', 'warning');
             }
         } catch (error) {
-            console.error('Erreur lors de la vérification du paiement:', error);
+            console.error('💥 Erreur vérification paiement:', error);
             if (attempt < MAX_ATTEMPTS) {
                 setTimeout(() => this.checkStatusAndRedirect(transactionId, userId, attempt + 1), DELAY);
             } else {
@@ -189,7 +196,7 @@ export class Payment {
             
             const validateButton = document.getElementById('validate-code');
             const originalText = validateButton.innerHTML;
-            validateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Validation...';
+            validateButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Validation...';
             validateButton.disabled = true;
 
             const response = await fetch(`${API_BASE_URL}/api/access-code/validate`, {
@@ -239,7 +246,7 @@ export class Payment {
                 this.showAlert(data.message, 'danger');
             }
         } catch (error) {
-            console.error('Error validating access code:', error);
+            console.error('💥 Erreur validation code:', error);
             this.showAlert('Erreur lors de la validation du code: ' + error.message, 'danger');
         }
     }
@@ -256,7 +263,7 @@ export class Payment {
             
             const resendBtn = document.getElementById('resend-code');
             const originalText = resendBtn.innerHTML;
-            resendBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Envoi...';
+            resendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Envoi...';
             resendBtn.disabled = true;
 
             const API_BASE_URL = await this.getActiveAPIUrl();
@@ -290,7 +297,7 @@ export class Payment {
                 this.showAlert(data.message || 'Erreur lors de l\'envoi du code', 'danger');
             }
         } catch (error) {
-            console.error('Error resending access code:', error);
+            console.error('💥 Erreur renvoi code:', error);
             this.showAlert('Erreur lors de l\'envoi du code. Veuillez réessayer.', 'danger');
         }
     }
