@@ -1,3 +1,4 @@
+// backend/server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,53 +9,49 @@ const deviceDetection = require('./middleware/deviceDetection');
 const auth = require('./middleware/auth');
 const sessionCheck = require('./middleware/sessionCheck');
 const handleDatabaseError = require('./middleware/handleDatabaseError');
-/*const productionMonitor = require('./middleware/productionMonitor'); // ✅ NOUVEAU
 
-// Configuration optimisée POUR LA PRODUCTION
+// Configuration optimisée pour serveurs gratuits
 const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  maxPoolSize: 10, // ✅ Augmenté pour la production
-  serverSelectionTimeoutMS: 30000, // ✅ Augmenté
+  maxPoolSize: 5,
+  serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
   bufferCommands: false,
-  bufferMaxEntries: 0 // ✅ Désactivé pour la production
-};*/
+};
 
-console.log('🚀 DÉMARRAGE EN MODE PRODUCTION LIVE');
-console.log('=====================================\n');
-
-// Connexion à MongoDB
+// Connexion à MongoDB avec gestion d'erreurs améliorée
 mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 .then(() => {
-  console.log('✅ MongoDB LIVE connecté');
+  console.log('Connected to MongoDB');
   
-  // Diagnostic complet
-  console.log('\n🔍 DIAGNOSTIC LIVE:');
-  
-  // Vérification PayDunya LIVE
-  try {
-    const { setup } = require('./config/paydunya');
-    console.log('📦 PayDunya:');
-    console.log('   - Mode:', setup.mode.toUpperCase());
-    console.log('   - Clés:', setup.masterKey && setup.privateKey ? '✓ LIVE' : '✗ CONFIGURATION');
-  } catch (error) {
-    console.error('❌ PayDunya:', error.message);
-  }
-  
-  // Vérification Email
+  // Test de la configuration email au démarrage
   setTimeout(() => {
     const transporter = require('./config/email');
     transporter.verify(function(error, success) {
       if (error) {
-        console.log('❌ Email:', error.message);
+        console.log('❌ Erreur configuration email:', error);
       } else {
-        console.log('✅ Email: Prêt pour les envois LIVE');
+        console.log('✅ Serveur email est prêt à envoyer des messages');
+        
+        // Test d'envoi d'email
+        transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: process.env.EMAIL_USER,
+          subject: 'Test de configuration email - Quiz de Carabin',
+          text: 'Ceci est un email de test pour vérifier la configuration.'
+        }, (err, info) => {
+          if (err) {
+            console.log('❌ Erreur envoi email test:', err);
+          } else {
+            console.log('✅ Email test envoyé avec succès:', info.response);
+          }
+        });
       }
     });
-  }, 2000);
-
-  // Charger les modèles
+  }, 3000);
+  
+  // Charger les modèles après la connexion réussie
   require('./models/User');
   require('./models/Quiz');
   require('./models/PasswordReset');
@@ -62,78 +59,73 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   require('./models/Transaction');
   require('./models/AccessCode');
   
-  // Import des routes
+  // Import des routes (APRÈS la connexion à la base de données)
   const authRoutes = require('./routes/auth');
   const quizRoutes = require('./routes/quiz');
   const paymentRoutes = require('./routes/payment');
   const userRoutes = require('./routes/user');
   const accessCodeRoutes = require('./routes/accessCode');
   const tokenRoutes = require('./routes/token');
-  const webhookRoutes = require('./routes/webhook');
+  const webhookRoutes = require('./routes/webhook'); // 👈 Importation du nouveau routeur
 
   const app = express();
 
-  // ✅ MIDDLEWARE DE SURVEILLANCE PRODUCTION
-  app.use(productionMonitor);
-
-  // Middleware CORS pour production
+  // Middleware CORS
   app.use(cors({
     origin: [
       'https://quiz-de-carabin.netlify.app',
-      'https://quiz-de-carabin-backend.onrender.com'
+      'https://quiz-de-carabin-backend.onrender.com',
+      'http://localhost:3000',
+      'http://localhost:3001'
     ],
     credentials: true
   }));
 
   // Middleware pour parser le JSON
   app.use(express.json({ 
-    limit: '10mb', // ✅ Augmenté pour la production
+    limit: '1mb',
     verify: (req, res, buf) => {
       req.rawBody = buf;
     }
   }));
   
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // Détection d'appareil
   app.use(deviceDetection);
 
-  // Route santé améliorée pour la production
+  // Routes publiques (sans authentification)
   app.get('/api/health', (req, res) => {
-    const health = {
-      success: true,
-      message: '🚀 SERVEUR LIVE - Quiz de Carabin',
+    res.status(200).json({ 
+      success: true, 
+      message: 'Server is running correctly',
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-      paydunya: 'live',
-      version: '1.0.0'
-    };
-    
-    res.status(200).json(health);
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
   });
 
-  // ✅ WEBHOOKS (Routes publiques)
+  // Routes d'authentification (publiques)
+  app.use('/api/auth', authRoutes);
+  
+  // ✅ CORRECTION MAJEURE: Le webhook PayDunya est une route publique.
+  // Nous l'ajoutons en utilisant son propre routeur, avant le middleware d'authentification.
   app.use('/api/payment', webhookRoutes);
 
-  // Routes d'authentification
-  app.use('/api/auth', authRoutes);
-
-  // Middleware d'authentification
+  // Middleware d'authentification (pour les routes suivantes)
   app.use(auth);
   app.use(sessionCheck);
 
-  // Routes protégées
+  // Routes protégées (nécessitent une authentification)
   app.use('/api/quiz', quizRoutes);
   app.use('/api/payment', paymentRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/access-code', accessCodeRoutes);
-  app.use('/api/auth', tokenRoutes);
+  app.use('/api/auth', tokenRoutes); // Routes auth protégées (comme check-session)
 
-  // Gestion des erreurs
+  // Middleware de gestion des erreurs de base de données
   app.use(handleDatabaseError);
 
-  // Route 404
+  // Gestion des routes non trouvées
   app.use('*', (req, res) => {
     res.status(404).json({ 
       success: false, 
@@ -143,35 +135,40 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 
   // Gestionnaire d'erreurs global
   app.use((err, req, res, next) => {
-    console.error('💥 ERREUR LIVE:', err);
+    console.error('Error:', err);
     res.status(500).json({ 
       success: false, 
-      message: 'Internal server error'
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
     });
   });
 
   const PORT = process.env.PORT || 5000;
   const server = app.listen(PORT, () => {
-    console.log(`\n🎉 SERVEUR LIVE DÉMARRÉ`);
-    console.log(`📍 Port: ${PORT}`);
-    console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
-    console.log(`💳 PayDunya: ${process.env.PAYDUNYA_MODE}`);
-    console.log(`🚀 Prêt à recevoir des paiements LIVE!`);
+    console.log(`Server running on port ${PORT}`);
   });
 
   // Gestion propre de la fermeture
   process.on('SIGINT', () => {
-    console.log('\n🔄 Arrêt gracieux du serveur...');
+    console.log('Shutting down gracefully');
     server.close(() => {
       mongoose.connection.close(false, () => {
-        console.log('✅ Serveur arrêté proprement');
+        console.log('MongoDB connection closed');
         process.exit(0);
       });
     });
   });
-  
 })
 .catch(err => {
-  console.error('❌ ERREUR CRITIQUE - Impossible de démarrer:', err);
+  console.error('Could not connect to MongoDB', err);
   process.exit(1);
+});
+
+// Gestion des erreurs de connexion après initialisation
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
 });
