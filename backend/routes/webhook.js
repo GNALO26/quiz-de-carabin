@@ -1,17 +1,14 @@
-// backend/routes/webhook.js
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
+const verifyPaydunyaSignature = require('../middleware/verifyWebhook'); // ✅ AJOUT
+const webhookLogger = require('../middleware/webhookLogger'); // ✅ AJOUT
 
-// Route pour les webhooks PayDunya
-// ✅ Middleware temporaire pour le débogage. À remplacer par la suite.
+// ✅ CORRECTION: Webhook sécurisé avec vérification de signature
 router.post('/callback', 
-  express.json(), 
-  (req, res, next) => {
-    console.log(`[${new Date().toISOString()}] [WEBHOOK] Données reçues: ${JSON.stringify(req.body, null, 2)}`);
-    console.log(`[${new Date().toISOString()}] [WEBHOOK] Headers reçus: ${JSON.stringify(req.headers, null, 2)}`);
-    next();
-  },
+  express.raw({ type: 'application/json' }), // ⚠ IMPORTANT: Body brut pour les webhooks
+  webhookLogger,
+  verifyPaydunyaSignature, // ✅ Middleware de sécurité
   paymentController.handleCallback
 );
 

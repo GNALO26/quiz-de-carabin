@@ -987,55 +987,65 @@
     import { CONFIG } from './js/config.js';
     
     class QuizDisplay {
-        constructor() {
-            this.quizzes = [];
-            this.init();
-        }
+    constructor() {
+        this.quizzes = [];
+        this.init();
+    }
 
-        async init() {
-            try {
-                await this.loadQuizzes();
-                this.displayQuizzes();
-            } catch (error) {
-                console.error('Erreur lors du chargement des quizs:', error);
-                this.showError();
+    async init() {
+        try {
+            await this.loadQuizzes();
+            this.displayQuizzes();
+        } catch (error) {
+            console.error('❌ Erreur chargement quiz:', error);
+            this.showError();
+        }
+    }
+
+    async loadQuizzes() {
+        try {
+            const token = localStorage.getItem('quizToken');
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            
+            const response = await fetch(`${API_BASE_URL}/api/quiz`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.status === 401) {
+                this.showLoginPrompt();
+                return;
             }
-        }
 
-        async loadQuizzes() {
-            try {
-                // Récupérer le token d'authentification
-                const token = localStorage.getItem('quizToken');
-                
-                const response = await fetch(`${CONFIG.API_BASE_URL}/api/quiz`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.status === 401) {
-                    this.showLoginPrompt();
-                    return;
-                }
-
-                if (!response.ok) {
-                    throw new Error('Erreur de chargement des quizs');
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    this.quizzes = data.quizzes || data.data || [];
-                } else {
-                    throw new Error(data.message || 'Erreur inconnue');
-                }
-            } catch (error) {
-                console.error('Erreur fetch:', error);
-                throw error;
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.quizzes = data.quizzes || [];
+            } else {
+                throw new Error(data.message || 'Erreur inconnue');
+            }
+        } catch (error) {
+            console.error('❌ Erreur fetch quiz:', error);
+            throw error;
         }
+    }
 
+    // ✅ AJOUT: Méthode pour obtenir l'URL API
+    async getActiveAPIUrl() {
+        try {
+            const response = await fetch('https://quiz-de-carabin-backend.onrender.com/api/health');
+            if (response.ok) return 'https://quiz-de-carabin-backend.onrender.com';
+        } catch (error) {
+            console.warn('URL principale inaccessible');
+        }
+        return 'https://quiz-de-carabin-backend.onrender.com';
+    }
         displayQuizzes() {
             const quizList = document.getElementById('quiz-list');
             const loadingSpinner = document.getElementById('loading-spinner');

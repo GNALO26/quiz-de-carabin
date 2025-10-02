@@ -7,27 +7,18 @@ const crypto = require('crypto');
 const transporter = require('../config/email');
 
 // Configuration PayDunya
-const setup = new Paydunya.Setup({
-  masterKey: process.env.PAYDUNYA_MASTER_KEY ? process.env.PAYDUNYA_MASTER_KEY.trim() : '',
-  privateKey: process.env.PAYDUNYA_PRIVATE_KEY ? process.env.PAYDUNYA_PRIVATE_KEY.trim() : '',
-  publicKey: process.env.PAYDUNYA_PUBLIC_KEY ? process.env.PAYDUNYA_PUBLIC_KEY.trim() : '',
-  token: process.env.PAYDUNYA_TOKEN ? process.env.PAYDUNYA_TOKEN.trim() : '',
-  mode: (process.env.PAYDUNYA_MODE || 'live').trim()
-});
+const { setup, store } = require('../config/paydunya');
 
-const store = new Paydunya.Store({
-  name: "Quiz de Carabin",
-  tagline: "Plateforme de quiz médicaux",
-  postalAddress: "Cotonou, Bénin",
-  phoneNumber: process.env.STORE_PHONE || "+2290156035888",
-  websiteURL: process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app",
-  logoURL: process.env.STORE_LOGO_URL || "https://quiz-de-carabin.netlify.app/assets/images/logo.png"
+// ✅ AJOUT: Vérification au démarrage
+console.log('🔍 Payment Controller - PayDunya Status:', {
+  mode: setup.mode,
+  hasMasterKey: !!setup.masterKey,
+  hasPrivateKey: !!setup.privateKey
 });
 
 // Définition des options d'abonnement
 const pricing = {
-  // 🛑 MODIFICATION POUR LES TESTS : Prix de l'abonnement 1 mois à 200
-  '1-month': { amount: 5000, description: "Abonnement Premium 1 mois", duration: 1 }, 
+  '1-month': { amount: 5000, description: "Abonnement Premium 1 mois", duration: 1 },
   '3-months': { amount: 12000, description: "Abonnement Premium 3 mois", duration: 3 },
   '10-months': { amount: 25000, description: "Abonnement Premium 10 mois", duration: 10 }
 };
@@ -51,9 +42,8 @@ const generateUniqueReference = () => {
 // Fonction pour envoyer des emails avec code d'accès
 const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') => {
   try {
-    console.log(`[EMAIL] 🔄 Tentative d'envoi de code d'accès (${accessCode}) à: ${email}`);
+    console.log(`[EMAIL] 🔄 Envoi de code d'accès à: ${email}`);
     
-    // Assurez-vous que le 'transporter' est celui importé au début du fichier
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -91,8 +81,7 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') 
     console.log(`[EMAIL] ✅ Code envoyé avec succès. Message ID: ${info.messageId}`);
     return true;
   } catch (error) {
-    // 🛑 LOGGING CRITIQUE : Affiche l'erreur complète du transporteur SMTP
-    console.error(`[EMAIL] ❌ ERREUR FATALE ENVOI DE CODE D'ACCÈS à ${email}:`, error);
+    console.error(`[EMAIL] ❌ ERREUR envoi code à ${email}:`, error);
     return false;
   }
 };
@@ -100,34 +89,36 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') 
 // Exporter la fonction
 exports.sendAccessCodeEmail = sendAccessCodeEmail;
 
-// Fonction de validation d'email
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-// Initier un paiement
+// Initier un paiement (VERSION AMÉLIORÉE)
 exports.initiatePayment = async (req, res) => {
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT ===');
     
-    // Récupérer le plan et le montant du corps de la requête
-    const { planId, amount } = req.body;
+    const { planId } = req.body;
     const plan = pricing[planId];
     
-    if (!plan || plan.amount !== parseInt(amount)) {
-      console.error('❌ Erreur: Plan d\'abonnement ou montant invalide:', { planId, amount });
-      return res.status(400).json({ success: false, message: 'Plan d\'abonnement ou montant invalide.' });
+    if (!plan) {
+      console.error('❌ Plan d\'abonnement invalide:', planId);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Plan d\'abonnement invalide.' 
+      });
+    }
+
+    // ✅ VÉRIFICATION: Configuration PayDunya
+    if (!setup.masterKey || !setup.privateKey) {
+      console.error('❌ Configuration PayDunya incomplète');
+      return res.status(500).json({
+        success: false,
+        message: 'Configuration de paiement incomplète. Contactez le support.'
+      });
     }
 
     const user = req.user;
-    const uniqueReference = generateUniqueReference();
-
-    // Vérification de l'abonnement actif (déplacée car l'utilisateur peut vouloir prolonger)
-
     const transactionID = generateUniqueTransactionID();
+
     const transaction = new Transaction({
-      userId: req.user._id,
+      userId: user._id,
       transactionId: transactionID,
       amount: plan.amount,
       durationInMonths: plan.duration,
@@ -138,42 +129,40 @@ exports.initiatePayment = async (req, res) => {
 
     const invoice = new Paydunya.CheckoutInvoice(setup, store);
     invoice.addItem(
-      `Abonnement Premium - ${plan.description}`,
+      plan.description,
       1,
       plan.amount,
       plan.amount,
-      `Accès illimité à tous les quiz premium - Référence: ${uniqueReference}`
+      plan.description
     );
 
     invoice.totalAmount = plan.amount;
-    invoice.description = `${plan.description} - ${uniqueReference}`;
+    invoice.description = plan.description;
 
     const baseUrl = process.env.API_BASE_URL;
     const frontendUrl = process.env.FRONTEND_URL;
     
-    // IMPORTANT: Utilisez la bonne URL de callback pour le webhook
-    invoice.callbackURL = `${baseUrl}/api/webhook/callback`;
-    invoice.returnURL = `${frontendUrl}/payment-callback.html?userId=${user._id}&transactionId=${transactionID}`;
+    // ✅ CORRECTION: URLs de callback
+    invoice.callbackURL = `${baseUrl}/api/payment/callback`;
+    invoice.returnURL = `${frontendUrl}/payment-callback.html?transactionId=${transactionID}`;
     invoice.cancelURL = `${frontendUrl}/payment-error.html`;
 
-    invoice.addCustomData('user_id', req.user._id.toString());
-    invoice.addCustomData('user_email', req.user.email);
-    invoice.addCustomData('service', 'premium_subscription');
+    // Données personnalisées
+    invoice.addCustomData('user_id', user._id.toString());
+    invoice.addCustomData('user_email', user.email);
     invoice.addCustomData('transaction_id', transactionID);
-    invoice.addCustomData('unique_reference', uniqueReference);
-    invoice.addCustomData('timestamp', Date.now().toString());
     invoice.addCustomData('plan_id', planId);
 
-    console.log('Création de la facture PayDunya pour le plan', planId, '...');
+    console.log('Création de la facture PayDunya...');
     
     const created = await invoice.create();
     
-    if (created || invoice.token) {
+    if (created && invoice.token) {
       transaction.paydunyaInvoiceToken = invoice.token;
       transaction.paydunyaInvoiceURL = invoice.url;
       await transaction.save();
 
-      console.log('✅ Payment invoice created successfully');
+      console.log('✅ Payment invoice created successfully:', invoice.url);
 
       res.status(200).json({
         success: true,
@@ -185,7 +174,7 @@ exports.initiatePayment = async (req, res) => {
       transaction.status = 'failed';
       await transaction.save();
 
-      console.error('❌ Échec de la création de la facture:', invoice.responseText);
+      console.error('❌ Échec création facture:', invoice.responseText);
       
       res.status(400).json({
         success: false,
@@ -193,7 +182,7 @@ exports.initiatePayment = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('❌ Erreur dans initiatePayment:', error);
+    console.error('❌ Erreur initiatePayment:', error);
     
     res.status(500).json({
       success: false,
@@ -202,7 +191,6 @@ exports.initiatePayment = async (req, res) => {
     });
   }
 };
-
 
 // Fonction de gestion du webhook PayDunya
 exports.handleCallback = async (req, res) => {

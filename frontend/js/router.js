@@ -30,6 +30,16 @@ export class Router {
         // Navigation initiale
         this.navigate(this.currentPath);
     }
+    // ✅ AJOUT: Méthode pour obtenir l'URL API
+    async getActiveAPIUrl() {
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`);
+            if (response.ok) return CONFIG.API_BASE_URL;
+        } catch (error) {
+            console.warn('URL principale inaccessible');
+        }
+        return CONFIG.API_BACKUP_URL;
+    }
 
     navigate(path) {
         // Trouver la fonction de gestionnaire pour ce chemin

@@ -35,18 +35,3 @@ exports.updateProfile = async (req, res) => {
     });
   }
 };
-
-exports.getQuizHistory = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).populate('quizHistory.quizId');
-    res.status(200).json({
-      success: true,
-      data: user.quizHistory,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};

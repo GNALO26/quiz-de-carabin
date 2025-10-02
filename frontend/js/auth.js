@@ -64,14 +64,12 @@ export class Auth {
         const token = localStorage.getItem('quizToken');
         if (token) {
             try {
-                // Vérifier si le token est mal formé
                 if (typeof token !== 'string' || token === 'null' || token === 'undefined') {
                     localStorage.removeItem('quizToken');
                     localStorage.removeItem('quizUser');
                     return;
                 }
                 
-                // Vérifier la structure JWT
                 const parts = token.split('.');
                 if (parts.length !== 3) {
                     localStorage.removeItem('quizToken');
@@ -90,13 +88,11 @@ export class Auth {
             return null;
         }
         
-        // Nettoyer le token des guillemets et espaces
         token = token.replace(/^"(.*)"$/, '$1')
                     .replace(/^'(.*)'$/, '$1')
                     .replace(/^Bearer /, '')
                     .trim();
         
-        // Vérifier la structure JWT
         try {
             const parts = token.split('.');
             if (parts.length !== 3) {
@@ -105,7 +101,6 @@ export class Auth {
                 return null;
             }
             
-            // Vérifier l'expiration
             const payload = JSON.parse(atob(parts[1]));
             const currentTime = Math.floor(Date.now() / 1000);
             
@@ -164,7 +159,6 @@ export class Auth {
                 this.hideModals();
                 this.showAlert('Connexion réussie!', 'success');
                 
-                // Recharger les quiz si on est sur la page quiz.html
                 if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
                     window.quiz.loadQuizzes();
                 }
@@ -207,7 +201,6 @@ export class Auth {
             const data = await response.json();
 
             if (data.success) {
-                // Connexion automatique après inscription
                 this.token = data.token;
                 this.user = data.user;
                 
@@ -218,7 +211,6 @@ export class Auth {
                 this.hideModals();
                 this.showAlert('Compte créé avec succès! Vous êtes maintenant connecté.', 'success');
                 
-                // Recharger les quiz si on est sur la page quiz.html
                 if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
                     window.quiz.loadQuizzes();
                 }
@@ -300,24 +292,31 @@ export class Auth {
         }
     }
 
+    // ✅ CORRECTION: Fonction getActiveAPIUrl ajoutée
     async getActiveAPIUrl() {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
                 method: 'GET',
-                cache: 'no-cache'
+                cache: 'no-cache',
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
             
             if (response.ok) {
                 return CONFIG.API_BASE_URL;
             }
         } catch (error) {
-            console.warn('URL principale inaccessible, tentative avec URL de secours:', error);
+            console.warn('URL principale inaccessible:', error.message);
         }
         
         return CONFIG.API_BACKUP_URL;
     }
 
-    // NOUVELLE MÉTHODE: Vérification périodique de la session
+    // Vérification périodique de la session
     startSessionChecker() {
         this.sessionCheckInterval = setInterval(async () => {
             if (this.isAuthenticated()) {
@@ -334,12 +333,11 @@ export class Auth {
                     console.error('Erreur vérification session:', error);
                 }
             }
-        }, 60000); // Vérifier toutes les minutes
+        }, 60000);
     }
 
     logout() {
         try {
-            // Arrêter la vérification de session
             if (this.sessionCheckInterval) {
                 clearInterval(this.sessionCheckInterval);
             }
@@ -355,12 +353,10 @@ export class Auth {
             this.updateUI();
             this.showAlert('Déconnexion réussie', 'success');
             
-            // Recharger les quiz si on est sur la page quiz.html
             if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
                 window.quiz.loadQuizzes();
             }
             
-            // Redirection vers l'accueil après déconnexion
             setTimeout(() => {
                 window.location.href = CONFIG.PAGES.INDEX;
             }, 1000);
@@ -386,15 +382,13 @@ export class Auth {
         const user = this.user;
 
         if (token && user) {
-            // Cacher les boutons de connexion
             authButtons.style.display = 'none';
-            // Afficher le menu utilisateur
             userMenu.style.display = 'block';
             
             if (userName) userName.textContent = user.name;
             
             if (premiumBadge) {
-                if (user.isPremium) {
+                if (this.isPremium()) {
                     premiumBadge.style.display = 'inline';
                     premiumBadge.textContent = 'Premium';
                 } else {
@@ -402,9 +396,7 @@ export class Auth {
                 }
             }
         } else {
-            // Afficher les boutons de connexion
             authButtons.style.display = 'flex';
-            // Cacher le menu utilisateur
             userMenu.style.display = 'none';
             
             if (premiumBadge) {
@@ -414,7 +406,6 @@ export class Auth {
     }
 
     hideModals() {
-        // Cacher les modals Bootstrap
         const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
         if (loginModal) loginModal.hide();
         
@@ -423,7 +414,6 @@ export class Auth {
     }
 
     showAlert(message, type) {
-        // Supprimer les alertes existantes
         document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
         
         const alertDiv = document.createElement('div');
@@ -440,7 +430,6 @@ export class Auth {
         
         document.body.appendChild(alertDiv);
         
-        // Supprimer automatiquement après 5 secondes
         setTimeout(() => {
             if (alertDiv.parentNode) {
                 alertDiv.parentNode.removeChild(alertDiv);
@@ -452,39 +441,34 @@ export class Auth {
         return this.getToken() !== null;
     }
 
+    // ✅ CORRECTION COMPLÈTE: Fonction isPremium réparée
     isPremium() {
         const user = this.getUser();
         
-        // Vérifie si l'utilisateur existe et s'il est marqué comme premium
-        if (user && user.isPremium) 
-            // S'il n'y a pas de date d'expiration (ancien bug ou mauvaise donnée), on suppose que l'abonnement est invalide
-            if (!user.premiumExpiresAt) {
-                return false; 
-            }
-            
+        if (!user || !user.isPremium) {
+            return false;
+        }
+        
+        if (user.premiumExpiresAt) {
             try {
                 const expirationDate = new Date(user.premiumExpiresAt);
                 const now = new Date();
                 
-                // Si la date d'expiration est postérieure à la date actuelle
                 if (expirationDate > now) {
                     return true;
                 } else {
-                    // L'abonnement est expiré côté client. 
-                    console.log(`Abonnement premium expiré pour ${user.email} (Fin: ${user.premiumExpiresAt})`);
-                    
-                    // Mise à jour de l'objet local pour éviter de nouvelles vérifications client
-                    // (La correction finale dans la DB sera faite par le middleware backend)
+                    console.log(`Abonnement expiré pour ${user.email}`);
                     this.user.isPremium = false;
-                    // On appelle updateUI pour masquer immédiatement le badge "Premium"
-                         this.updateUI(); 
-                    
+                    this.updateUI();
                     return false;
                 }
             } catch (e) {
-                console.error("Erreur de parsing de la date d'expiration:", e);
+                console.error("Erreur date expiration:", e);
                 return false;
             }
+        }
+        
+        return user.isPremium === true;
     }
 
     getUser() {
@@ -517,10 +501,9 @@ export class Auth {
             const response = await fetch(`${API_BASE_URL}${url}`, {
                 ...options,
                 headers,
-                credentials: 'include' // Important pour les cookies
+                credentials: 'include'
             });
             
-            // Gérer les tokens expirés ou invalides
             if (response.status === 401) {
                 this.cleanInvalidToken();
                 this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
@@ -539,7 +522,7 @@ export class Auth {
 // Exposer la classe Auth globalement
 window.Auth = Auth;
 
-// Initialisation automatique si on est sur une page qui nécessite l'authentification
+// Initialisation automatique
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('auth-buttons') || document.getElementById('user-menu')) {
         window.auth = new Auth();
