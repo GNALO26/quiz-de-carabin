@@ -117,7 +117,7 @@ export class Quiz {
                         </div>
                         <div class="card-footer bg-transparent">
                             ${hasAccess ? 
-                                <a href="quiz.html?id=${quiz._id}" class="btn btn-primary w-100">Commencer</a> : 
+                                `<a href="quiz.html?id=${quiz._id}" class="btn btn-primary w-100">Commencer</a>` : 
                                 `<button class="btn btn-outline-primary w-100 premium-quiz" data-quiz-id="${quiz._id}">
                                     ${isFree ? 'Commencer' : 'Accéder (Premium)'}
                                 </button>`
