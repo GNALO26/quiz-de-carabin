@@ -8,7 +8,7 @@ const deviceDetection = require('./middleware/deviceDetection');
 const auth = require('./middleware/auth');
 const sessionCheck = require('./middleware/sessionCheck');
 const handleDatabaseError = require('./middleware/handleDatabaseError');
-const productionMonitor = require('./middleware/productionMonitor'); // ✅ NOUVEAU
+/*const productionMonitor = require('./middleware/productionMonitor'); // ✅ NOUVEAU
 
 // Configuration optimisée POUR LA PRODUCTION
 const mongooseOptions = {
@@ -19,7 +19,7 @@ const mongooseOptions = {
   socketTimeoutMS: 45000,
   bufferCommands: false,
   bufferMaxEntries: 0 // ✅ Désactivé pour la production
-};
+};*/
 
 console.log('🚀 DÉMARRAGE EN MODE PRODUCTION LIVE');
 console.log('=====================================\n');
