@@ -540,18 +540,18 @@ export class Quiz {
                               userAnswer.every(val => correctAnswers.includes(val));
             
             resultsHTML += `
-                <div class="mb-4 p-3 ${isCorrect ? 'border-success' : 'border-danger'} border rounded">
-                    <h5>Question ${index + 1}: ${question.text}</h5>
-                    <p class="${isCorrect ? 'text-success' : 'text-danger'}">
-                        <strong>Vos réponses:</strong> 
-                        ${userAnswer.length > 0 ? userAnswer.map(idx => question.options[idx]).join(', ') : 'Aucune réponse'}
-                        ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
-                    </p>
-            `;
+    // ...
+    <p class="${isCorrect ? 'text-success' : 'text-danger'}">
+        <strong>Vos réponses:</strong> 
+        ${userAnswer.length > 0 ? userAnswer.map(idx => question.options[idx].text).join(', ') : 'Aucune réponse'}
+        ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
+    </p>
+`;
 
-            if (!isCorrect) {
-                resultsHTML += `<p class="text-success"><strong>Réponses correctes:</strong> ${correctAnswers.map(idx => question.options[idx]).join(', ')}</p>`;
-            }
+if (!isCorrect) {
+    resultsHTML += <p class="text-success"><strong>Réponses correctes:</strong> ${correctAnswers.map(idx => question.options[idx].text).join(', ')}</p>;
+}
+
 
             resultsHTML += `
                     <div class="justification mt-2 border-top pt-2">
