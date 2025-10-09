@@ -121,8 +121,8 @@ async function seedFromDocx() {
     const docxSubjects = {
       'Physiologie': [
         {
-          path: path.join(__dirname, '../uploads/physiologie-renale.docx'),
-          category: 'physiologie-renale',
+          path: path.join(__dirname, '../uploads/physiologie-renale-1.docx'),
+          category: 'physiologie-renale-1',
           free: true
         },
         {
@@ -139,12 +139,22 @@ async function seedFromDocx() {
           path: path.join(__dirname, '../uploads/physiologie-musculaire.docx'),
           category: 'physiologie-musculaire',
           free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/ENDOCRINO-QCM1.docx'),
+          category: 'ENDOCRINO',
+          free: true
         }
       ],
       'Histologie': [
         {
           path: path.join(__dirname, '../uploads/tissu-epithelial1.docx'),
           category: 'tissu-epithelial-1',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-epithelial2.docx'),
+          category: 'tissu-epithelial-2',
           free: true
         },
         {
@@ -161,8 +171,56 @@ async function seedFromDocx() {
           path: path.join(__dirname, '../uploads/tissu-cartilagineux.docx'),
           category: 'tissu-cartilagineux',
           free: false
-        }
-      ]
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-musculaire1.docx'),
+          category: 'tissu-musculaire1',
+          free: false
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-musculaire2.docx'),
+          category: 'tissu-musculaire2',
+          free: false
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-nerveux1.docx'),
+          category: 'tissu-nerveux1',
+          free: false
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-nerveux2.docx'),
+          category: 'tissu-nerveux2',
+          free: false
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-osseux1.docx'),
+          category: 'tissu-osseux1',
+          free: false
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-osseux2.docx'),
+          category: 'tissu-osseux2',
+          free: false
+        },
+        {
+          path: path.join(__dirname, '../uploads/tissu-sanguin.docx'),
+          category: 'tissu-sanguin',
+          free: false
+        },
+      ],
+      'Biophysique': [
+        {
+          path: path.join(__dirname, '../uploads/Erreurs-incertitudes.docx'),
+          category: 'Erreurs-incertitudes',
+          free: true
+        },
+        {
+          path: path.join(__dirname, '../uploads/Biophysique1.docx'), 
+          category: 'Biophysique1',
+          free: false 
+        },
+        
+      ],
     };
 
     console.log('🗑 Suppression des anciens quizzes...');
