@@ -5,8 +5,7 @@ export class Quiz {
         this.quizzes = [];
         this.currentQuiz = null;
         this.currentQuestionIndex = 0;
-        // Tableau de tableaux (une entrée par question, chaque entrée est un tableau d'indices de réponses choisies)
-        this.userAnswers = []; 
+        this.userAnswers = []; // Tableau de tableaux (une entrée par question, chaque entrée est un tableau d'indices de réponses choisies)
         this.timerInterval = null;
         this.timeLeft = 0;
         
@@ -32,10 +31,9 @@ export class Quiz {
             this.showQuizList();
         });
         
-        // Bouton de révision (utilisé dans la section des résultats pour revenir à la liste)
+        // Bouton de révision
         document.getElementById('review-btn')?.addEventListener('click', () => {
-            // En mode résultat, le bouton sert souvent de 'revenir à la liste'
-            this.showQuizList();
+            this.showQuestion(0);
         });
 
         // Bouton précédent
@@ -53,7 +51,6 @@ export class Quiz {
             this.submitQuiz();
         });
     }
-
     async loadQuizzes() {
         console.log('Début du chargement des quizs');
         
@@ -199,7 +196,6 @@ export class Quiz {
 
         this.addQuizEventListeners();
     }
-    
     addQuizEventListeners() {
         document.querySelectorAll('.start-quiz').forEach(button => {
             button.addEventListener('click', (e) => {
@@ -354,10 +350,8 @@ export class Quiz {
                 // 🛠 CORRECTION: Utiliser les ID des sections pour basculer la vue
                 const quizListSection = document.getElementById('quiz-list-section'); 
                 const quizInterface = document.getElementById('quiz-interface');
-                const resultsContainer = document.getElementById('results-container');
                 
                 if (quizListSection) quizListSection.style.display = 'none';
-                if (resultsContainer) resultsContainer.style.display = 'none'; // S'assurer que les résultats sont cachés
                 if (quizInterface) quizInterface.style.display = 'block';
 
                 // Initialiser le quiz
@@ -373,7 +367,6 @@ export class Quiz {
             this.showQuizList();
         }
     }
-    
     showQuestion(index) {
         if (!this.currentQuiz || index < 0 || index >= this.currentQuiz.questions.length) return;
 
@@ -381,20 +374,16 @@ export class Quiz {
         const questionContainer = document.getElementById('question-container');
         this.currentQuestionIndex = index;
 
-        // Assurez-vous que l'interface de quiz est visible et le conteneur de question affiché
-        document.getElementById('question-container').style.display = 'block';
-        document.getElementById('results-container').style.display = 'none';
-
         let optionsHTML = '';
         question.options.forEach((option, i) => {
-            const isSelected = this.userAnswers[index].includes(i);
-            optionsHTML += `
-                <div class="option">
-                    <input type="checkbox" id="option-${i}" data-index="${i}" ${isSelected ? 'checked' : ''}>
-                    <label for="option-${i}">${option.text}</label>
-                </div>
-            `;
-        });
+    const isSelected = this.userAnswers[index].includes(i);
+    optionsHTML += `
+        <div class="option">
+            <input type="checkbox" id="option-${i}" data-index="${i}" ${isSelected ? 'checked' : ''}>
+            <label for="option-${i}">${option.text}</label>
+        </div>
+    `;
+});
 
         questionContainer.innerHTML = `
             <div class="question">Question ${index + 1}/${this.currentQuiz.questions.length}: ${question.text}</div>
@@ -423,8 +412,6 @@ export class Quiz {
                     // Ajouter l'index de l'option si coché
                     if (!this.userAnswers[questionIndex].includes(optionIndex)) {
                         this.userAnswers[questionIndex].push(optionIndex);
-                        // Trier les réponses pour un envoi cohérent au backend
-                        this.userAnswers[questionIndex].sort((a, b) => a - b);
                     }
                 } else {
                     // Retirer l'index de l'option si décoché
@@ -476,7 +463,6 @@ export class Quiz {
         document.getElementById('quiz-timer').textContent = 
             `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
-    
     async submitQuiz() {
         clearInterval(this.timerInterval);
         
@@ -484,12 +470,6 @@ export class Quiz {
             const token = localStorage.getItem('quizToken');
             const API_BASE_URL = await this.getActiveAPIUrl();
             
-            // Format structuré pour la soumission
-            const submissionAnswers = this.userAnswers.map((selectedOptions, questionIndex) => ({
-                questionIndex: questionIndex,
-                selectedOptions: selectedOptions 
-            }));
-
             const response = await fetch(`${API_BASE_URL}/api/quiz/${this.currentQuiz._id}/submit`, {
                 method: 'POST',
                 headers: {
@@ -497,7 +477,7 @@ export class Quiz {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ 
-                    answers: submissionAnswers, // Utilisation du format structuré
+                    answers: this.userAnswers,
                     timeSpent: (this.currentQuiz.duration * 60) - this.timeLeft
                 })
             });
@@ -509,7 +489,7 @@ export class Quiz {
             const data = await response.json();
             
             if (data.success) {
-                this.showResults(data); 
+                this.showResults(data);
             } else {
                 alert('Erreur lors de la soumission du quiz: ' + data.message);
             }
@@ -519,138 +499,63 @@ export class Quiz {
         }
     }
 
-    /**
-     * Affiche les résultats du quiz avec une correction détaillée (format révision).
-     * @param {object} data Les données de résultats renvoyées par l'API (score, correction).
-     */
     showResults(data) {
-        const quizInterface = document.getElementById('quiz-interface');
         const resultsContainer = document.getElementById('results-container');
         const resultsContent = document.getElementById('results-content');
+        const scorePercent = Math.round((data.score / data.totalQuestions) * 100);
         
-        // S'assurer que data.totalQuestions existe ou utiliser la taille du quiz
-        const totalQuestions = data.totalQuestions || this.currentQuiz.questions.length;
-        const scorePercent = Math.round((data.score / totalQuestions) * 100);
+        // Mettre à jour le score
+        document.getElementById('score-value').textContent = scorePercent;
         
-        // --- 1. MISE À JOUR DU SCORE ET DU MESSAGE GLOBAL ---
-        
-        // Mettre à jour le score global
-        // Assurez-vous d'avoir un élément avec l'ID 'total-score' dans votre HTML
-        const totalScoreElement = document.getElementById('total-score');
-        if (totalScoreElement) totalScoreElement.textContent = `${data.score}/${totalQuestions}`;
-        
-        // Mettre à jour la valeur du cercle
-        const scoreValueElement = document.getElementById('score-value');
-        if (scoreValueElement) scoreValueElement.textContent = scorePercent; 
-
         // Déterminer le message en fonction du score
         let scoreText = '';
         let scoreDescription = '';
-        let scoreColor = 'text-danger';
-
+        
         if (scorePercent >= 80) {
             scoreText = 'Excellent!';
             scoreDescription = 'Vous maîtrisez parfaitement ce sujet!';
-            scoreColor = 'text-success';
         } else if (scorePercent >= 60) {
             scoreText = 'Bon travail!';
             scoreDescription = 'Vous avez une bonne compréhension de ce sujet.';
-            scoreColor = 'text-warning';
+        } else if (scorePercent >= 40) {
+            scoreText = 'Pas mal!';
+            scoreDescription = 'Quelques révisions vous aideront à améliorer votre score.';
         } else {
             scoreText = 'À améliorer';
             scoreDescription = 'Continuez à étudier, vous vous améliorerez!';
         }
         
-        const scoreTextElement = document.getElementById('score-text');
-        if (scoreTextElement) {
-            scoreTextElement.textContent = scoreText;
-            scoreTextElement.className = `fw-bold ${scoreColor}`;
-        }
+        document.getElementById('score-text').textContent = scoreText;
+        document.getElementById('score-description').textContent = scoreDescription;
         
-        const scoreDescElement = document.getElementById('score-description');
-        if (scoreDescElement) scoreDescElement.textContent = scoreDescription;
-        
-
-        // --- 2. CONSTRUCTION DU HTML DE CORRECTION DÉTAILLÉE ---
+        // Construction du HTML des résultats
         let resultsHTML = '';
         
         this.currentQuiz.questions.forEach((question, index) => {
-            // L'API devrait idéalement renvoyer un tableau results
-            // contenant l'état de correction de chaque question.
-            // On utilise les données du quiz local si les données de correction ne sont pas détaillées
-            const correctionData = data.results && data.results[index] ? data.results[index] : {};
+            const userAnswer = this.userAnswers[index] || [];
+            // Les réponses correctes ne sont pas renvoyées par le submitQuiz, elles sont dans le modèle Quiz complet
+            // Pour l'affichage des résultats, on doit supposer que les réponses correctes sont disponibles dans this.currentQuiz (elles le sont)
+            const correctAnswers = question.correctAnswers; 
+            const isCorrect = userAnswer.length === correctAnswers.length && 
+                              userAnswer.every(val => correctAnswers.includes(val));
             
-            // Logique de correction (simplifiée si le backend ne donne que le score total)
-            // On fait ici une vérification stricte basé sur les données locales du quiz et les réponses utilisateur
-            const correctAnswersIndexes = question.correctAnswers || [];
-            const userAnswerIndexes = this.userAnswers[index] || [];
+            resultsHTML += `
+    // ...
+    <p class="${isCorrect ? 'text-success' : 'text-danger'}">
+        <strong>Vos réponses:</strong> 
+        ${userAnswer.length > 0 ? userAnswer.map(idx => question.options[idx].text).join(', ') : 'Aucune réponse'}
+        ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
+    </p>
+`;
 
-            const isCorrect = userAnswerIndexes.length === correctAnswersIndexes.length && 
-                              userAnswerIndexes.every(val => correctAnswersIndexes.includes(val));
-            
-            // Style basé sur le statut
-            const statusClass = isCorrect ? 'border-success-subtle bg-success-subtle' : 'border-danger-subtle bg-danger-subtle';
-            const statusIcon = isCorrect ? '<i class="fas fa-check-circle text-success ms-2"></i>' : '<i class="fas fa-times-circle text-danger ms-2"></i>';
-            const questionLetter = (index + 1).toString().padStart(2, '0');
+if (!isCorrect) {
+    resultsHTML += <p class="text-success"><strong>Réponses correctes:</strong> ${correctAnswers.map(idx => question.options[idx].text).join(', ')}</p>;
+}
+
 
             resultsHTML += `
-                <div class="card mb-4 shadow-sm ${statusClass}">
-                    <div class="card-body">
-                        <h6 class="card-title fw-bold text-dark">
-                            <span class="text-primary me-2">${questionLetter}.</span> ${question.text} ${statusIcon}
-                        </h6>
-                        <hr>
-                        
-                        <div class="options-review">
-            `;
-            
-            // Parcourir les options pour marquer la sélection de l'utilisateur et la correction
-            question.options.forEach((option, oIndex) => {
-                const isSelected = userAnswerIndexes.includes(oIndex);
-                const isCorrectAnswer = correctAnswersIndexes.includes(oIndex);
-                
-                let optionClass = '';
-                let optionIcon = '';
-                
-                if (isCorrectAnswer) {
-                    // Option correcte
-                    optionClass = 'text-success fw-bold';
-                    optionIcon = '<i class="fas fa-check-square me-2"></i>';
-                }
-                
-                if (isSelected && !isCorrectAnswer) {
-                    // Option sélectionnée mais incorrecte
-                    optionClass = 'text-danger text-decoration-line-through';
-                    optionIcon = '<i class="fas fa-times-circle me-2"></i>';
-                } else if (isSelected && isCorrectAnswer) {
-                    // Option sélectionnée et correcte
-                    optionClass = 'text-success fw-bold';
-                    optionIcon = '<i class="fas fa-check-double me-2"></i>';
-                } else if (isCorrectAnswer) {
-                     // Option correcte non sélectionnée (pour la révision)
-                    optionClass = 'text-success'; 
-                    optionIcon = '<i class="fas fa-check me-2"></i>';
-                } else {
-                    // Option non sélectionnée et non correcte
-                    optionClass = 'text-muted';
-                    optionIcon = '<i class="far fa-circle me-2"></i>';
-                }
-
-                resultsHTML += `
-                    <div class="option-item ${optionClass}">
-                        ${optionIcon}
-                        <span>${String.fromCharCode(97 + oIndex)}) ${option.text}</span>
-                    </div>
-                `;
-            });
-
-            resultsHTML += `
-                        </div>
-                        
-                        <div class="justification mt-3 p-3 border-top border-info-subtle bg-info-subtle rounded">
-                            <p class="mb-1 fw-bold text-info"><i class="fas fa-info-circle me-1"></i> Explication:</p>
-                            <p class="mb-0">${question.justification || 'Pas de justification disponible.'}</p>
-                        </div>
+                    <div class="justification mt-2 border-top pt-2">
+                        <strong>Explication:</strong> ${question.justification}
                     </div>
                 </div>
             `;
@@ -658,13 +563,9 @@ export class Quiz {
 
         resultsContent.innerHTML = resultsHTML;
 
-        // Afficher la section des résultats et masquer l'interface du quiz
-        if (quizInterface) quizInterface.style.display = 'none';
-        if (resultsContainer) resultsContainer.style.display = 'block';
-
-        // Le bouton de révision (review-btn) n'est plus nécessaire si cette vue est déjà la révision
-        const reviewBtn = document.getElementById('review-btn');
-        if (reviewBtn) reviewBtn.style.display = 'none'; 
+        // Afficher les résultats
+        document.getElementById('question-container').style.display = 'none';
+        resultsContainer.style.display = 'block';
     }
 
     showQuizList() {
