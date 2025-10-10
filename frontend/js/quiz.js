@@ -549,7 +549,7 @@ export class Quiz {
 `;
 
 if (!isCorrect) {
-    resultsHTML += <p class="text-success"><strong>Réponses correctes:</strong> ${correctAnswers.map(idx => question.options[idx].text).join(', ')}</p>;
+    resultsHTML += `<p class="text-success"><strong>Réponses correctes:</strong> ${correctAnswers.map(idx => question.options[idx].text).join(', ')}</p>`;
 }
 
 
