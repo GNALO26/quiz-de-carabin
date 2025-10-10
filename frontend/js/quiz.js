@@ -564,7 +564,7 @@ export class Quiz {
         const scoreTextElement = document.getElementById('score-text');
         if (scoreTextElement) {
             scoreTextElement.textContent = scoreText;
-            scoreTextElement.className = fw-bold `${scoreColor}`;
+            scoreTextElement.className = `fw-bold ${scoreColor}`;
         }
         
         const scoreDescElement = document.getElementById('score-description');
