@@ -6,9 +6,473 @@
     <title>Quiz de Carabin - Plateforme de quiz médicaux</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        :root {
+            --primary: #1a4b8c;
+            --secondary: #4a90e2;
+            --accent: #e63946;
+            --success: #2a9d8f;
+            --warning: #f4a261;
+            --info: #17a2b8;
+            --purple: #6f42c1;
+            --pink: #e83e8c;
+            --teal: #20c997;
+            
+            --card-1-color: #4a90e2;
+            --card-2-color: #2a9d8f;
+            --card-3-color: #e83e8c;
+            
+            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, #2a5a8c 100%);
+        }
+        
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        /* Section Abonnement améliorée */
+        .pricing-section {
+            padding: 5rem 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pricing-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" opacity="0.05"><path d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%231a4b8c"/></svg>');
+        }
+        
+        .section-title {
+            position: relative;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: var(--card-2-color);
+            border-radius: 2px;
+        }
+        
+        .section-subtitle {
+            color: #6c757d;
+            margin-bottom: 3rem;
+        }
+        
+        /* Cartes de prix compactes et colorées */
+        .pricing-card {
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            height: auto; /* Hauteur automatique pour réduire la taille */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            position: relative;
+            background: white;
+            margin-bottom: 1.5rem;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+        
+        .pricing-card.popular {
+            border: 3px solid var(--card-2-color);
+            transform: scale(1.02);
+        }
+        
+        .pricing-card.popular:hover {
+            transform: scale(1.02) translateY(-5px);
+        }
+        
+        .popular-badge {
+            position: absolute;
+            top: -10px;
+            right: 20px;
+            background: var(--card-2-color);
+            color: white;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            z-index: 2;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* En-têtes de cartes avec différentes couleurs */
+        .pricing-card-header.card-1 {
+            background: linear-gradient(135deg, var(--card-1-color) 0%, #6ba2e7 100%);
+        }
+        
+        .pricing-card-header.card-2 {
+            background: linear-gradient(135deg, var(--card-2-color) 0%, #34c9a8 100%);
+        }
+        
+        .pricing-card-header.card-3 {
+            background: linear-gradient(135deg, var(--card-3-color) 0%, #f06292 100%);
+        }
+        
+        .pricing-card-header {
+            color: white;
+            padding: 1.2rem 1rem; /* Réduction du padding */
+            text-align: center;
+            position: relative;
+        }
+        
+        .pricing-card-header h3 {
+            margin: 0;
+            font-weight: 700;
+            font-size: 1.2rem; /* Taille de police réduite */
+        }
+        
+        .pricing-card-header small {
+            opacity: 0.9;
+            font-size: 0.8rem;
+        }
+        
+        .pricing-card-body {
+            padding: 1.5rem 1rem; /* Réduction du padding */
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .price {
+            text-align: center;
+            margin-bottom: 1rem; /* Réduction de la marge */
+        }
+        
+        .price-amount {
+            font-size: 2rem; /* Taille réduite */
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+        }
+        
+        .price-currency {
+            font-size: 1.2rem; /* Taille réduite */
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .price-period {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .pricing-features {
+            flex-grow: 1;
+            margin-bottom: 1.5rem; /* Réduction de la marge */
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.7rem; /* Réduction de la marge */
+            font-size: 0.85rem; /* Taille de police réduite */
+        }
+        
+        .feature-icon {
+            width: 20px; /* Taille réduite */
+            height: 20px; /* Taille réduite */
+            border-radius: 50%;
+            background: #e8f4ff;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.7rem; /* Réduction de la marge */
+            font-size: 0.7rem; /* Taille réduite */
+            flex-shrink: 0;
+        }
+        
+        /* Couleurs différentes pour les icônes selon la carte */
+        .card-1 .feature-icon {
+            background: #e3f2fd;
+            color: var(--card-1-color);
+        }
+        
+        .card-2 .feature-icon {
+            background: #e8f5e9;
+            color: var(--card-2-color);
+        }
+        
+        .card-3 .feature-icon {
+            background: #fce4ec;
+            color: var(--card-3-color);
+        }
+        
+        .savings-badge {
+            display: inline-block;
+            background: #e8f5e9;
+            color: var(--success);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-top: 0.3rem;
+        }
+        
+        .subscribe-btn {
+            border: none;
+            color: white;
+            padding: 0.8rem 1.5rem; /* Réduction du padding */
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9rem; /* Taille réduite */
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: auto;
+        }
+        
+        /* Boutons avec couleurs correspondant aux cartes */
+        .card-1 .subscribe-btn {
+            background: linear-gradient(135deg, var(--card-1-color) 0%, #6ba2e7 100%);
+        }
+        
+        .card-2 .subscribe-btn {
+            background: linear-gradient(135deg, var(--card-2-color) 0%, #34c9a8 100%);
+        }
+        
+        .card-3 .subscribe-btn {
+            background: linear-gradient(135deg, var(--card-3-color) 0%, #f06292 100%);
+        }
+        
+        .subscribe-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+            opacity: 0.9;
+        }
+        
+        /* Animation d'apparition */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fadeInUp {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+        
+        .delay-100 {
+            animation-delay: 0.1s;
+        }
+        
+        .delay-200 {
+            animation-delay: 0.2s;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .pricing-card.popular {
+                transform: scale(1);
+            }
+            
+            .pricing-card.popular:hover {
+                transform: translateY(-5px);
+            }
+            
+            .price-amount {
+                font-size: 1.8rem;
+            }
+            
+            .pricing-section {
+                padding: 3rem 0;
+            }
+        }
+        
+        /* Garantie de satisfaction */
+        .satisfaction-guarantee {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .guarantee-icon {
+            font-size: 2.5rem;
+            color: var(--success);
+            margin-bottom: 0.8rem;
+        }
+        
+        .satisfaction-guarantee h4 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .satisfaction-guarantee p {
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+    </style>
 </head>
+<!-- Ajoutez ce code juste avant la balise </body> -->
+<div id="protection-overlay" style="display: none;">
+    <div class="protection-alert">
+        <h2>Copie de texte détectée!</h2>
+        <p>La copie de texte n'est pas autorisée sur ce site.</p>
+    </div>
+</div>
+
+<style>
+    /* Styles pour la protection contre les captures */
+    #protection-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: Arial, sans-serif;
+    }
+    
+    .protection-alert {
+        text-align: center;
+        background: #e74c3c;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        max-width: 80%;
+    }
+    
+    .protection-alert h2 {
+        margin-top: 0;
+        font-size: 24px;
+    }
+    
+    .protection-alert p {
+        margin-bottom: 0;
+        font-size: 18px;
+    }
+    
+    .blur-effect {
+        animation: blurAnimation 0.5s;
+    }
+    
+    @keyframes blurAnimation {
+        0% { filter: blur(0); }
+        50% { filter: blur(5px); }
+        100% { filter: blur(0); }
+    }
+    
+    /* Protection supplémentaire pour le contenu sensible */
+    .sensitive-content {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Éléments de protection
+        const overlay = document.getElementById('protection-overlay');
+        let protectionEnabled = true;
+        
+        // Détection de la touche Impr écran
+        document.addEventListener('keydown', function(e) {
+            if (!protectionEnabled) return;
+            
+            // Bloquer Impr écran
+            if (e.key === 'PrintScreen') {
+                e.preventDefault();
+                showProtectionAlert();
+                return false;
+            }
+            
+            // Bloquer les combinaisons de touches courantes pour les captures
+            if ((e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === '3' || e.key === '4')) ||
+                (e.metaKey && e.shiftKey && (e.key === 'S' || e.key === '3' || e.key === '4'))) {
+                e.preventDefault();
+                showProtectionAlert();
+                return false;
+            }
+        });
+        
+        // Empêcher le menu contextuel (clic droit)
+        document.addEventListener('contextmenu', function(e) {
+            if (!protectionEnabled) return;
+            e.preventDefault();
+            showProtectionAlert();
+            return false;
+        });
+        
+        // Empêcher le glisser-déposer d'images
+        document.addEventListener('dragstart', function(e) {
+            if (!protectionEnabled) return;
+            if (e.target.tagName === 'IMG') {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        // Fonction pour afficher l'alerte de protection
+        function showProtectionAlert() {
+            // Ajouter un effet de flou
+            document.body.classList.add('blur-effect');
+            
+            // Afficher l'overlay
+            overlay.style.display = 'flex';
+            
+            // Cacher l'overlay après 2 secondes
+            setTimeout(function() {
+                overlay.style.display = 'none';
+                document.body.classList.remove('blur-effect');
+            }, 2000);
+        }
+        
+        // Détection des outils de développement (approximation)
+        let devToolsOpen = false;
+        
+        setInterval(function() {
+            if (!protectionEnabled) return;
+            
+            const widthThreshold = window.outerWidth - window.innerWidth > 160;
+            const heightThreshold = window.outerHeight - window.innerHeight > 160;
+            
+            if (!devToolsOpen && (widthThreshold || heightThreshold)) {
+                devToolsOpen = true;
+                showProtectionAlert();
+            } else if (devToolsOpen && !widthThreshold && !heightThreshold) {
+                devToolsOpen = false;
+            }
+        }, 1000);
+        
+        // Ajouter la classe de protection au contenu sensible
+        const sensitiveElements = document.querySelectorAll('.sensitive-data, .quiz-container, .results-container');
+        sensitiveElements.forEach(el => {
+            el.classList.add('sensitive-content');
+        });
+    });
+</script>
 <body>
    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
     <div class="container">
@@ -22,7 +486,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
-                    <a class="nav-link active" href="index.html">Accueil</a>
+                    <a class="nav-link" href="index.html">Accueil</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="quiz.html">Quiz</a>
@@ -32,11 +496,13 @@
                 </li>
             </ul>
             
+            <!-- Boutons de connexion (visibles quand non connecté) -->
             <div class="d-flex" id="auth-buttons">
                 <a href="#" class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Se connecter</a>
                 <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">Créer un compte</a>
             </div>
             
+            <!-- Menu utilisateur (visible quand connecté) -->
             <div id="user-menu" style="display: none;">
                 <div class="dropdown">
                     <button class="btn btn-outline-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -46,7 +512,7 @@
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="quiz.html"><i class="fas fa-gamepad me-2"></i>Quiz</a></li>
                         <li><a class="dropdown-item" href="history.html"><i class="fas fa-history me-2"></i>Historique</a></li>
-                        <li><a class="dropdown-item" href="help.html"><i class="fas fa-life-ring me-2"></i>Aide</a></li>
+                        <li><a class="dropdown-item" href="help.html"><i class="fas fa-history me-2"></i>Aide</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
                     </ul>
@@ -55,95 +521,730 @@
         </div>
     </div>
 </nav>
-     
-    <section id="home" class="hero-section text-white text-center">
+     <!-- Hero Section -->
+    <section id="home" class="hero-section">
         <div class="container">
-            <h1 class="display-4 fw-bold mb-4 animate-fadeInUp">Testez vos Connaissances Médicales</h1>
-            <p class="lead mb-4 animate-fadeInUp delay-100">La plateforme interactive de quiz spécialement conçue pour les étudiants en médecine.</p>
-            <a href="quiz.html" class="btn btn-lg btn-success animate-fadeInUp delay-200">Commencer un Quiz</a>
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <h1 class="display-4 fw-bold mb-4">Testez vos connaissances médicales</h1>
+                    <p class="lead mb-4">Une plateforme interactive de quiz spécialement conçue pour les étudiants en médecine</p>
+                    <a href="#quiz-section" class="btn btn-lg btn-success">Commencer un quiz</a>
+                </div>
+            </div>
         </div>
     </section>
-    
-    <section id="features" class="py-5">
+    <!-- Features Section -->
+    <section class="py-5">
         <div class="container">
             <div class="row text-center mb-5">
                 <div class="col">
-                    <h2 class="section-title">Pourquoi choisir Quiz de Carabin?</h2>
-                    <p class="section-subtitle">Une expérience d'apprentissage optimisée pour les carabins.</p>
+                    <h2 class="fw-bold">Pourquoi choisir Quiz de Carabin?</h2>
+                    <p class="lead">Une expérience d'apprentissage optimisée pour les carabins</p>
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-4 mb-4">
-                    <div class="feature-item text-center">
-                        <div class="feature-icon">
-                            <i class="fas fa-graduation-cap"></i>
-                        </div>
-                        <h4 class="mt-3">Contenu Spécialisé</h4>
-                        <p class="text-muted">Quiz élaborés par des professionnels de santé et adaptés au programme des études médicales.</p>
+                <div class="col-md-4 mb-4">
+                     <div class="feature-item" style=" display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;">
+        <div class="feature-icon" style="width: 75px;
+    height: 75px;
+    border-radius: 50%;
+    background: #e3f2fd; /* Fond bleu clair */
+    color: var(--primary-color, #2c6eb5); display: flex;
+    align-items: center;
+    justify-content: center;font-size: 2.5rem; 
+    /* Ajoute de l'espace en dessous */
+    margin-bottom: 1.5rem; 
+    /* Effet de transition fluide */
+    transition: all 0.3s ease;
+    transform: scale(1.1);
+    background: var(--primary-color, #2c6eb5);
+    color: white;
+    box-shadow: 0 10px 20px rgba(44, 110, 181, 0.3);
+
+">
+            <i class="fas fa-graduation-cap"></i>
+        </div>
+                        <h4>Contenu spécialisé</h4>
+                        <p style="font-size: 18px;">Quiz élaborés par des professionnels de santé et adaptés au programme des études médicales</p>
                     </div>
                 </div>
-                <div class="col-lg-4 mb-4">
-                    <div class="feature-item text-center">
-                        <div class="feature-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <h4 class="mt-3">Suivi de Progression</h4>
-                        <p class="text-muted">Visualisez vos forces et faiblesses grâce à un tableau de bord détaillé de vos performances.</p>
+                <div class="col-md-4 mb-4">
+                    <div class="feature-item" style=" display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;">
+        <div class="feature-icon" style="width: 75px;
+    height: 75px;
+    border-radius: 50%;
+    background: #e3f2fd; /* Fond bleu clair */
+    color: var(--primary-color, #2c6eb5); display: flex;
+    align-items: center;
+    justify-content: center;font-size: 2.5rem; 
+    /* Ajoute de l'espace en dessous */
+    margin-bottom: 1.5rem; 
+    /* Effet de transition fluide */
+    transition: all 0.3s ease;
+    transform: scale(1.1);
+    background: var(--primary-color, #2c6eb5);
+    color: white;
+    box-shadow: 0 10px 20px rgba(44, 110, 181, 0.3);
+
+">
+            <i class="fas fa-graduation-cap"></i>
+        </div>
+                        <h4>Suivi de progression</h4>
+                        <p style="font-size: 18px;">Visualisez vos forces et faiblesses grâce à un tableau de bord détaillé de vos performances</p>
                     </div>
                 </div>
-                <div class="col-lg-4 mb-4">
-                    <div class="feature-item text-center">
-                        <div class="feature-icon">
-                            <i class="fas fa-mobile-alt"></i>
-                        </div>
-                        <h4 class="mt-3">Accessible Partout</h4>
-                        <p class="text-muted">Application responsive accessible sur mobile, tablette et ordinateur.</p>
+                <div class="col-md-4 mb-4">
+                     <div class="feature-item" style=" display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;">
+        <div class="feature-icon" style="width: 75px;
+    height: 75px;
+    border-radius: 50%;
+    background: #e3f2fd; /* Fond bleu clair */
+    color: var(--primary-color, #2c6eb5); display: flex;
+    align-items: center;
+    justify-content: center;font-size: 2.5rem; 
+    /* Ajoute de l'espace en dessous */
+    margin-bottom: 1.5rem; 
+    /* Effet de transition fluide */
+    transition: all 0.3s ease;
+    transform: scale(1.1);
+    background: var(--primary-color, #2c6eb5);
+    color: white;
+    box-shadow: 0 10px 20px rgba(44, 110, 181, 0.3);
+">
+            <i class="fas fa-graduation-cap"></i>
+        </div>
+                        <h4>Accessible partout</h4>
+                        <p style="font-size: 18px;">Application responsive accessible sur mobile, tablette et ordinateur</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Quiz Section -->
+     
     <section id="quiz-section" class="py-5 bg-light">
         <div class="container">
-             <div class="row text-center mb-5">
+            <div class="row text-center mb-5">
                 <div class="col">
-                    <h2 class="section-title">Nos Quiz Populaires</h2>
-                    <p class="section-subtitle">Testez vos connaissances dès maintenant.</p>
+                    <h2 class="fw-bold">Nos Quiz</h2>
+                    <p class="lead">Testez vos connaissances dès maintenant</p>
                 </div>
             </div>
             <div class="row" id="quiz-list">
-                <div class="col-12">
-                    <div class="quiz-loader text-center">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Chargement...</span>
-                        </div>
-                        <p class="mt-3">Chargement des quiz...</p>
-                    </div>
+    <!-- Les quiz seront chargés dynamiquement ici -->
+    <div class="col-12">
+        <div class="text-center" id="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="mt-2">Chargement des quizs...</p>
+        </div>
+    </div>
+</div>
+        </div>
+    </section>
+    <!-- Quiz Interface (hidden by default) -->
+    <section id="quiz-interface" class="py-5" style="display: none;">
+        <div class="container">
+            <div class="quiz-container">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 id="quiz-title">Titre du Quiz</h3>
+                    <div class="timer" id="quiz-timer">20:00</div>
+                </div>
+                
+                <div id="question-container">
+                    <!-- Questions will be loaded here -->
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button class="btn btn-secondary" id="prev-btn" disabled>Précédent</button>
+                    <button class="btn btn-primary" id="next-btn">Suivant</button>
+                    <button class="btn btn-success" id="submit-quiz" style="display: none;">Soumettre</button>
                 </div>
             </div>
-             <div class="text-center mt-4">
-                <a href="quiz.html" class="btn btn-primary btn-lg">Voir tous les quiz</a>
+            
+            <div class="results-container" id="results-container" style="display: none;">
+                <h3 class="text-center mb-4">Résultats du Quiz</h3>
+                <div id="results-content">
+                    <!-- Results will be displayed here -->
+                </div>
+                <div class="text-center mt-4">
+                    <button class="btn btn-primary me-2" id="review-btn">Revoir les réponses</button>
+                    <button class="btn btn-outline-secondary" id="back-to-quizzes">Retour aux quiz</button>
+                </div>
             </div>
         </div>
     </section>
 
-    <section class="pricing-section" id="pricing-section">
+    <!-- Pricing Section -->
+ <section class="pricing-section" id="pricing-section">
         <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col">
+                    <h2 class="section-title">Abonnement Premium</h2>
+                    <p class="section-subtitle">Accédez à tous les quiz avec une de nos formules</p>
+                </div>
             </div>
+            <div class="row justify-content-center">
+                <!-- Carte 1 Mois - Bleu -->
+                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp">
+                    <div class="pricing-card card-1">
+                        <div class="pricing-card-header card-1">
+                            <h3>Accès 1 Mois</h3>
+                        </div>
+                        <div class="pricing-card-body">
+                            <div class="price">
+                                <span class="price-amount">5.000</span>
+                                <span class="price-currency">XOF</span>
+                                <span class="price-period d-block">/ mois</span>
+                            </div>
+                            <p class="text-center text-muted" style="font-size: 0.9rem;">La formule la plus flexible pour commencer.</p>
+                            <div class="pricing-features">
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Accès à tous les quiz premium</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Tableau de bord de suivi</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Support technique</span>
+                                </div>
+                            </div>
+                            <button class="btn subscribe-btn" data-plan-id="1-month" data-plan-price="5000">
+                                S'abonner maintenant
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte 3 Mois (Populaire) - Vert -->
+                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-100">
+                    <div class="pricing-card card-2 popular">
+                        <div class="popular-badge">Le plus populaire</div>
+                        <div class="pricing-card-header card-2">
+                            <h3>Accès 3 Mois</h3>
+                        </div>
+                        <div class="pricing-card-body">
+                            <div class="price">
+                                <span class="price-amount">12.000</span>
+                                <span class="price-currency">XOF</span>
+                                <span class="price-period d-block">/ 3 mois</span>
+                                <span class="savings-badge">Économisez 3.000 XOF</span>
+                            </div>
+                            <p class="text-center text-muted" style="font-size: 0.9rem;">Idéal pour une préparation intensive.</p>
+                            <div class="pricing-features">
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Accès à tous les quiz premium</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Tableau de bord de suivi</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Support technique</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Historique des performances</span>
+                                </div>
+                            </div>
+                            <button class="btn subscribe-btn" data-plan-id="3-months" data-plan-price="12000">
+                                Choisir cette offre
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte 10 Mois - Rose -->
+                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-200">
+                    <div class="pricing-card card-3">
+                        <div class="pricing-card-header card-3">
+                            <h3>Accès VIP</h3>
+                            <small>(9 mois + 1 mois offert)</small>
+                        </div>
+                        <div class="pricing-card-body">
+                            <div class="price">
+                                <span class="price-amount">25.000</span>
+                                <span class="price-currency">XOF</span>
+                                <span class="price-period d-block">/ 10 mois</span>
+                                <span class="savings-badge">Économisez 20.000 XOF</span>
+                            </div>
+                            <p class="text-center text-muted" style="font-size: 0.9rem;">La solution complète pour votre année.</p>
+                            <div class="pricing-features">
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Accès à tous les quiz premium</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Tableau de bord de suivi</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Support technique prioritaire</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Historique complet des quiz</span>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <span>Accès aux nouvelles fonctionnalités</span>
+                                </div>
+                            </div>
+                            <button class="btn subscribe-btn" data-plan-id="10-months" data-plan-price="25000">
+                                Optez pour l'excellence
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
     </section>
-   
+    <!-- Enter Code Modal -->
+    <div class="modal fade" id="codeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Entrer le code d'accès</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Veuillez saisir le code à 6 chiffres reçu par email après votre paiement.</p>
+                    <div class="mb-3">
+                        <label for="accessCode" class="form-label">Code d'accès</label>
+                        <input type="text" class="form-control" id="accessCode" placeholder="XXXXXX" maxlength="6">
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Ce code est valable pendant 30 minutes et à usage unique.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="button" class="btn btn-primary" id="validate-code">Valider le code</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Connexion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="loginEmail" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="loginEmail" placeholder="votre@email.com">
+                </div>
+                <div class="mb-3">
+                    <label for="loginPassword" class="form-label">Mot de passe</label>
+                    <input type="password" class="form-control" id="loginPassword" placeholder="Votre mot de passe">
+                </div>
+                <!-- Ajout du lien "Mot de passe oublié" -->
+                <div class="mb-3 text-end">
+                    <a href="forgot-password.html" class="text-decoration-none" 
+                       onclick="closeLoginModal()">
+                        Mot de passe oublié ?
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" id="login-btn">Se connecter</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+    <!-- Register Modal -->
+    <div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Créer un compte</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="registerName" class="form-label">Nom complet</label>
+                        <input type="text" class="form-control" id="registerName" placeholder="Votre nom">
+                    </div>
+                    <div class="mb-3">
+                        <label for="registerEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="registerEmail" placeholder="votre@email.com">
+                    </div>
+                    <div class="mb-3">
+                        <label for="registerPassword" class="form-label">Mot de passe</label>
+                        <input type="password" class="form-control" id="registerPassword" placeholder="Créez un mot de passe">
+                    </div>
+                    <div class="mb-3">
+                        <label for="registerConfirmPassword" class="form-label">Confirmer le mot de passe</label>
+                        <input type="password" class="form-control" id="registerConfirmPassword" placeholder="Confirmez votre mot de passe">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="button" class="btn btn-primary" id="register-btn">Créer le compte</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer -->
     <footer class="footer" id="about">
-        </footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h4 class="text-uppercase mb-4">Quiz de Carabin</h4>
+                    <p>La plateforme interactive de quiz spécialement conçue pour les étudiants en médecine.</p>
+                </div>
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h4 class="text-uppercase mb-4">Contact</h4>
+                    <p><i class="fas fa-phone me-2"></i> +229 01 56 03 58 88</p>
+                    <p><i class="fas fa-phone me-2"></i> +229 01 97 59 46 66</p>
+                    <p><i class="fas fa-phone me-2"></i> +229 01 57 17 41 09</p>
+                </div>
+                <div class="col-lg-4">
+                    <h4 class="text-uppercase mb-4">Email</h4>
+                    <p><i class="fas fa-envelope me-2"></i> contact@quizdecarabin.bj</p>
+                    <p><i class="fas fa-envelope me-2"></i> quizdecarabin4@gmail.com</p>
+                    <p><a href="https://wa.me/22953914648" style="text-decoration: none;" class="text-white"><i class="fab fa-whatsapp"> </i> <span style="text-decoration: none;">Whatsapp</span></a></p>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0">&copy; 2023 Quiz de Carabin. Tous droits réservés.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="#" class="text-white me-3"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="text-white"><i class="fab fa-linkedin-in"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
 
-    <div class="modal fade" id="loginModal">...</div>
-    <div class="modal fade" id="registerModal">...</div>
-    <div class="modal fade" id="codeModal">...</div>
+ <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module" src="js/config.js"></script>
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/payment.js"></script>
+<script type="module" src="js/quiz.js"></script>
+<script type="module" src="js/app.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module" src="js/config.js"></script>
-    <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/payment.js"></script>
-    <script type="module" src="js/app.js"></script> 
+<script>
+    // Fonction pour afficher/masquer les mots de passe
+    function setupPasswordToggle() {
+        const toggleButtons = document.querySelectorAll('[id^="toggle"]');
+        
+        toggleButtons.forEach(button => {
+            // Vérifier si l'élément existe avant d'ajouter l'écouteur
+            if (button) {
+                button.addEventListener('click', function() {
+                    // Trouver l'input de mot de passe associé
+                    const form = this.closest('form');
+                    let passwordInput;
+                    
+                    if (form) {
+                        // Chercher dans le formulaire parent
+                        passwordInput = form.querySelector('input[type="password"]');
+                    } else {
+                        // Fallback: chercher par ID conventionnel
+                        const inputId = this.id.replace('toggle', '').toLowerCase() + 'Password';
+                        passwordInput = document.getElementById(inputId);
+                    }
+                    
+                    if (passwordInput) {
+                        const icon = this.querySelector('i');
+                        if (passwordInput.type === 'password') {
+                            passwordInput.type = 'text';
+                            if (icon) {
+                                icon.classList.replace('fa-eye', 'fa-eye-slash');
+                            }
+                        } else {
+                            passwordInput.type = 'password';
+                            if (icon) {
+                                icon.classList.replace('fa-eye-slash', 'fa-eye');
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    // Initialisation de l'authentification
+    document.addEventListener('DOMContentLoaded', function() {
+        if (document.getElementById('auth-buttons') || document.getElementById('user-menu')) {
+            window.auth = new Auth();
+        }
+        
+        // Configurer les boutons d'affichage de mot de passe
+        setupPasswordToggle();
+    });
+</script>
+
+<script>
+    function closeLoginModal() {
+        const loginModalElement = document.getElementById('loginModal');
+        if (loginModalElement) {
+            const loginModal = bootstrap.Modal.getInstance(loginModalElement);
+            if (loginModal) {
+                loginModal.hide();
+            }
+        }
+    }
+</script>
+<script type="module">
+    import { CONFIG } from './js/config.js';
+    
+    class QuizDisplay {
+    constructor() {
+        this.quizzes = [];
+        this.init();
+    }
+
+    async init() {
+        try {
+            await this.loadQuizzes();
+            this.displayQuizzes();
+        } catch (error) {
+            console.error('❌ Erreur chargement quiz:', error);
+            this.showError();
+        }
+    }
+
+    async loadQuizzes() {
+        try {
+            const token = localStorage.getItem('quizToken');
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            
+            const response = await fetch(`${API_BASE_URL}/api/quiz`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.status === 401) {
+                this.showLoginPrompt();
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.quizzes = data.quizzes || [];
+            } else {
+                throw new Error(data.message || 'Erreur inconnue');
+            }
+        } catch (error) {
+            console.error('❌ Erreur fetch quiz:', error);
+            throw error;
+        }
+    }
+
+    // ✅ AJOUT: Méthode pour obtenir l'URL API
+    async getActiveAPIUrl() {
+        try {
+            const response = await fetch('https://quiz-de-carabin-backend.onrender.com/api/health');
+            if (response.ok) return 'https://quiz-de-carabin-backend.onrender.com';
+        } catch (error) {
+            console.warn('URL principale inaccessible');
+        }
+        return 'https://quiz-de-carabin-backend.onrender.com';
+    }
+        displayQuizzes() {
+            const quizList = document.getElementById('quiz-list');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            // Cacher le spinner de chargement
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
+            
+            // Si aucun quiz n'est disponible
+            if (!this.quizzes || this.quizzes.length === 0) {
+                quizList.innerHTML = `
+                    <div class="col-12 text-center">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Aucun quiz disponible pour le moment.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Afficher les quizs
+            quizList.innerHTML = this.quizzes.map(quiz => {
+                const isFree = quiz.free || false;
+                const user = JSON.parse(localStorage.getItem('quizUser') || '{}');
+                const hasAccess = isFree || user.isPremium;
+                
+                return `
+                    <div class="col-md-4 mb-4">
+                        <div class="card quiz-card h-100">
+                            <div class="card-body">
+                                <span class="badge ${isFree ? 'bg-success' : 'bg-warning'} mb-2">
+                                    ${isFree ? 'GRATUIT' : 'PREMIUM'}
+                                </span>
+                                <h5 class="card-title">${quiz.title}</h5>
+                                <p class="card-text">${quiz.description || 'Aucune description'}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small><i class="fas fa-question-circle me-1"></i> ${quiz.questions?.length || 0} questions</small>
+                                    <small><i class="fas fa-clock me-1"></i> ${quiz.duration || 10} min</small>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                ${hasAccess ? 
+                                    `<a href="quiz.html?id=${quiz._id}" class="btn btn-primary w-100">Commencer</a>` : 
+                                    `<button class="btn btn-outline-primary w-100 premium-quiz" data-quiz-id="${quiz._id}">
+                                        ${isFree ? 'Commencer' : 'Accéder (5.000 XOF)'}
+                                    </button>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Ajouter les événements pour les quizs
+            this.addQuizEventListeners();
+        }
+
+        addQuizEventListeners() {
+            // Quiz premium - ouvrir modal d'abonnement
+            document.querySelectorAll('.premium-quiz').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const quizId = e.target.getAttribute('data-quiz-id');
+                    this.handlePremiumQuiz(quizId);
+                });
+            });
+        }
+
+        handlePremiumQuiz(quizId) {
+            // Vérifier si l'utilisateur est connecté
+            if (!localStorage.getItem('quizToken')) {
+                // Afficher le modal de connexion
+                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                loginModal.show();
+                return;
+            }
+            
+            // Afficher le modal d'abonnement
+            const codeModal = new bootstrap.Modal(document.getElementById('codeModal'));
+            codeModal.show();
+            // Stocker l'ID du quiz pour plus tard
+            document.getElementById('validate-code').setAttribute('data-quiz-id', quizId);
+        }
+        showLoginPrompt() {
+            const quizList = document.getElementById('quiz-list');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
+            
+            quizList.innerHTML = `
+                <div class="col-12 text-center">
+                    <div class="alert alert-warning">
+                        <h4>Connexion requise</h4>
+                        <p>Vous devez vous connecter pour accéder aux quiz.</p>
+                        <button class="btn btn-primary mt-2" id="quiz-login-button">
+                            Se connecter
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('quiz-login-button').addEventListener('click', () => {
+                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                loginModal.show();
+            });
+        }
+
+        showError() {
+            const quizList = document.getElementById('quiz-list');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
+            
+            quizList.innerHTML = `
+                <div class="col-12 text-center">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erreur lors du chargement des quizs. Veuillez réessayer.
+                    </div>
+                    <button class="btn btn-primary mt-2" id="retry-loading">Réessayer</button>
+                </div>
+            `;
+            
+            document.getElementById('retry-loading').addEventListener('click', () => {
+                this.init();
+            });
+        }
+    }
+
+    // Initialiser l'affichage des quizs quand la page est chargée
+    document.addEventListener('DOMContentLoaded', () => {
+        // Vérifier si on est sur la page d'accueil
+        if (window.location.pathname.includes('index.html') || 
+            window.location.pathname === '/' || 
+            window.location.pathname.endsWith('.html') === false) {
+            new QuizDisplay();
+        }
+    });
+</script>
 </body>
 </html>
