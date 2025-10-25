@@ -126,6 +126,11 @@ async function seedFromDocx() {
           free: true
         },
         {
+          path: path.join(__dirname, '../uploads/physiologie-renale-1.docx'),
+          category: 'physiologie-renale-2',
+          free: true
+        },
+        {
           path: path.join(__dirname, '../uploads/physiologie-respiratoire.docx'), 
           category: 'physiologie-respiratoire',
           free: false 
@@ -175,37 +180,37 @@ async function seedFromDocx() {
         {
           path: path.join(__dirname, '../uploads/tissu-musculaire1.docx'),
           category: 'tissu-musculaire1',
-          free: false
+          free: true
         },
         {
           path: path.join(__dirname, '../uploads/tissu-musculaire2.docx'),
           category: 'tissu-musculaire2',
-          free: false
+          free: true
         },
         {
           path: path.join(__dirname, '../uploads/tissu-nerveux1.docx'),
           category: 'tissu-nerveux1',
-          free: false
+          free: true
         },
         {
           path: path.join(__dirname, '../uploads/tissu-nerveux2.docx'),
           category: 'tissu-nerveux2',
-          free: false
+          free: true
         },
         {
           path: path.join(__dirname, '../uploads/tissu-osseux1.docx'),
           category: 'tissu-osseux1',
-          free: false
+          free: true
         },
         {
           path: path.join(__dirname, '../uploads/tissu-osseux2.docx'),
           category: 'tissu-osseux2',
-          free: false
+          free: true
         },
         {
           path: path.join(__dirname, '../uploads/tissu-sanguin.docx'),
           category: 'tissu-sanguin',
-          free: false
+          free: true
         },
       ],
       'Biophysique': [
@@ -217,7 +222,7 @@ async function seedFromDocx() {
         {
           path: path.join(__dirname, '../uploads/Biophysique1.docx'), 
           category: 'Biophysique1',
-          free: false 
+          free: true 
         },
         
       ],
