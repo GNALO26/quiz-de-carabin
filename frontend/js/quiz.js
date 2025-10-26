@@ -1,7 +1,7 @@
 // quiz.js - Gestion complète des quiz
 import { CONFIG } from './config.js';
 
-export class Quiz {
+class Quiz {
     constructor() {
         this.currentQuiz = null;
         this.currentQuestionIndex = 0;
@@ -541,5 +541,5 @@ export class Quiz {
     }
 }
 
-// Export pour une utilisation externe
+// ✅ UN SEUL EXPORT À LA FIN DU FICHIER
 export { Quiz };
