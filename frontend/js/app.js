@@ -86,8 +86,6 @@ window.closeLoginModal = function() {
         console.log('   - Payment initialisé:', this.payment ? 'OUI' : 'NON');
         console.log('   - Quiz initialisé:', this.quiz ? 'OUI' : 'NON');
     }
-}
-
 // Démarrer l'application quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
     window.app = new App();
