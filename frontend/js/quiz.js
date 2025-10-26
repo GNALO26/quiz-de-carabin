@@ -583,4 +583,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Export pour une utilisation externe
-export { Quiz };
+export { QuizManager as Quiz };
