@@ -1,7 +1,7 @@
 // quiz.js - Gestion complète des quiz
 import { CONFIG } from './config.js';
 
-class Quiz {
+class QuizManager {
     constructor() {
         this.currentQuiz = null;
         this.currentQuestionIndex = 0;
@@ -541,5 +541,46 @@ class Quiz {
     }
 }
 
-// ✅ UN SEUL EXPORT À LA FIN DU FICHIER
-export { Quiz };
+// Initialisation quand la page est chargée
+document.addEventListener('DOMContentLoaded', () => {
+    // Vérifier si on est sur la page quiz.html
+    if (window.location.pathname.includes('quiz.html')) {
+        window.quizManager = new QuizManager();
+    }
+});
+
+// Gestion de la protection contre la copie
+document.addEventListener('DOMContentLoaded', function() {
+    const protectionOverlay = document.getElementById('protection-overlay');
+    
+    // Empêcher le clic droit
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        showProtectionAlert();
+    });
+
+    // Empêcher la copie
+    document.addEventListener('copy', function(e) {
+        e.preventDefault();
+        showProtectionAlert();
+    });
+
+    // Empêcher le glisser-déposer
+    document.addEventListener('dragstart', function(e) {
+        if (e.target.tagName === 'IMG') {
+            e.preventDefault();
+        }
+    });
+
+    function showProtectionAlert() {
+        if (protectionOverlay) {
+            protectionOverlay.style.display = 'flex';
+            setTimeout(() => {
+                protectionOverlay.style.display = 'none';
+            }, 2000);
+        }
+    }
+});
+
+// Export pour une utilisation externe
+export { QuizManager };
