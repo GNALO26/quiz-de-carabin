@@ -1,557 +1,581 @@
-// quiz.js - Code complet avec amélioration d'affichage uniquement
 import { CONFIG } from './config.js';
 
-class QuizManager {
+export class Quiz {
     constructor() {
+        this.quizzes = [];
         this.currentQuiz = null;
         this.currentQuestionIndex = 0;
-        this.userAnswers = [];
-        this.timer = null;
+        this.userAnswers = []; // Tableau de tableaux (une entrée par question, chaque entrée est un tableau d'indices de réponses choisies)
+        this.timerInterval = null;
         this.timeLeft = 0;
-        this.quizStarted = false;
-        this.questions = [];
         
         this.init();
     }
 
     init() {
-        this.bindEvents();
-        this.loadQuizFromURL();
-    }
-
-    bindEvents() {
-        document.getElementById('prev-btn')?.addEventListener('click', () => this.previousQuestion());
-        document.getElementById('next-btn')?.addEventListener('click', () => this.nextQuestion());
-        document.getElementById('submit-quiz')?.addEventListener('click', () => this.submitQuiz());
-        document.getElementById('back-to-quizzes')?.addEventListener('click', () => this.showQuizList());
-        document.getElementById('review-btn')?.addEventListener('click', () => this.reviewAnswers());
-        document.getElementById('validate-code')?.addEventListener('click', () => this.validateAccessCode());
-    }
-
-    async loadQuizFromURL() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const quizId = urlParams.get('id');
+        console.log("Initialisation du module Quiz");
+        this.setupEventListeners();
         
-        if (quizId) {
-            await this.startQuiz(quizId);
+        // Attendre que l'authentification soit initialisée
+        if (window.app && window.app.auth) {
+            this.loadQuizzes();
+        } else {
+            // Si l'app n'est pas encore initialisée, attendre un peu
+            setTimeout(() => this.loadQuizzes(), 1000);
         }
     }
 
-    async startQuiz(quizId) {
+    setupEventListeners() {
+        // Bouton de retour aux quiz
+        document.getElementById('back-to-quizzes')?.addEventListener('click', () => {
+            this.showQuizList();
+        });
+        
+        // Bouton de révision
+        document.getElementById('review-btn')?.addEventListener('click', () => {
+            this.showQuestion(0);
+        });
+
+        // Bouton précédent
+        document.getElementById('prev-btn')?.addEventListener('click', () => {
+            this.prevQuestion();
+        });
+
+        // Bouton suivant
+        document.getElementById('next-btn')?.addEventListener('click', () => {
+            this.nextQuestion();
+        });
+
+        // Bouton soumettre
+        document.getElementById('submit-quiz')?.addEventListener('click', () => {
+            this.submitQuiz();
+        });
+    }
+    async loadQuizzes() {
+        console.log('Début du chargement des quizs');
+        
+        // Afficher le loader
+        this.showLoader();
+        
         try {
-            this.showLoading(true);
+            const API_BASE_URL = await this.getActiveAPIUrl();
             
+            // Préparer les headers
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            // Ajouter le token seulement s'il est disponible et valide
             const token = localStorage.getItem('quizToken');
-            if (!token) {
+            if (token && token !== 'null' && token !== 'undefined') {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/api/quiz`, {
+                headers: headers
+            });
+
+            if (response.status === 401) {
+                console.log('Token expiré ou invalide');
+                localStorage.removeItem('quizToken');
+                localStorage.removeItem('quizUser');
                 this.showLoginPrompt();
                 return;
             }
 
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+            if (response.ok) {
+                const data = await response.json();
+                this.quizzes = data.quizzes || data.data || [];
+                this.displayQuizzes();
+            } else {
+                console.error('Erreur lors du chargement des quizs:', response.status);
+                this.showError('Erreur serveur. Veuillez réessayer plus tard.');
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement des quizs:', error);
+            this.showError('Erreur de connexion. Vérifiez votre connexion internet.');
+        }
+    }
+
+    displayQuizzes() {
+        const quizList = document.getElementById('quiz-list');
+        if (!quizList) {
+            console.error("Element #quiz-list non trouvé dans le DOM");
+            return;
+        }
+        
+        // Cacher le loader
+        this.hideLoader();
+        
+        console.log("Rendu des quizs dans l'interface", this.quizzes);
+        quizList.innerHTML = '';
+
+        if (this.quizzes.length === 0) {
+            quizList.innerHTML = `
+                <div class="col-12 text-center">
+                    <div class="alert alert-info">
+                        Aucun quiz disponible pour le moment.
+                        (Veuillez actualiser la page)
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // 1. REGROUPEMENT PAR MATIÈRE (SUBJECT)
+        const quizzesBySubject = this.quizzes.reduce((acc, quiz) => {
+            const subject = quiz.subject || 'Autres'; // Utiliser 'Autres' si le champ est manquant
+            if (!acc[subject]) {
+                acc[subject] = [];
+            }
+            acc[subject].push(quiz);
+            return acc;
+        }, {});
+        
+        // Trier les matières (optionnel)
+        const sortedSubjects = Object.keys(quizzesBySubject).sort();
+
+        // 2. RENDU DYNAMIQUE PAR MATIÈRE
+        sortedSubjects.forEach(subject => {
+            const quizzes = quizzesBySubject[subject];
+            
+            // Créer le conteneur de la matière
+            const subjectSection = document.createElement('div');
+            subjectSection.className = 'col-12 mb-5 animate-fadeInUp';
+            
+            // Titre de la matière
+            subjectSection.innerHTML = `
+                <div class="subject-header mb-4 mt-4">
+                    <h3 class="fw-bold text-primary">${subject}</h3>
+                    <hr class="mt-2 mb-4" style="border-top: 3px solid var(--secondary); opacity: 1;">
+                </div>
+                <div class="row" id="subject-row-${subject.replace(/\s+/g, '-').toLowerCase()}">
+                    </div>
+            `;
+            
+            quizList.appendChild(subjectSection);
+            
+            const subjectRow = document.getElementById(`subject-row-${subject.replace(/\s+/g, '-').toLowerCase()}`);
+
+            // Rendre les cartes de quiz pour cette matière
+            quizzes.forEach(quiz => {
+                const isFree = quiz.free || false;
+                // Vérifier si window.app.auth est défini avant d'appeler isPremium
+                const hasAccess = isFree || (window.app && window.app.auth && window.app.auth.isPremium && window.app.auth.isPremium());
+                
+                const quizCard = document.createElement('div');
+                quizCard.className = 'col-md-4 mb-4';
+                quizCard.innerHTML = `
+                    <div class="card quiz-card h-100">
+                        <div class="card-body">
+                            <span class="badge ${isFree ? 'badge-free' : 'bg-warning text-dark'} mb-2">
+                                ${isFree ? 'GRATUIT' : 'PREMIUM'}
+                            </span>
+                            <h5 class="card-title">${quiz.title}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">${quiz.category}</h6> 
+                            <p class="card-text">${quiz.description}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small><i class="fas fa-question-circle me-1"></i> ${quiz.questions?.length || 0} questions</small>
+                                <small><i class="fas fa-clock me-1"></i> ${quiz.duration || 10} minutes</small>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white">
+                            <button class="btn ${isFree ? 'btn-outline-primary' : 'btn-primary'} w-100 start-quiz" 
+                                    data-quiz-id="${quiz._id}" ${!hasAccess && !isFree ? 'disabled' : ''}>
+                                ${isFree ? 'Commencer le quiz' : (hasAccess ? 'Commencer le quiz' : 'Accéder (5.000 XOF)')}
+                            </button>
+                            ${!hasAccess && !isFree ? `
+                                <small class="text-muted d-block mt-2">Abonnement premium requis</small>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                subjectRow.appendChild(quizCard);
+            });
+        });
+
+        this.addQuizEventListeners();
+    }
+    addQuizEventListeners() {
+        document.querySelectorAll('.start-quiz').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const quizId = e.target.getAttribute('data-quiz-id');
+                const quiz = this.quizzes.find(q => q._id === quizId);
+                
+                if (!quiz) return;
+                
+                // Si non-gratuit et pas Premium (on fait une double vérification)
+                if (!quiz.free && window.app.auth && !window.app.auth.isPremium()) {
+                    // Rediriger vers l'abonnement
+                    if (window.app.payment && typeof window.app.payment.initiatePayment === 'function') {
+                        // Ouvre la section de paiement ou modal si elle existe
+                        console.log("Accès Premium requis. Tentative d'ouverture du modal de paiement.");
+                        window.app.payment.showPaymentModal(); // Assurez-vous que cette fonction existe
+                    } else {
+                         // Afficher l'alerte si le module de paiement n'est pas prêt
+                         alert("Abonnement Premium requis pour ce quiz. Veuillez vous abonner.");
+                    }
+                } else {
+                    this.startQuiz(quizId);
                 }
             });
+        });
+    }
+
+    showLoader() {
+        const quizList = document.getElementById('quiz-list');
+        if (!quizList) return;
+        
+        quizList.innerHTML = `
+            <div class="col-12">
+                <div class="quiz-loader text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <p class="mt-3">Chargement des quiz...</p>
+                </div>
+            </div>
+        `;
+    }
+
+    hideLoader() {
+        const loader = document.querySelector('.quiz-loader');
+        if (loader) {
+            loader.style.display = 'none';
+        }
+    }
+
+    showLoginPrompt() {
+        const quizList = document.getElementById('quiz-list');
+        if (!quizList) return;
+        
+        this.hideLoader();
+        
+        quizList.innerHTML = `
+            <div class="col-12 text-center">
+                <div class="alert alert-warning">
+                    <h4>Connexion requise</h4>
+                    <p>Vous devez vous connecter pour accéder aux quiz.</p>
+                    <button class="btn btn-primary mt-2" id="quiz-login-button">
+                        Se connecter
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('quiz-login-button').addEventListener('click', () => {
+            if (window.app.auth && typeof window.app.auth.showLoginModal === 'function') {
+                window.app.auth.showLoginModal();
+            }
+        });
+    }
+
+    showError(message) {
+        const quizList = document.getElementById('quiz-list');
+        if (!quizList) return;
+        
+        this.hideLoader();
+        
+        quizList.innerHTML = `
+            <div class="col-12 text-center">
+                <div class="alert alert-danger">
+                    <h4>Erreur</h4>
+                    <p>${message}</p>
+                    <button class="btn btn-primary mt-2" onclick="window.location.reload()">
+                        Actualiser la page
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    async getActiveAPIUrl() {
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
+                method: 'GET',
+                cache: 'no-cache'
+            });
+            
+            if (response.ok) {
+                return CONFIG.API_BASE_URL;
+            }
+        } catch (error) {
+            console.warn('URL principale inaccessible, tentative avec URL de secours:', error);
+        }
+        
+        return CONFIG.API_BACKUP_URL;
+    }
+
+    // 🛑 CORRECTION MAJEURE: Masquage des sections et gestion du 403
+    async startQuiz(quizId) {
+        try {
+            const token = localStorage.getItem('quizToken');
+            
+            if (!token) {
+                alert('Vous devez vous connecter pour accéder à ce quiz.');
+                return;
+            }
+
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            
+            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            // 🛠 Gestion explicite de l'erreur 403 (Accès Premium refusé par le backend)
+            if (response.status === 403) {
+                const errorData = await response.json();
+                alert(errorData.message || 'Accès Premium requis pour ce quiz.');
+                // Rediriger vers l'abonnement/afficher la modal de paiement si elle existe
+                if (window.app.payment && typeof window.app.payment.showPaymentModal === 'function') {
+                    window.app.payment.showPaymentModal();
+                }
+                return; // Arrêter le processus ici
+            }
 
             if (!response.ok) {
-                if (response.status === 401) {
-                    this.showLoginPrompt();
-                    return;
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.currentQuiz = data.quiz || data.data;
+                // Initialiser userAnswers comme un tableau de tableaux vides
+                this.userAnswers = new Array(this.currentQuiz.questions.length).fill().map(() => []);
+                this.currentQuestionIndex = 0;
+
+                // 🛠 CORRECTION: Utiliser les ID des sections pour basculer la vue
+                const quizListSection = document.getElementById('quiz-list-section'); 
+                const quizInterface = document.getElementById('quiz-interface');
+                
+                if (quizListSection) quizListSection.style.display = 'none';
+                if (quizInterface) quizInterface.style.display = 'block';
+
+                // Initialiser le quiz
+                document.getElementById('quiz-title').textContent = this.currentQuiz.title;
+                this.showQuestion(0);
+                this.startTimer(this.currentQuiz.duration * 60);
+            } else {
+                throw new Error(data.message || 'Erreur inconnue');
+            }
+        } catch (error) {
+            console.error('Error starting quiz:', error);
+            alert('Erreur lors du chargement du quiz: ' + error.message);
+            this.showQuizList();
+        }
+    }
+    showQuestion(index) {
+        if (!this.currentQuiz || index < 0 || index >= this.currentQuiz.questions.length) return;
+
+        const question = this.currentQuiz.questions[index];
+        const questionContainer = document.getElementById('question-container');
+        this.currentQuestionIndex = index;
+
+        let optionsHTML = '';
+        question.options.forEach((option, i) => {
+    const isSelected = this.userAnswers[index].includes(i);
+    optionsHTML += `
+        <div class="option">
+            <input type="checkbox" id="option-${i}" data-index="${i}" ${isSelected ? 'checked' : ''}>
+            <label for="option-${i}">${option.text}</label>
+        </div>
+    `;
+});
+
+        questionContainer.innerHTML = `
+            <div class="question">Question ${index + 1}/${this.currentQuiz.questions.length}: ${question.text}</div>
+            <div class="options">${optionsHTML}</div>
+        `;
+
+        // Mise à jour de la navigation
+        document.getElementById('prev-btn').disabled = index === 0;
+        document.getElementById('next-btn').style.display = index < this.currentQuiz.questions.length - 1 ? 'block' : 'none';
+        document.getElementById('submit-quiz').style.display = index === this.currentQuiz.questions.length - 1 ? 'block' : 'none';
+
+        // Mise à jour de la barre de progression
+        const progressPercent = ((index + 1) / this.currentQuiz.questions.length) * 100;
+        document.getElementById('quiz-progress').style.width = `${progressPercent}%`;
+
+        // Ajout des écouteurs d'événements pour les options
+        this.addOptionEventListeners(index);
+    }
+
+    addOptionEventListeners(questionIndex) {
+        document.querySelectorAll('.option input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const optionIndex = parseInt(e.target.getAttribute('data-index'));
+                
+                if (e.target.checked) {
+                    // Ajouter l'index de l'option si coché
+                    if (!this.userAnswers[questionIndex].includes(optionIndex)) {
+                        this.userAnswers[questionIndex].push(optionIndex);
+                    }
+                } else {
+                    // Retirer l'index de l'option si décoché
+                    this.userAnswers[questionIndex] = this.userAnswers[questionIndex].filter(idx => idx !== optionIndex);
                 }
+            });
+        });
+    }
+
+    nextQuestion() {
+        this.saveCurrentAnswers();
+        if (this.currentQuestionIndex < this.currentQuiz.questions.length - 1) {
+            this.showQuestion(this.currentQuestionIndex + 1);
+        }
+    }
+
+    prevQuestion() {
+        this.saveCurrentAnswers();
+        if (this.currentQuestionIndex > 0) {
+            this.showQuestion(this.currentQuestionIndex - 1);
+        }
+    }
+
+    saveCurrentAnswers() {
+        // La sauvegarde est gérée en temps réel par addOptionEventListeners
+    }
+
+    startTimer(seconds) {
+        this.timeLeft = seconds;
+        clearInterval(this.timerInterval);
+        
+        this.updateTimerDisplay();
+        
+        this.timerInterval = setInterval(() => {
+            this.timeLeft--;
+            this.updateTimerDisplay();
+            
+            if (this.timeLeft <= 0) {
+                clearInterval(this.timerInterval);
+                alert('Temps écoulé! Le quiz sera soumis automatiquement.');
+                this.submitQuiz();
+            }
+        }, 1000);
+    }
+
+    updateTimerDisplay() {
+        const minutes = Math.floor(this.timeLeft / 60);
+        const seconds = this.timeLeft % 60;
+        document.getElementById('quiz-timer').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    async submitQuiz() {
+        clearInterval(this.timerInterval);
+        
+        try {
+            const token = localStorage.getItem('quizToken');
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            
+            const response = await fetch(`${API_BASE_URL}/api/quiz/${this.currentQuiz._id}/submit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ 
+                    answers: this.userAnswers,
+                    timeSpent: (this.currentQuiz.duration * 60) - this.timeLeft
+                })
+            });
+            
+            if (!response.ok) {
                 throw new Error(`Erreur HTTP: ${response.status}`);
             }
 
             const data = await response.json();
             
             if (data.success) {
-                this.setupQuiz(data.quiz);
+                this.showResults(data);
             } else {
-                throw new Error(data.message || 'Erreur lors du chargement du quiz');
+                alert('Erreur lors de la soumission du quiz: ' + data.message);
             }
         } catch (error) {
-            console.error('Erreur:', error);
-            this.showError('Erreur lors du chargement du quiz');
-        } finally {
-            this.showLoading(false);
+            console.error('Error submitting quiz:', error);
+            alert('Erreur lors de la soumission du quiz: ' + error.message);
         }
     }
 
-    setupQuiz(quizData) {
-        this.currentQuiz = quizData;
-        this.questions = quizData.questions || [];
-        this.currentQuestionIndex = 0;
-        this.userAnswers = new Array(this.questions.length).fill(null);
-        this.quizStarted = true;
-
-        this.showQuizInterface();
-
-        if (quizData.duration) {
-            this.timeLeft = quizData.duration * 60;
-            this.startTimer();
-        }
-
-        this.displayCurrentQuestion();
-        this.updateNavigation();
-    }
-
-    showQuizInterface() {
-        document.getElementById('quiz-list-section').style.display = 'none';
-        document.getElementById('quiz-interface').style.display = 'block';
-        document.getElementById('results-container').style.display = 'none';
+    showResults(data) {
+        const resultsContainer = document.getElementById('results-container');
+        const resultsContent = document.getElementById('results-content');
+        const scorePercent = Math.round((data.score / data.totalQuestions) * 100);
         
-        if (this.currentQuiz) {
-            document.getElementById('quiz-title').textContent = this.currentQuiz.title;
+        // Mettre à jour le score
+        document.getElementById('score-value').textContent = scorePercent;
+        
+        // Déterminer le message en fonction du score
+        let scoreText = '';
+        let scoreDescription = '';
+        
+        if (scorePercent >= 80) {
+            scoreText = 'Excellent!';
+            scoreDescription = 'Vous maîtrisez parfaitement ce sujet!';
+        } else if (scorePercent >= 60) {
+            scoreText = 'Bon travail!';
+            scoreDescription = 'Vous avez une bonne compréhension de ce sujet.';
+        } else if (scorePercent >= 40) {
+            scoreText = 'Pas mal!';
+            scoreDescription = 'Quelques révisions vous aideront à améliorer votre score.';
+        } else {
+            scoreText = 'À améliorer';
+            scoreDescription = 'Continuez à étudier, vous vous améliorerez!';
         }
+        
+        document.getElementById('score-text').textContent = scoreText;
+        document.getElementById('score-description').textContent = scoreDescription;
+        
+        // Construction du HTML des résultats
+        let resultsHTML = '';
+        
+        this.currentQuiz.questions.forEach((question, index) => {
+            const userAnswer = this.userAnswers[index] || [];
+            // Les réponses correctes ne sont pas renvoyées par le submitQuiz, elles sont dans le modèle Quiz complet
+            // Pour l'affichage des résultats, on doit supposer que les réponses correctes sont disponibles dans this.currentQuiz (elles le sont)
+            const correctAnswers = question.correctAnswers; 
+            const isCorrect = userAnswer.length === correctAnswers.length && 
+                              userAnswer.every(val => correctAnswers.includes(val));
+            
+            resultsHTML += `
+    // ...
+    <p class="${isCorrect ? 'text-success' : 'text-danger'}">
+        <strong>Vos réponses:</strong> 
+        ${userAnswer.length > 0 ? userAnswer.map(idx => question.options[idx].text).join(', ') : 'Aucune réponse'}
+        ${isCorrect ? '<i class="fas fa-check ms-2"></i>' : '<i class="fas fa-times ms-2"></i>'}
+    </p>
+`;
+
+if (!isCorrect) {
+    resultsHTML += `<p class="text-success"><strong>Réponses correctes:</strong> ${correctAnswers.map(idx => question.options[idx].text).join(', ')}</p>`;
+}
+
+
+            resultsHTML += `
+                    <div class="justification mt-2 border-top pt-2">
+                        <strong>Explication:</strong> ${question.justification}
+                    </div>
+                </div>
+            `;
+        });
+
+        resultsContent.innerHTML = resultsHTML;
+
+        // Afficher les résultats
+        document.getElementById('question-container').style.display = 'none';
+        resultsContainer.style.display = 'block';
     }
 
     showQuizList() {
-        document.getElementById('quiz-list-section').style.display = 'block';
         document.getElementById('quiz-interface').style.display = 'none';
+        // 🛠 CORRECTION: Utiliser l'ID de section nouvellement ajouté
+        const quizListSection = document.getElementById('quiz-list-section');
+        if (quizListSection) quizListSection.style.display = 'block';
         document.getElementById('results-container').style.display = 'none';
-        window.history.pushState({}, '', 'quiz.html');
-    }
-
-    displayCurrentQuestion() {
-        if (!this.questions.length || this.currentQuestionIndex >= this.questions.length) {
-            return;
-        }
-
-        const question = this.questions[this.currentQuestionIndex];
-        const container = document.getElementById('question-container');
         
-        container.innerHTML = `
-            <div class="question-card">
-                <div class="d-flex align-items-start mb-4">
-                    <div class="question-number bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-weight: 700;">
-                        ${this.currentQuestionIndex + 1}
-                    </div>
-                    <div class="flex-grow-1">
-                        <h5 class="question-text fw-bold mb-3">${question.text}</h5>
-                        ${question.image ? `<img src="${question.image}" class="img-fluid mb-3 rounded" style="max-height: 200px;" alt="Image question">` : ''}
-                    </div>
-                </div>
-                
-                <div class="options-container">
-                    ${this.generateOptionsHTML(question.options, this.userAnswers[this.currentQuestionIndex])}
-                </div>
-            </div>
-        `;
-
-        this.attachOptionEvents();
-        this.updateProgress();
-    }
-
-    generateOptionsHTML(options, selectedAnswer) {
-        return options.map((option, index) => {
-            const isSelected = selectedAnswer === index;
-            const optionLetter = String.fromCharCode(65 + index);
-            
-            return `
-                <div class="option ${isSelected ? 'selected' : ''}" data-option-index="${index}">
-                    <div class="d-flex align-items-center">
-                        <div class="option-letter bg-${isSelected ? 'primary' : 'light'} text-${isSelected ? 'white' : 'dark'} rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 30px; height: 30px; font-weight: 600; font-size: 0.9rem;">
-                            ${optionLetter}
-                        </div>
-                        <div class="option-text">${option.text}</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    attachOptionEvents() {
-        const options = document.querySelectorAll('.option');
-        options.forEach(option => {
-            option.addEventListener('click', () => {
-                options.forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-                
-                const optionIndex = parseInt(option.getAttribute('data-option-index'));
-                this.userAnswers[this.currentQuestionIndex] = optionIndex;
-                
-                this.updateNavigation();
-            });
-        });
-    }
-
-    updateNavigation() {
-        const prevBtn = document.getElementById('prev-btn');
-        const nextBtn = document.getElementById('next-btn');
-        const submitBtn = document.getElementById('submit-quiz');
-
-        if (prevBtn) {
-            prevBtn.disabled = this.currentQuestionIndex === 0;
-        }
-
-        if (nextBtn && submitBtn) {
-            const isLastQuestion = this.currentQuestionIndex === this.questions.length - 1;
-            nextBtn.style.display = isLastQuestion ? 'none' : 'block';
-            submitBtn.style.display = isLastQuestion ? 'block' : 'none';
-        }
-    }
-
-    updateProgress() {
-        const progress = ((this.currentQuestionIndex + 1) / this.questions.length) * 100;
-        const progressBar = document.getElementById('quiz-progress');
-        if (progressBar) {
-            progressBar.style.width = `${progress}%`;
-            progressBar.setAttribute('aria-valuenow', progress);
-        }
-    }
-
-    previousQuestion() {
-        if (this.currentQuestionIndex > 0) {
-            this.currentQuestionIndex--;
-            this.displayCurrentQuestion();
-            this.updateNavigation();
-        }
-    }
-
-    nextQuestion() {
-        if (this.currentQuestionIndex < this.questions.length - 1) {
-            this.currentQuestionIndex++;
-            this.displayCurrentQuestion();
-            this.updateNavigation();
-        }
-    }
-
-    async submitQuiz() {
-        try {
-            this.showLoading(true);
-            
-            const token = localStorage.getItem('quizToken');
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            
-            const quizResult = {
-                quizId: this.currentQuiz._id,
-                answers: this.userAnswers,
-                timeSpent: this.currentQuiz.duration ? (this.currentQuiz.duration * 60 - this.timeLeft) : 0
-            };
-
-            const response = await fetch(`${API_BASE_URL}/api/quiz/submit`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(quizResult)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
-            }
-
-            const result = await response.json();
-            
-            if (result.success) {
-                this.showResults(result.data);
-            } else {
-                throw new Error(result.message || 'Erreur lors de la soumission');
-            }
-        } catch (error) {
-            console.error('Erreur:', error);
-            this.showError('Erreur lors de la soumission du quiz');
-        } finally {
-            this.showLoading(false);
-            this.stopTimer();
-        }
-    }
-
-    showResults(results) {
-        document.getElementById('quiz-interface').style.display = 'none';
-        document.getElementById('results-container').style.display = 'block';
-        
-        this.displayScore(results);
-        this.displayDetailedResults(results);
-    }
-
-    displayScore(results) {
-        const scorePercentage = Math.round((results.score / results.totalQuestions) * 100);
-        const scoreValue = document.getElementById('score-value');
-        const scoreText = document.getElementById('score-text');
-        const scoreDescription = document.getElementById('score-description');
-
-        if (scoreValue) {
-            scoreValue.textContent = scorePercentage;
-            
-            const scoreCircle = document.querySelector('.score-circle');
-            if (scoreCircle) {
-                scoreCircle.style.background = `conic-gradient(var(--primary-color) ${scorePercentage}%, #e2e8f0 ${scorePercentage}%)`;
-            }
-        }
-
-        if (scorePercentage >= 90) {
-            scoreText.textContent = 'Excellent ! 🎉';
-            scoreDescription.textContent = 'Maîtrise parfaite du sujet';
-        } else if (scorePercentage >= 70) {
-            scoreText.textContent = 'Très bien ! 👍';
-            scoreDescription.textContent = 'Bonne compréhension globale';
-        } else if (scorePercentage >= 50) {
-            scoreText.textContent = 'Pas mal ! 💪';
-            scoreDescription.textContent = 'Quelques révisions nécessaires';
-        } else {
-            scoreText.textContent = 'À travailler 📚';
-            scoreDescription.textContent = 'Consultez les corrections attentivement';
-        }
-    }
-
-    displayDetailedResults(results) {
-        const container = document.getElementById('results-content');
-        
-        container.innerHTML = `
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card text-center h-100">
-                        <div class="card-body">
-                            <h6 class="card-title">Score Final</h6>
-                            <div class="h3 text-primary fw-bold">${results.score}/${results.totalQuestions}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card text-center h-100">
-                        <div class="card-body">
-                            <h6 class="card-title">Temps passé</h6>
-                            <div class="h3 text-primary fw-bold">${this.formatTime(results.timeSpent)}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <h5 class="mb-3">Détail des réponses</h5>
-            ${this.generateQuestionsReview(results.questions)}
-        `;
-    }
-
-    generateQuestionsReview(questions) {
-        return questions.map((q, index) => {
-            const userAnswer = this.userAnswers[index];
-            const isCorrect = userAnswer === q.correctAnswer;
-            const userAnswerText = userAnswer !== null ? q.options[userAnswer]?.text : 'Non répondu';
-            const correctAnswerText = q.options[q.correctAnswer]?.text;
-            
-            return `
-                <div class="question-review mb-4 p-3 border rounded ${isCorrect ? 'border-success bg-light' : 'border-danger bg-light'}">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="mb-0">Question ${index + 1}</h6>
-                        <span class="badge ${isCorrect ? 'bg-success' : 'bg-danger'}">
-                            ${isCorrect ? '✓ Correct' : '✗ Incorrect'}
-                        </span>
-                    </div>
-                    <p class="fw-bold">${q.text}</p>
-                    
-                    <div class="mb-2">
-                        <small class="text-muted">Votre réponse :</small>
-                        <div class="p-2 rounded ${isCorrect ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10'}">
-                            ${userAnswerText}
-                        </div>
-                    </div>
-                    
-                    ${!isCorrect ? `
-                        <div class="mb-2">
-                            <small class="text-muted">Bonne réponse :</small>
-                            <div class="p-2 rounded bg-success bg-opacity-10">
-                                ${correctAnswerText}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    ${q.explanation ? `
-                        <div class="mt-2">
-                            <small class="text-muted">Explication :</small>
-                            <div class="p-2 rounded bg-info bg-opacity-10">
-                                ${q.explanation}
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        }).join('');
-    }
-
-    reviewAnswers() {
-        document.getElementById('results-container').style.display = 'none';
-        document.getElementById('quiz-interface').style.display = 'block';
-        this.currentQuestionIndex = 0;
-        this.displayCurrentQuestion();
-        this.updateNavigation();
-    }
-
-    startTimer() {
-        this.updateTimerDisplay();
-        
-        this.timer = setInterval(() => {
-            this.timeLeft--;
-            this.updateTimerDisplay();
-            
-            if (this.timeLeft <= 0) {
-                this.stopTimer();
-                this.submitQuiz();
-            }
-        }, 1000);
-    }
-
-    stopTimer() {
-        if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
-        }
-    }
-
-    updateTimerDisplay() {
-        const timerElement = document.getElementById('quiz-timer');
-        if (timerElement) {
-            const minutes = Math.floor(this.timeLeft / 60);
-            const seconds = this.timeLeft % 60;
-            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            
-            if (this.timeLeft < 300) {
-                timerElement.style.background = 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)';
-            }
-        }
-    }
-
-    formatTime(seconds) {
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-
-    async validateAccessCode() {
-        const codeInput = document.getElementById('accessCode');
-        const code = codeInput.value.trim();
-        
-        if (!code || code.length !== 6) {
-            this.showAlert('Veuillez entrer un code valide à 6 chiffres', 'error');
-            return;
-        }
-
-        try {
-            this.showLoading(true);
-            
-            const token = localStorage.getItem('quizToken');
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            
-            const response = await fetch(`${API_BASE_URL}/api/payment/validate-code`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ code })
-            });
-
-            const result = await response.json();
-            
-            if (result.success) {
-                this.showAlert('Code validé avec succès !', 'success');
-                
-                const codeModal = bootstrap.Modal.getInstance(document.getElementById('codeModal'));
-                if (codeModal) {
-                    codeModal.hide();
-                }
-                
-                const quizId = document.getElementById('validate-code').getAttribute('data-quiz-id');
-                if (quizId) {
-                    await this.startQuiz(quizId);
-                }
-            } else {
-                this.showAlert(result.message || 'Code invalide', 'error');
-            }
-        } catch (error) {
-            console.error('Erreur:', error);
-            this.showAlert('Erreur lors de la validation du code', 'error');
-        } finally {
-            this.showLoading(false);
-        }
-    }
-
-    async getActiveAPIUrl() {
-        try {
-            const response = await fetch('https://quiz-de-carabin-backend.onrender.com/api/health');
-            if (response.ok) return 'https://quiz-de-carabin-backend.onrender.com';
-        } catch (error) {
-            console.warn('URL principale inaccessible');
-        }
-        return 'https://quiz-de-carabin-backend.onrender.com';
-    }
-
-    showLoading(show) {
-        const loader = document.getElementById('loading-spinner');
-        if (loader) {
-            loader.style.display = show ? 'block' : 'none';
-        }
-    }
-
-    showLoginPrompt() {
-        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-        loginModal.show();
-    }
-
-    showError(message) {
-        this.showAlert(message, 'error');
-    }
-
-    showAlert(message, type = 'info') {
-        const alertClass = type === 'error' ? 'alert-danger' : 
-                          type === 'success' ? 'alert-success' : 'alert-info';
-        
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert ${alertClass} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        const container = document.querySelector('.container');
-        container.insertBefore(alertDiv, container.firstChild);
-        
-        setTimeout(() => {
-            if (alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 5000);
+        // Recharger les quiz pour mettre à jour les statuts
+        this.loadQuizzes();
     }
 }
-
-// Initialisation
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.location.pathname.includes('quiz.html')) {
-        window.quizManager = new QuizManager();
-    }
-});
-
-// Gestion de la protection contre la copie
-document.addEventListener('DOMContentLoaded', function() {
-    const protectionOverlay = document.getElementById('protection-overlay');
-    
-    document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-        showProtectionAlert();
-    });
-
-    document.addEventListener('copy', function(e) {
-        e.preventDefault();
-        showProtectionAlert();
-    });
-
-    document.addEventListener('dragstart', function(e) {
-        if (e.target.tagName === 'IMG') {
-            e.preventDefault();
-        }
-    });
-
-    function showProtectionAlert() {
-        if (protectionOverlay) {
-            protectionOverlay.style.display = 'flex';
-            setTimeout(() => {
-                protectionOverlay.style.display = 'none';
-            }, 2000);
-        }
-    }
-});
-
-// Export
-export { QuizManager as Quiz };

@@ -1,5 +1,3 @@
-// Fichier: backend/scripts/seedQuizzes.js
-
 const mongoose = require('mongoose');
 const Quiz = require('../models/Quiz');
 const fs = require('fs');
@@ -60,23 +58,28 @@ async function parseDocxFile(filePath, category, isFree = true) {
         const questionText = questionMatch[1].trim(); 
         const contentAfterQuestion = block.substring(block.indexOf(questionMatch[0]) + questionMatch[0].length);
 
-
-        // 2b. EXTRACTION DES OPTIONS ET CRÉATION DE L'ARRAY {text: '...'}
+        // 2b. EXTRACTION DES OPTIONS - ARRÊT AVANT "RÉPONSE"
         const optionsRaw = [];
-        // Regex pour capturer toutes les options (a), b), c)...)
-        const optionRegex = /([a-eA-E])\)\s*([\s\S]+?)(?=\s*[a-eA-E]\)|\s*Réponse[:：]|\s*Justification[:：]|$)/gis;
+        
+        // Trouver où commence "Réponse" pour arrêter l'extraction des options
+        const answerStart = contentAfterQuestion.search(/R[ée]ponses?\s*[:：]?/i);
+        const contentForOptions = answerStart !== -1 
+            ? contentAfterQuestion.substring(0, answerStart)
+            : contentAfterQuestion;
+
+        // Regex pour capturer les options uniquement avant "Réponse"
+        const optionRegex = /([a-eA-E])\)\s*([\s\S]+?)(?=\s*[a-eA-E]\)|$)/gis;
         
         let optionMatch;
-        while ((optionMatch = optionRegex.exec(contentAfterQuestion)) !== null) {
+        while ((optionMatch = optionRegex.exec(contentForOptions)) !== null) {
             optionsRaw.push({ text: optionMatch[2].trim().replace(/[\r\n]+/g, ' ') }); 
         }
 
-        // *CORRECTION ICI : Filtrer les options dont le texte est vide après nettoyage*
+        // Filtrer les options dont le texte est vide après nettoyage
         const optionsText = optionsRaw.filter(option => option.text.length > 0);
 
-
         // 2c. EXTRACTION DES RÉPONSES ET CONVERSION EN INDICES NUMÉRIQUES
-        const answerMatch = block.match(/Réponses?\s*[:：]?\s*([a-eA-E,\s]+)/i);
+        const answerMatch = block.match(/R[ée]ponses?\s*[:：]?\s*([a-eA-E,\s]+)/i);
         
         const answersLetters = answerMatch
             ? answerMatch[1].split(/[,\s]+/g).map(a => a.trim().toLowerCase()).filter(a => a.length > 0)
@@ -100,6 +103,8 @@ async function parseDocxFile(filePath, category, isFree = true) {
                 correctAnswers: correctAnswers,
                 justification: justification
             });
+        } else {
+            console.warn(`⚠ Question ignorée - Options: ${optionsText.length}, Réponses: ${correctAnswers.length}`);
         }
     }
 
