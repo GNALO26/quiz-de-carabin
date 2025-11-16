@@ -51,77 +51,73 @@ export class Payment {
     }
 
     async initiatePayment(planId, amount) {
-        try {
-            console.log(`💰 Initialisation paiement: ${planId} - ${amount} FCFA`);
-            
-            if (!this.auth.isAuthenticated()) {
-                this.auth.showLoginModal();
-                this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
-                return;
-            }
-
-            const user = this.auth.getUser();
-            const token = this.auth.getToken();
-            
-            console.log('👤 Utilisateur:', user.email);
-            
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            console.log('🌐 API utilisée:', API_BASE_URL);
-            
-            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
-            const originalText = subscribeBtn.innerHTML;
-            subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traitement...';
-            subscribeBtn.disabled = true;
-
-            const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ 
-                    planId, 
-                    amount: parseInt(amount)
-                })
-            });
-
-            const data = await response.json();
-            console.log('📨 Réponse serveur:', data);
-
-            subscribeBtn.innerHTML = originalText;
-            subscribeBtn.disabled = false;
-
-            if (data.success && data.paymentUrl) {
-                console.log('✅ Redirection vers KkiaPay:', data.paymentUrl);
-                window.location.href = data.paymentUrl;
-            } else {
-                console.error('❌ Erreur serveur:', data);
-                this.showAlert(data.message || 'Erreur lors du paiement', 'danger');
-            }
-        } catch (error) {
-            console.error('💥 Erreur initiatePayment:', error);
-            
-            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
-            if (subscribeBtn) {
-                subscribeBtn.innerHTML = 'S\'abonner';
-                subscribeBtn.disabled = false;
-            }
-            
-            this.showAlert('Erreur de connexion. Vérifiez votre internet.', 'danger');
-        }
-    }
-
-    async checkPaymentReturn() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const transactionId = urlParams.get('transactionId');
-        const userId = urlParams.get('userId');
+    try {
+        console.log(`💰 Initialisation paiement: ${planId} - ${amount} FCFA`);
         
-        if (transactionId && userId) {
-            console.log('🔄 Détection retour paiement. Vérification statut...');
-            this.showAlert('Paiement en cours de confirmation. Veuillez patienter...', 'info');
-            this.checkStatusAndRedirect(transactionId, userId, 0);
+        if (!this.auth.isAuthenticated()) {
+            this.auth.showLoginModal();
+            this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
+            return;
         }
+
+        const user = this.auth.getUser();
+        const token = this.auth.getToken();
+        
+        console.log('👤 Utilisateur:', user.email);
+        
+        const API_BASE_URL = await this.getActiveAPIUrl();
+        console.log('🌐 API utilisée:', API_BASE_URL);
+        
+        const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
+        const originalText = subscribeBtn.innerHTML;
+        subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traitement...';
+        subscribeBtn.disabled = true;
+
+        const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                planId, 
+                amount: parseInt(amount)
+            })
+        });
+
+        const data = await response.json();
+        console.log('📨 Réponse serveur complète:', data);
+        console.log('📊 Statut HTTP:', response.status);
+        console.log('🔍 Headers:', Object.fromEntries(response.headers.entries()));
+
+        subscribeBtn.innerHTML = originalText;
+        subscribeBtn.disabled = false;
+
+        if (data.success && data.paymentUrl) {
+            console.log('✅ Redirection vers KkiaPay:', data.paymentUrl);
+            window.location.href = data.paymentUrl;
+        } else {
+            console.error('❌ Erreur serveur détaillée:', {
+                success: data.success,
+                message: data.message,
+                error: data.error,
+                status: response.status,
+                statusText: response.statusText
+            });
+            this.showAlert(data.message || `Erreur lors du paiement (${response.status})`, 'danger');
+        }
+    } catch (error) {
+        console.error('💥 Erreur initiatePayment:', error);
+        
+        const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
+        if (subscribeBtn) {
+            subscribeBtn.innerHTML = 'S\'abonner';
+            subscribeBtn.disabled = false;
+        }
+        
+        this.showAlert('Erreur de connexion. Vérifiez votre internet.', 'danger');
     }
+}
     
     async checkStatusAndRedirect(transactionId, userId, attempt) {
         const MAX_ATTEMPTS = 5;
