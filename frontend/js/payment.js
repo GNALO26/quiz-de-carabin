@@ -91,9 +91,9 @@ export class Payment {
             subscribeBtn.innerHTML = originalText;
             subscribeBtn.disabled = false;
 
-            if (data.success && data.invoiceURL) {
-                console.log('✅ Redirection vers PayDunya:', data.invoiceURL);
-                window.location.href = data.invoiceURL;
+            if (data.success && data.paymentUrl) {
+                console.log('✅ Redirection vers KkiaPay:', data.paymentUrl);
+                window.location.href = data.paymentUrl;
             } else {
                 console.error('❌ Erreur serveur:', data);
                 this.showAlert(data.message || 'Erreur lors du paiement', 'danger');

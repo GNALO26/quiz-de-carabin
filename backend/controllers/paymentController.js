@@ -1,32 +1,13 @@
-const Paydunya = require('paydunya');
 const User = require('../models/User');
 const AccessCode = require('../models/AccessCode');
 const generateCode = require('../utils/generateCode');
 const Transaction = require('../models/Transaction');
 const crypto = require('crypto');
 const transporter = require('../config/email');
-
-// Configuration PayDunya
-const setup = new Paydunya.Setup({
-  masterKey: process.env.PAYDUNYA_MASTER_KEY ? process.env.PAYDUNYA_MASTER_KEY.trim() : '',
-  privateKey: process.env.PAYDUNYA_PRIVATE_KEY ? process.env.PAYDUNYA_PRIVATE_KEY.trim() : '',
-  publicKey: process.env.PAYDUNYA_PUBLIC_KEY ? process.env.PAYDUNYA_PUBLIC_KEY.trim() : '',
-  token: process.env.PAYDUNYA_TOKEN ? process.env.PAYDUNYA_TOKEN.trim() : '',
-  mode: (process.env.PAYDUNYA_MODE || 'live').trim()
-});
-
-const store = new Paydunya.Store({
-  name: "Quiz de Carabin",
-  tagline: "Plateforme de quiz médicaux",
-  postalAddress: "Cotonou, Bénin",
-  phoneNumber: process.env.STORE_PHONE || "+2290156035888",
-  websiteURL: process.env.FRONTEND_URL || "https://quiz-de-carabin.netlify.app",
-  logoURL: process.env.STORE_LOGO_URL || "https://quiz-de-carabin.netlify.app/assets/images/logo.png"
-});
+const kkiapay = require('../config/kkiapay');
 
 // Définition des options d'abonnement
 const pricing = {
-  // 🛑 MODIFICATION POUR LES TESTS : Prix de l'abonnement 1 mois à 200
   '1-month': { amount: 5000, description: "Abonnement Premium 1 mois", duration: 1 }, 
   '3-months': { amount: 12000, description: "Abonnement Premium 3 mois", duration: 3 },
   '10-months': { amount: 25000, description: "Abonnement Premium 10 mois", duration: 10 }
@@ -53,7 +34,6 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') 
   try {
     console.log(`[EMAIL] 🔄 Tentative d'envoi de code d'accès (${accessCode}) à: ${email}`);
     
-    // Assurez-vous que le 'transporter' est celui importé au début du fichier
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -91,7 +71,6 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') 
     console.log(`[EMAIL] ✅ Code envoyé avec succès. Message ID: ${info.messageId}`);
     return true;
   } catch (error) {
-    // 🛑 LOGGING CRITIQUE : Affiche l'erreur complète du transporteur SMTP
     console.error(`[EMAIL] ❌ ERREUR FATALE ENVOI DE CODE D'ACCÈS à ${email}:`, error);
     return false;
   }
@@ -100,18 +79,11 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') 
 // Exporter la fonction
 exports.sendAccessCodeEmail = sendAccessCodeEmail;
 
-// Fonction de validation d'email
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-// Initier un paiement
+// Initier un paiement avec KkiaPay
 exports.initiatePayment = async (req, res) => {
   try {
-    console.log('=== DÉBUT INITIATION PAIEMENT ===');
+    console.log('=== DÉBUT INITIATION PAIEMENT KKiaPay ===');
     
-    // Récupérer le plan et le montant du corps de la requête
     const { planId, amount } = req.body;
     const plan = pricing[planId];
     
@@ -122,8 +94,6 @@ exports.initiatePayment = async (req, res) => {
 
     const user = req.user;
     const uniqueReference = generateUniqueReference();
-
-    // Vérification de l'abonnement actif (déplacée car l'utilisateur peut vouloir prolonger)
 
     const transactionID = generateUniqueTransactionID();
     const transaction = new Transaction({
@@ -136,60 +106,51 @@ exports.initiatePayment = async (req, res) => {
 
     await transaction.save();
 
-    const invoice = new Paydunya.CheckoutInvoice(setup, store);
-    invoice.addItem(
-      `Abonnement Premium - ${plan.description}`,
-      1,
-      plan.amount,
-      plan.amount,
-      `Accès illimité à tous les quiz premium - Référence: ${uniqueReference}`
-    );
-
-    invoice.totalAmount = plan.amount;
-    invoice.description = `${plan.description} - ${uniqueReference}`;
-
-    const baseUrl = process.env.API_BASE_URL;
+    // Configuration KkiaPay
     const frontendUrl = process.env.FRONTEND_URL;
     
-    // IMPORTANT: Utilisez la bonne URL de callback pour le webhook
-    invoice.callbackURL = `${baseUrl}/api/webhook/callback`;
-    invoice.returnURL = `${frontendUrl}/payment-callback.html?userId=${user._id}&transactionId=${transactionID}`;
-    invoice.cancelURL = `${frontendUrl}/payment-error.html`;
+    const paymentData = {
+      amount: plan.amount,
+      phone: user.phone, // Optionnel - peut être null
+      metadata: {
+        user_id: req.user._id.toString(),
+        user_email: req.user.email,
+        service: 'premium_subscription',
+        transaction_id: transactionID,
+        unique_reference: uniqueReference,
+        timestamp: Date.now().toString(),
+        plan_id: planId
+      },
+      callback: `${frontendUrl}/payment-callback.html?transactionId=${transactionID}`,
+      // KkiaPay gère automatiquement les webhooks avec les métadonnées
+    };
 
-    invoice.addCustomData('user_id', req.user._id.toString());
-    invoice.addCustomData('user_email', req.user.email);
-    invoice.addCustomData('service', 'premium_subscription');
-    invoice.addCustomData('transaction_id', transactionID);
-    invoice.addCustomData('unique_reference', uniqueReference);
-    invoice.addCustomData('timestamp', Date.now().toString());
-    invoice.addCustomData('plan_id', planId);
-
-    console.log('Création de la facture PayDunya pour le plan', planId, '...');
+    console.log('Création du paiement KkiaPay pour le plan', planId, '...');
     
-    const created = await invoice.create();
+    const paymentResponse = await kkiapay.createPayment(paymentData);
     
-    if (created || invoice.token) {
-      transaction.paydunyaInvoiceToken = invoice.token;
-      transaction.paydunyaInvoiceURL = invoice.url;
+    if (paymentResponse && paymentResponse.transactionId) {
+      transaction.kkiapayTransactionId = paymentResponse.transactionId;
+      transaction.kkiapayPaymentUrl = paymentResponse.url;
       await transaction.save();
 
-      console.log('✅ Payment invoice created successfully');
+      console.log('✅ Paiement KkiaPay créé avec succès');
 
       res.status(200).json({
         success: true,
         message: "Paiement initié avec succès",
-        invoiceURL: invoice.url,
-        token: invoice.token
+        paymentUrl: paymentResponse.url,
+        transactionId: transactionID
       });
     } else {
       transaction.status = 'failed';
       await transaction.save();
 
-      console.error('❌ Échec de la création de la facture:', invoice.responseText);
+      console.error('❌ Échec de la création du paiement KkiaPay:', paymentResponse);
       
       res.status(400).json({
         success: false,
-        message: "Erreur lors de la création du paiement: " + (invoice.responseText || 'Erreur inconnue')
+        message: "Erreur lors de la création du paiement: " + (paymentResponse.message || 'Erreur inconnue')
       });
     }
   } catch (error) {
@@ -202,88 +163,6 @@ exports.initiatePayment = async (req, res) => {
     });
   }
 };
-
-
-// Fonction de gestion du webhook PayDunya
-exports.handleCallback = async (req, res) => {
-  try {
-    console.log(`[${new Date().toISOString()}] [WEBHOOK] === Début du traitement du webhook ===`);
-    console.log(`[${new Date().toISOString()}] [WEBHOOK] Données reçues: ${JSON.stringify(req.body, null, 2)}`);
-
-    let data = req.body.data || req.body;
-    const token = data.invoice?.token || data.custom_data?.invoice_token || data.token;
-
-    if (!token) {
-      console.error(`[${new Date().toISOString()}] [ERREUR] Webhook: Token manquant. Données: ${JSON.stringify(data)}`);
-      return res.status(400).send('Token manquant');
-    }
-
-    console.log(`[${new Date().toISOString()}] [WEBHOOK] Recherche de la transaction avec le token: ${token}`);
-    const transaction = await Transaction.findOne({ paydunyaInvoiceToken: token });
-
-    if (!transaction) {
-      console.error(`[${new Date().toISOString()}] [ERREUR] Webhook: Transaction non trouvée pour le token: ${token}`);
-      return res.status(404).send('Transaction non trouvée');
-    }
-
-    if (transaction.status === 'completed') {
-      console.warn(`[${new Date().toISOString()}] [AVERTISSEMENT] Webhook: Paiement déjà traité pour la transaction ${transaction.transactionId}.`);
-      return res.status(200).send('Paiement déjà traité');
-    }
-
-    console.log(`[${new Date().toISOString()}] [WEBHOOK] Statut PayDunya: ${data.status}`);
-
-    if (data.status === 'completed') {
-      console.log(`[${new Date().toISOString()}] [INFO] Webhook: Paiement confirmé. Provisionnement de l'abonnement...`);
-      
-      transaction.status = 'completed';
-      const accessCode = generateCode();
-      transaction.accessCode = accessCode;
-      
-      const user = await User.findById(transaction.userId);
-      
-      if (user) {
-        // 🛑 CRITIQUE 1: Créer le code d'accès dans la collection AccessCode
-        const newAccessCode = new AccessCode({
-            code: accessCode,
-            email: user.email,
-            userId: user._id,
-            // Utilise la durée de la transaction pour l'expiration du code
-            expiresAt: addMonths(Date.now(), transaction.durationInMonths) 
-        });
-        await newAccessCode.save();
-
-        // 🛑 CRITIQUE 2: Mettre à jour le statut Premium de l'utilisateur
-        let expiresAt = user.premiumExpiresAt && user.premiumExpiresAt > new Date()
-            ? user.premiumExpiresAt // Prolonge l'abonnement existant
-            : new Date(); // Commence aujourd'hui si expiré ou inexistant
-            
-        user.isPremium = true;
-        user.premiumExpiresAt = addMonths(expiresAt, transaction.durationInMonths);
-        await user.save();
-        
-        console.log(`[${new Date().toISOString()}] [INFO] Webhook: Utilisateur Premium mis à jour. Expiration: ${user.premiumExpiresAt}`);
-
-        console.log(`[${new Date().toISOString()}] [INFO] Webhook: Utilisateur trouvé. Envoi de l'email...`);
-        // Envoi de l'email avec le code généré
-        const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name);
-        console.log(`[${new Date().toISOString()}] [INFO] Webhook: Email envoyé avec succès: ${emailSent}`);
-      }
-      
-      await transaction.save(); // Sauvegarde de la transaction mise à jour
-      
-      console.log(`[${new Date().toISOString()}] [INFO] Webhook: Fin du traitement du webhook pour la transaction ${transaction.transactionId}.`);
-    } else {
-      console.log(`[${new Date().toISOString()}] [INFO] Webhook: Statut de paiement non géré: ${data.status}`);
-    }
-    
-    res.status(200).send('Webhook traité avec succès');
-  } catch (error) {
-    console.error(`[${new Date().toISOString()}] [ERREUR] Webhook: Erreur dans le gestionnaire de webhook: ${error.message}`);
-    res.status(500).send('Erreur de traitement du webhook');
-  }
-};
-
 
 // Fonction de traitement du retour de paiement
 exports.processPaymentReturn = async (req, res) => {
@@ -303,70 +182,45 @@ exports.processPaymentReturn = async (req, res) => {
         if (transaction.status === 'completed') {
             console.log(`[${new Date().toISOString()}] [INFO] Retour: Transaction déjà confirmée par le webhook.`);
             
-            // 🛑 Amélioration: Retourner les données utilisateur mises à jour
             const user = await User.findById(transaction.userId);
             return res.status(200).json({
                 success: true,
                 status: 'completed',
                 accessCode: transaction.accessCode,
-                user: user, // Retourner l'utilisateur mis à jour
+                user: user,
                 message: "Paiement déjà traité et code disponible"
             });
         }
         
         // Si le webhook a échoué, on confirme manuellement le paiement
         console.log(`[${new Date().toISOString()}] [RETOUR] Confirmation manuelle du paiement...`);
-        const invoice = new Paydunya.CheckoutInvoice(setup, store);
-        const success = await invoice.confirm(transaction.paydunyaInvoiceToken);
         
-        if (success && invoice.status === 'completed') {
-            console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement confirmé manuellement. Provisionnement de l'abonnement...`);
+        if (transaction.kkiapayTransactionId) {
+            const paymentStatus = await kkiapay.verifyTransaction(transaction.kkiapayTransactionId);
             
-            transaction.status = 'completed';
-            const accessCode = generateCode();
-            transaction.accessCode = accessCode;
-            
-            const user = await User.findById(transaction.userId);
-            
-            if (user) {
-                // 🛑 CRITIQUE 3: Créer le code d'accès dans la collection AccessCode
-                const newAccessCode = new AccessCode({
-                    code: accessCode,
-                    email: user.email,
-                    userId: user._id,
-                    expiresAt: addMonths(Date.now(), transaction.durationInMonths)
-                });
-                await newAccessCode.save();
-
-                // 🛑 CRITIQUE 4: Mettre à jour le statut Premium de l'utilisateur
-                let expiresAt = user.premiumExpiresAt && user.premiumExpiresAt > new Date()
-                    ? user.premiumExpiresAt
-                    : new Date();
-                    
-                user.isPremium = true;
-                user.premiumExpiresAt = addMonths(expiresAt, transaction.durationInMonths);
-                await user.save();
+            if (paymentStatus && paymentStatus.status === 'SUCCESS') {
+                console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement confirmé manuellement. Provisionnement de l'abonnement...`);
                 
-                await sendAccessCodeEmail(user.email, accessCode, user.name);
+                await this.activatePremiumSubscription(transaction);
+                
+                const user = await User.findById(transaction.userId);
+                
+                return res.status(200).json({
+                    success: true,
+                    status: 'completed',
+                    accessCode: transaction.accessCode,
+                    user: user,
+                    message: "Paiement confirmé et code d'accès généré"
+                });
             }
-            
-            await transaction.save();
-
-            return res.status(200).json({
-                success: true,
-                status: 'completed',
-                accessCode: accessCode,
-                user: user, // Retourner l'utilisateur mis à jour
-                message: "Paiement confirmé et code d'accès généré"
-            });
-        } else {
-            console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement toujours en attente.`);
-            return res.status(200).json({
-                success: false,
-                status: 'pending',
-                message: "Paiement en attente de confirmation"
-            });
         }
+        
+        console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement toujours en attente.`);
+        return res.status(200).json({
+            success: false,
+            status: 'pending',
+            message: "Paiement en attente de confirmation"
+        });
     } catch (error) {
         console.error(`[${new Date().toISOString()}] [ERREUR] Retour: Erreur lors du traitement du retour de paiement: ${error.message}`);
         res.status(500).json({
@@ -386,64 +240,36 @@ exports.checkTransactionStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Transaction non trouvée' });
         }
         
-        // Vérifier si la transaction est déjà terminée et si un code a été généré
         if (transaction.status === 'completed' && transaction.accessCode) {
             const user = await User.findById(transaction.userId);
             return res.status(200).json({
                 success: true,
                 transactionStatus: 'completed',
                 accessCode: transaction.accessCode,
-                user: user, // Retourner l'utilisateur mis à jour
+                user: user,
                 message: 'Paiement confirmé.'
             });
         }
         
-        // Sinon, vérifier le statut directement auprès de PayDunya
-        const invoice = new Paydunya.CheckoutInvoice(setup, store);
-        const confirmed = await invoice.confirm(transaction.paydunyaInvoiceToken);
-        
-        if (confirmed && invoice.status === 'completed') {
+        // Vérifier le statut auprès de KkiaPay
+        if (transaction.kkiapayTransactionId) {
+            const paymentStatus = await kkiapay.verifyTransaction(transaction.kkiapayTransactionId);
             
-            transaction.status = 'completed';
-            const accessCode = generateCode();
-            transaction.accessCode = accessCode;
-            
-            const user = await User.findById(transaction.userId);
-            
-            if (user) {
-                // Création du code d'accès dans la collection AccessCode
-                const newAccessCode = new AccessCode({
-                    code: accessCode,
-                    email: user.email,
-                    userId: user._id,
-                    expiresAt: addMonths(Date.now(), transaction.durationInMonths)
-                });
-                await newAccessCode.save();
-
-                // Mettre à jour le statut Premium de l'utilisateur
-                let expiresAt = user.premiumExpiresAt && user.premiumExpiresAt > new Date()
-                    ? user.premiumExpiresAt
-                    : new Date();
-                    
-                user.isPremium = true;
-                user.premiumExpiresAt = addMonths(expiresAt, transaction.durationInMonths);
-                await user.save();
+            if (paymentStatus && paymentStatus.status === 'SUCCESS') {
+                await this.activatePremiumSubscription(transaction);
                 
-                await sendAccessCodeEmail(user.email, accessCode, user.name);
+                const user = await User.findById(transaction.userId);
+                
+                return res.status(200).json({
+                    success: true,
+                    transactionStatus: 'completed',
+                    accessCode: transaction.accessCode,
+                    user: user,
+                    message: 'Paiement confirmé et code d\'accès généré.'
+                });
             }
-            
-            await transaction.save();
-
-            return res.status(200).json({
-                success: true,
-                transactionStatus: 'completed',
-                accessCode: accessCode,
-                user: user, // Retourner l'utilisateur mis à jour
-                message: 'Paiement confirmé et code d\'accès généré.'
-            });
         }
         
-        // Si la transaction n'est ni terminée, ni confirmée par PayDunya
         res.status(200).json({
             success: true,
             transactionStatus: transaction.status,
@@ -454,6 +280,38 @@ exports.checkTransactionStatus = async (req, res) => {
         console.error('Erreur dans checkTransactionStatus:', error);
         res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
+};
+
+// Fonction utilitaire pour activer l'abonnement premium
+exports.activatePremiumSubscription = async (transaction) => {
+    transaction.status = 'completed';
+    const accessCode = generateCode();
+    transaction.accessCode = accessCode;
+    
+    const user = await User.findById(transaction.userId);
+    
+    if (user) {
+        const newAccessCode = new AccessCode({
+            code: accessCode,
+            email: user.email,
+            userId: user._id,
+            expiresAt: addMonths(Date.now(), transaction.durationInMonths)
+        });
+        await newAccessCode.save();
+
+        let expiresAt = user.premiumExpiresAt && user.premiumExpiresAt > new Date()
+            ? user.premiumExpiresAt
+            : new Date();
+            
+        user.isPremium = true;
+        user.premiumExpiresAt = addMonths(expiresAt, transaction.durationInMonths);
+        await user.save();
+        
+        await sendAccessCodeEmail(user.email, accessCode, user.name);
+    }
+    
+    await transaction.save();
+    console.log(`✅ Abonnement activé pour l'utilisateur ${user.email}`);
 };
 
 // Obtenir le code d'accès de la dernière transaction

@@ -20,6 +20,16 @@ const transactionSchema = new mongoose.Schema({
     enum: ['pending', 'completed', 'failed'],
     default: 'pending'
   },
+  // Champs KkiaPay
+  kkiapayTransactionId: {
+    type: String,
+    default: null
+  },
+  kkiapayPaymentUrl: {
+    type: String,
+    default: null
+  },
+  // Anciens champs PayDunya (à garder pour compatibilité)
   paydunyaInvoiceToken: {
     type: String,
     default: null
