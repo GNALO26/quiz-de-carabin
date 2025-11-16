@@ -23,7 +23,7 @@ class KkiaPay {
 
       const response = await axios.post(`${this.baseURL}/api/v1/transactions/request, payload`, {
         headers: {
-          'Authorization': Bearer `${this.secretKey}`,
+          'Authorization': `Bearer ${this.secretKey}`,
           'Content-Type': 'application/json'
         }
       });
