@@ -2,11 +2,12 @@ const axios = require('axios');
 
 class KkiaPay {
   constructor() {
-    this.publicKey = process.env.KKIAPAY_PUBLIC_KEY;
-    this.privateKey = process.env.KKIAPAY_PRIVATE_KEY;
-    this.secretKey = process.env.KKIAPAY_SECRET_KEY;
+    // CORRECTION: Utilisation de .trim() pour supprimer les espaces ou sauts de ligne invisibles
+    this.publicKey = process.env.KKIAPAY_PUBLIC_KEY ? process.env.KKIAPAY_PUBLIC_KEY.trim() : null;
+    this.privateKey = process.env.KKIAPAY_PRIVATE_KEY ? process.env.KKIAPAY_PRIVATE_KEY.trim() : null;
+    this.secretKey = process.env.KKIAPAY_SECRET_KEY ? process.env.KKIAPAY_SECRET_KEY.trim() : null;
+    
     this.mode = process.env.KKIAPAY_MODE || 'live';
-    // Attention: L'URL de sandbox peut différer, mais pour le live c'est api.kkiapay.me
     this.baseURL = this.mode === 'test' 
       ? 'https://api-sandbox.kkiapay.me' 
       : 'https://api.kkiapay.me';
@@ -17,46 +18,39 @@ class KkiaPay {
     try {
       console.log('💰 Création paiement KkiaPay...');
 
-      // 1. CORRECTION DE L'URL
-      // L'ancien endpoint '/api/v1/transactions/request' renvoie 404.
-      // Le bon endpoint standard est '/api/v1/payments'.
+      // URL CORRIGÉE: Utilisation du endpoint /api/v1/payments
       const url = `${this.baseURL}/api/v1/payments`;
 
-      // 2. CONSTRUCTION DU PAYLOAD
+      // CONSTRUCTION DU PAYLOAD
       const payload = {
         amount: Math.round(paymentData.amount),
         reason: paymentData.description || `Abonnement ${paymentData.planId || 'Premium'}`,
-        name: paymentData.name || 'Client Quiz', // Optionnel mais recommandé
-        phone: paymentData.phone, // Optionnel
-        email: paymentData.email, // Optionnel
-        callback: paymentData.callback, // URL de redirection après paiement
-        partnerId: paymentData.metadata?.user_id, // Utile pour le tracking
-        metadata: paymentData.metadata // Vos données personnalisées (plan_id, user_id)
+        name: paymentData.name || 'Client Quiz',
+        phone: paymentData.phone,
+        email: paymentData.email,
+        callback: paymentData.callback,
+        partnerId: paymentData.metadata?.user_id,
+        metadata: paymentData.metadata
       };
 
       console.log('🌐 URL:', url);
-      // console.log('📤 Payload:', JSON.stringify(payload, null, 2)); // Décommentez pour debug
 
-      // 3. APPEL API AVEC LES BONS HEADERS
+      // APPEL API AVEC LES BONS HEADERS (maintenant nettoyés)
       const response = await axios.post(url, payload, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          // KkiaPay utilise souvent ces headers spécifiques en plus ou à la place du Bearer
           'x-api-key': this.publicKey,
           'x-private-key': this.privateKey,
           'x-secret-key': this.secretKey
         },
-        timeout: 15000 // Augmentation du timeout à 15s
+        timeout: 15000
       });
 
-      console.log('✅ Réponse KkiaPay:', response.status);
-      
-      // La réponse de KkiaPay sur cet endpoint contient généralement { url: "..." } ou { redirect_url: "..." }
+      console.log('✅ Réponse KkiaPay réussie. Statut:', response.status);
       return response.data;
 
     } catch (error) {
-      // Gestion détaillée des erreurs
       console.error('❌ Erreur KkiaPay createPayment:');
       if (error.response) {
         console.error(`Status: ${error.response.status}`);
@@ -64,7 +58,8 @@ class KkiaPay {
       } else {
         console.error('Message:', error.message);
       }
-      throw error;
+      // On lance l'erreur pour que le controller (paymentController.js) puisse la gérer
+      throw error; 
     }
   }
 
@@ -89,6 +84,22 @@ class KkiaPay {
     } catch (error) {
       console.error('Erreur KkiaPay verifyTransaction:', error.response?.data || error.message);
       throw error;
+    }
+  }
+
+  // Valider une signature webhook (laissez comme avant si elle fonctionne)
+  verifyWebhookSignature(payload, signature) {
+    try {
+        const crypto = require('crypto');
+        const computedSignature = crypto
+        .createHmac('sha256', this.secretKey)
+        .update(JSON.stringify(payload))
+        .digest('hex');
+        
+        return computedSignature === signature;
+    } catch(e) {
+        console.error("Erreur de vérification de signature:", e);
+        return false;
     }
   }
 }
