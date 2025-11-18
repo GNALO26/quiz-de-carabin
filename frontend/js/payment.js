@@ -372,6 +372,53 @@ export class Payment {
     }
 }
 
+    async function diagnostic() {
+    try {
+        const token = localStorage.getItem('token');
+        const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
+        
+        console.log('🔍 DIAGNOSTIC DÉBUT');
+        
+        // Test 1: Route publique
+        const test1 = await fetch(`${API_BASE_URL}/api/payment/debug-test`);
+        console.log('Test 1 (public):', await test1.json());
+        
+        // Test 2: Route protégée sans token
+        const test2 = await fetch(`${API_BASE_URL}/api/payment/debug-test-protected`);
+        console.log('Test 2 (sans token):', test2.status);
+        
+        // Test 3: Route protégée avec token
+        if (token) {
+            const test3 = await fetch(`${API_BASE_URL}/api/payment/debug-test-protected`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            console.log('Test 3 (avec token):', await test3.json());
+        }
+        
+        // Test 4: Route initiate
+        if (token) {
+            const test4 = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ planId: '1-month', amount: 5000 })
+            });
+            console.log('Test 4 (initiate):', {
+                status: test4.status,
+                statusText: test4.statusText,
+                response: await test4.text()
+            });
+        }
+        
+        console.log('🔍 DIAGNOSTIC FIN');
+    } catch (error) {
+        console.error('❌ Erreur diagnostic:', error);
+    }
+}
+
+
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
     console.log('💰 Initialisation du module Payment...');

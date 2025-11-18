@@ -6,7 +6,9 @@ const Transaction = require('../models/Transaction');
 const AccessCode = require('../models/AccessCode');
 const { sendAccessCodeEmail } = require('../controllers/paymentController');
 
-// ✅ ROUTE INITIATE MANQUANTE - AJOUTÉE
+// ✅ TOUTES LES ROUTES SONT PROTÉGÉES PAR AUTH
+
+// Route pour initier un paiement
 router.post('/initiate', auth, paymentController.initiatePayment);
 
 // Route pour traiter le retour de paiement
@@ -21,12 +23,17 @@ router.get('/latest-access-code', auth, paymentController.getLatestAccessCode);
 // Route pour renvoyer le code d'accès
 router.post('/resend-code', auth, async (req, res) => {
   try {
+    console.log('🔄 Tentative de renvoi de code d\'accès pour:', req.user.email);
+    
+    // Chercher d'abord dans les transactions
     const transaction = await Transaction.findOne({
       userId: req.user._id,
-      status: 'completed'
+      status: 'completed',
+      accessCode: { $exists: true, $ne: null }
     }).sort({ createdAt: -1 });
 
     if (transaction && transaction.accessCode) {
+      console.log('📦 Code trouvé dans transaction:', transaction.accessCode);
       const emailSent = await sendAccessCodeEmail(req.user.email, transaction.accessCode, req.user.name);
       
       if (emailSent) {
@@ -42,6 +49,7 @@ router.post('/resend-code', auth, async (req, res) => {
       }
     }
 
+    // Sinon chercher dans les codes d'accès
     const accessCode = await AccessCode.findOne({
       userId: req.user._id,
       used: false,
@@ -55,6 +63,7 @@ router.post('/resend-code', auth, async (req, res) => {
       });
     }
 
+    console.log('📦 Code trouvé dans AccessCode:', accessCode.code);
     const emailSent = await sendAccessCodeEmail(req.user.email, accessCode.code, req.user.name);
     
     if (emailSent) {
@@ -69,19 +78,20 @@ router.post('/resend-code', auth, async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Erreur lors du renvoi du code:', error);
+    console.error('❌ Erreur lors du renvoi du code:', error);
     res.status(500).json({
       success: false,
-      message: "Erreur serveur"
+      message: "Erreur serveur lors du renvoi du code"
     });
   }
 });
 
-// Route de test pour vérifier que le routeur fonctionne
-router.get('/test', (req, res) => {
+// ✅ ROUTE DE TEST POUR VÉRIFIER QUE LE ROUTEUR FONCTIONNE
+router.get('/test', auth, (req, res) => {
   res.json({ 
     success: true, 
     message: 'Route payment fonctionne!',
+    user: req.user.email,
     timestamp: new Date().toISOString()
   });
 });

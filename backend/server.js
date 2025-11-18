@@ -1,4 +1,3 @@
-// backend/server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -33,20 +32,6 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
         console.log('❌ Erreur configuration email:', error);
       } else {
         console.log('✅ Serveur email est prêt à envoyer des messages');
-        
-        // Test d'envoi d'email
-        transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: process.env.EMAIL_USER,
-          subject: 'Test de configuration email - Quiz de Carabin',
-          text: 'Ceci est un email de test pour vérifier la configuration.'
-        }, (err, info) => {
-          if (err) {
-            console.log('❌ Erreur envoi email test:', err);
-          } else {
-            console.log('✅ Email test envoyé avec succès:', info.response);
-          }
-        });
       }
     });
   }, 3000);
@@ -94,6 +79,24 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   // Détection d'appareil
   app.use(deviceDetection);
 
+  // ✅ CORRECTION: Routes de debug pour tester l'accès
+  app.get('/api/payment/debug-test', (req, res) => {
+    res.json({ 
+      success: true, 
+      message: 'Route payment accessible sans auth',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  app.get('/api/payment/debug-test-protected', auth, (req, res) => {
+    res.json({ 
+      success: true, 
+      message: 'Route payment accessible avec auth',
+      user: req.user ? req.user.email : 'no user',
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // Routes publiques (sans authentification)
   app.get('/api/health', (req, res) => {
     res.status(200).json({ 
@@ -107,19 +110,19 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   // Routes d'authentification (publiques)
   app.use('/api/auth', authRoutes);
   
-  // ✅ CORRECTION: Montage du routeur de webhook sur '/api/webhook' (Ligne 87)
+  // ✅ CORRECTION: Webhooks doivent être AVANT l'authentification
   app.use('/api/webhook', webhookRoutes);
 
   // Middleware d'authentification (pour les routes suivantes)
   app.use(auth);
   app.use(sessionCheck);
 
-  // Routes protégées (nécessitent une authentification)
-  app.use('/api/quiz', quizRoutes);
+  // ✅ CORRECTION: Routes protégées - BIEN MONTER paymentRoutes ICI
   app.use('/api/payment', paymentRoutes);
+  app.use('/api/quiz', quizRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/access-code', accessCodeRoutes);
-  app.use('/api/auth', tokenRoutes); // Routes auth protégées (comme check-session)
+  app.use('/api/auth', tokenRoutes);
 
   // Middleware de gestion des erreurs de base de données
   app.use(handleDatabaseError);
@@ -128,10 +131,10 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   app.use('*', (req, res) => {
     res.status(404).json({ 
       success: false, 
-      message: 'Route not found' 
+      message: 'Route not found',
+      path: req.originalUrl
     });
   });
-  
 
   // Gestionnaire d'erreurs global
   app.use((err, req, res, next) => {
@@ -146,6 +149,13 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   const PORT = process.env.PORT || 5000;
   const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log('🔄 Routes montées:');
+    console.log('   - /api/health (public)');
+    console.log('   - /api/auth (public)');
+    console.log('   - /api/webhook (public)');
+    console.log('   - /api/payment (protégé)');
+    console.log('   - /api/quiz (protégé)');
+    console.log('   - /api/user (protégé)');
   });
 
   // Gestion propre de la fermeture
