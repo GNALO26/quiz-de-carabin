@@ -24,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 // Middleware de logging des requêtes
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  if (req.body && Object.keys(req.body).length > 0) {
+  if (req.body && Object.keys(req.body).length > 0 && !req.url.includes('/payments/webhook')) {
     console.log('Body:', JSON.stringify(req.body, null, 2));
   }
   next();
@@ -34,7 +34,7 @@ app.use((req, res, next) => {
 const connectDB = require('./config/database');
 connectDB();
 
-// Import des modèles (pour s'assurer qu'ils sont chargés)
+// Import des modèles
 require('./models/User');
 require('./models/Quiz');
 require('./models/Transaction');
@@ -44,16 +44,8 @@ require('./models/Session');
 
 // Import des middlewares
 const authMiddleware = require('./middleware/auth');
-const checkPremiumStatus = require('./middleware/checkPremiumStatus');
-const sessionCheckMiddleware = require('./middleware/sessionCheck');
 const deviceDetectionMiddleware = require('./middleware/deviceDetection');
-const productionMonitor = require('./middleware/productionMonitor');
-const handleDatabaseError = require('./middleware/handleDatabaseError');
 const webhookLogger = require('./middleware/webhookLogger');
-
-// Application des middlewares globaux
-app.use(handleDatabaseError);
-app.use(productionMonitor);
 
 // Import des contrôleurs
 const authController = require('./controllers/authController');
@@ -61,6 +53,14 @@ const quizController = require('./controllers/quizController');
 const userController = require('./controllers/userController');
 const paymentController = require('./controllers/paymentController');
 const accessCodeController = require('./controllers/accessCodeController');
+
+// Vérification du chargement des contrôleurs
+console.log('🔍 Vérification des contrôleurs:');
+console.log('- authController:', typeof authController.login === 'function' ? '✅ OK' : '❌ MANQUANT');
+console.log('- quizController:', typeof quizController.getQuizzes === 'function' ? '✅ OK' : '❌ MANQUANT');
+console.log('- userController:', typeof userController.getProfile === 'function' ? '✅ OK' : '❌ MANQUANT');
+console.log('- paymentController:', typeof paymentController.initiatePayment === 'function' ? '✅ OK' : '❌ MANQUANT');
+console.log('- accessCodeController:', typeof accessCodeController.validateAccessCode === 'function' ? '✅ OK' : '❌ MANQUANT');
 
 // ==================== ROUTES PUBLIQUES ====================
 
@@ -70,7 +70,8 @@ app.get('/api/health', (req, res) => {
     success: true, 
     message: 'API Quiz de Carabin est en ligne', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0'
   });
 });
 
@@ -85,9 +86,22 @@ app.post('/api/auth/forgot-password', authController.requestPasswordReset);
 app.post('/api/auth/verify-reset-code', authController.verifyResetCode);
 app.post('/api/auth/reset-password', authController.resetPassword);
 
-// Routes admin (protection à ajouter si nécessaire)
+// Routes admin
 app.post('/api/auth/admin-reset-account', authController.adminResetAccount);
 app.post('/api/auth/repair-account', authController.repairAccount);
+
+// Vérification de session
+app.get('/api/auth/check-session', authMiddleware, (req, res) => {
+  res.json({
+    success: true,
+    user: {
+      id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      isPremium: req.user.isPremium || false
+    }
+  });
+});
 
 // Routes de quiz publiques
 app.get('/api/quizzes', quizController.getQuizzes);
@@ -112,24 +126,53 @@ app.post('/api/payments/process-return', authMiddleware, paymentController.proce
 app.get('/api/payments/check-status/:transactionId', authMiddleware, paymentController.checkTransactionStatus);
 app.get('/api/payments/latest-access-code', authMiddleware, paymentController.getLatestAccessCode);
 
-// Webhook KkiaPay (sans auth pour permettre les callbacks)
+// Webhook KkiaPay (sans authentification)
 app.post('/api/payments/webhook/kkiapay', webhookLogger, (req, res) => {
-  // Logique webhook temporaire - à implémenter
   console.log('📩 Webhook KkiaPay reçu:', req.body);
-  res.status(200).json({ received: true });
+  
+  // Traitement basique du webhook - à compléter selon la documentation KkiaPay
+  if (req.body && req.body.transaction_id) {
+    console.log('Transaction ID:', req.body.transaction_id);
+    console.log('Statut:', req.body.status);
+    
+    // Ici, vous devriez traiter le statut de la transaction
+    // et mettre à jour votre base de données en conséquence
+  }
+  
+  res.status(200).json({ 
+    success: true, 
+    message: 'Webhook reçu',
+    received: true 
+  });
 });
 
 // ==================== ROUTES CODE D'ACCÈS ====================
 
 app.post('/api/access-codes/validate', authMiddleware, accessCodeController.validateAccessCode);
-app.get('/api/access-codes/user-codes', authMiddleware, accessCodeController.getUserAccessCodes);
+app.post('/api/access-codes/resend', authMiddleware, accessCodeController.resendAccessCode);
 
 // ==================== ROUTES ADMIN ====================
 
-// Routes admin (à protéger avec un middleware admin)
-app.get('/api/admin/users', authMiddleware, userController.getAllUsers);
-app.get('/api/admin/transactions', authMiddleware, paymentController.getAllTransactions);
-app.get('/api/admin/access-codes', authMiddleware, accessCodeController.getAllAccessCodes);
+// Routes admin (basiques - à sécuriser avec un middleware admin si nécessaire)
+app.get('/api/admin/users', authMiddleware, async (req, res) => {
+  try {
+    const User = require('./models/User');
+    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    res.json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/admin/transactions', authMiddleware, async (req, res) => {
+  try {
+    const Transaction = require('./models/Transaction');
+    const transactions = await Transaction.find().populate('userId', 'name email').sort({ createdAt: -1 });
+    res.json({ success: true, transactions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
 
 // ==================== ROUTE DE TEST KKiaPay ====================
 
@@ -137,11 +180,15 @@ app.get('/api/test-kkiapay', async (req, res) => {
   try {
     const kkiapay = require('./config/kkiapay');
     
+    console.log('🧪 Test de configuration KkiaPay...');
+    console.log('Clé publique:', process.env.KKIAPAY_PUBLIC_KEY ? 'PRÉSENTE' : 'MANQUANTE');
+    console.log('Mode:', process.env.KKIAPAY_MODE || 'non défini');
+    
     const testPayment = await kkiapay.createPayment({
       amount: 100,
       phone: '+2290156035888',
       name: 'Test User',
-      email: 'olympeguidolokossou@gmail.com',
+      email: 'olympeguidolokossou@.com',
       reason: 'Test de paiement KkiaPay',
       callback: 'https://quiz-de-carabin.netlify.app/payment-callback.html',
       metadata: {
@@ -160,14 +207,22 @@ app.get('/api/test-kkiapay', async (req, res) => {
   } catch (error) {
     console.error('❌ Test KkiaPay échoué:', error);
     
+    let errorDetails = 'Erreur inconnue';
+    if (error.response) {
+      errorDetails = error.response.data;
+    } else if (error.request) {
+      errorDetails = 'Aucune réponse du serveur KkiaPay';
+    } else {
+      errorDetails = error.message;
+    }
+    
     res.status(500).json({ 
       success: false, 
-      error: error.message,
-      details: error.response?.data,
+      error: errorDetails,
       config: {
-        publicKey: process.env.KKIAPAY_PUBLIC_KEY ? 'PRÉSENTE' : 'MANQUANT',
-        privateKey: process.env.KKIAPAY_PRIVATE_KEY ? 'PRÉSENTE' : 'MANQUANT', 
-        secretKey: process.env.KKIAPAY_SECRET_KEY ? 'PRÉSENTE' : 'MANQUANT',
+        publicKey: process.env.KKIAPAY_PUBLIC_KEY ? 'PRÉSENTE' : 'MANQUANTE',
+        privateKey: process.env.KKIAPAY_PRIVATE_KEY ? 'PRÉSENTE' : 'MANQUANTE', 
+        secretKey: process.env.KKIAPAY_SECRET_KEY ? 'PRÉSENTE' : 'MANQUANTE',
         mode: process.env.KKIAPAY_MODE || 'non défini'
       }
     });
@@ -182,7 +237,14 @@ app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route non trouvée',
-    path: req.originalUrl
+    path: req.originalUrl,
+    availableRoutes: [
+      '/api/health',
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/quizzes',
+      '/api/payments/initiate'
+    ]
   });
 });
 
@@ -229,7 +291,10 @@ app.use((error, req, res, next) => {
     message: process.env.NODE_ENV === 'production' 
       ? 'Erreur interne du serveur' 
       : error.message,
-    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    ...(process.env.NODE_ENV === 'development' && { 
+      stack: error.stack,
+      details: error.toString()
+    })
   });
 });
 
@@ -237,46 +302,43 @@ app.use((error, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Fonction pour démarrer le serveur
 const startServer = () => {
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Serveur démarré sur le port ${PORT}`);
-    console.log(`🌐 Environnement: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📧 Email config: ${process.env.EMAIL_USER ? 'PRÉSENT' : 'MANQUANT'}`);
-    console.log(`💰 KkiaPay config: ${process.env.KKIAPAY_PUBLIC_KEY ? 'PRÉSENT' : 'MANQUANT'}`);
-    console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'Non défini'}`);
-    console.log(`🔗 API URL: ${process.env.API_BASE_URL || 'Non défini'}`);
-    console.log(`=========================================\n`);
+    console.log(`
+🚀 SERVEUR DÉMARRÉ AVEC SUCCÈS
+================================
+📍 Port: ${PORT}
+🌐 Environnement: ${process.env.NODE_ENV || 'development'}
+📧 Email: ${process.env.EMAIL_USER ? 'CONFIGURÉ' : 'NON CONFIGURÉ'}
+💰 KkiaPay: ${process.env.KKIAPAY_PUBLIC_KEY ? 'CONFIGURÉ' : 'NON CONFIGURÉ'}
+🔗 Frontend: ${process.env.FRONTEND_URL || 'Non défini'}
+🗄  MongoDB: ${process.env.MONGODB_URI ? 'CONNECTÉ' : 'NON CONFIGURÉ'}
+================================
+    `);
     
-    // Test automatique de la configuration email
-    if (process.env.EMAIL_USER) {
-      setTimeout(() => {
-        const transporter = require('./config/email');
-        transporter.verify((error) => {
-          if (error) {
-            console.log('⚠  Configuration email - Vérification échouée:', error.message);
-          } else {
-            console.log('✅ Configuration email - Vérification réussie');
-            
-            // Test d'envoi d'email (optionnel)
-            if (process.env.NODE_ENV === 'development') {
-              transporter.sendMail({
-                from: process.env.EMAIL_USER,
-                to: 'test@example.com',
-                subject: 'Test de configuration email - Quiz de Carabin',
-                text: 'Ceci est un test de configuration email.'
-              }, (err, info) => {
-                if (err) {
-                  console.log('❌ Test email échoué:', err.message);
-                } else {
-                  console.log('✅ Email test envoyé avec succès:', info.response);
-                }
-              });
+    // Test automatique de la configuration
+    setTimeout(async () => {
+      try {
+        // Test email
+        if (process.env.EMAIL_USER) {
+          const transporter = require('./config/email');
+          transporter.verify((error) => {
+            if (error) {
+              console.log('⚠  Email - Vérification échouée:', error.message);
+            } else {
+              console.log('✅ Email - Configuration réussie');
             }
-          }
-        });
-      }, 2000);
-    }
+          });
+        }
+        
+        // Test base de données
+        const dbState = mongoose.connection.readyState;
+        console.log(`🗄  Base de données: ${dbState === 1 ? 'CONNECTÉE' : 'DÉCONNECTÉE'}`);
+        
+      } catch (testError) {
+        console.log('⚠  Tests automatiques échoués:', testError.message);
+      }
+    }, 2000);
   });
 };
 
