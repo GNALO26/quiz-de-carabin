@@ -9,42 +9,21 @@ const auth = require('./middleware/auth');
 const sessionCheck = require('./middleware/sessionCheck');
 const handleDatabaseError = require('./middleware/handleDatabaseError');
 
-// Configuration optimisée pour serveurs gratuits
+// Configuration MongoDB
 const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   maxPoolSize: 5,
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
-  bufferCommands: false,
 };
 
-// Connexion à MongoDB avec gestion d'erreurs améliorée
+// Connexion à MongoDB
 mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 .then(() => {
-  console.log('Connected to MongoDB');
+  console.log('✅ Connected to MongoDB');
   
-  // Test de la configuration email au démarrage
-  setTimeout(() => {
-    const transporter = require('./config/email');
-    transporter.verify(function(error, success) {
-      if (error) {
-        console.log('❌ Erreur configuration email:', error);
-      } else {
-        console.log('✅ Serveur email est prêt à envoyer des messages');
-      }
-    });
-  }, 3000);
-  
-  // Charger les modèles après la connexion réussie
-  require('./models/User');
-  require('./models/Quiz');
-  require('./models/PasswordReset');
-  require('./models/Session');
-  require('./models/Transaction');
-  require('./models/AccessCode');
-  
-  // Import des routes (APRÈS la connexion à la base de données)
+  // Import des routes
   const authRoutes = require('./routes/auth');
   const quizRoutes = require('./routes/quiz');
   const paymentRoutes = require('./routes/payment');
@@ -79,25 +58,25 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   // Détection d'appareil
   app.use(deviceDetection);
 
-  // ✅ CORRECTION: Routes de debug pour tester l'accès
-  app.get('/api/payment/debug-test', (req, res) => {
+  // ✅ ROUTES DE DEBUG - AVANT AUTH
+  app.get('/api/debug/payment-test', (req, res) => {
     res.json({ 
       success: true, 
-      message: 'Route payment accessible sans auth',
+      message: 'Route debug payment accessible sans auth',
       timestamp: new Date().toISOString()
     });
   });
 
-  app.get('/api/payment/debug-test-protected', auth, (req, res) => {
+  app.get('/api/debug/payment-test-protected', auth, (req, res) => {
     res.json({ 
       success: true, 
-      message: 'Route payment accessible avec auth',
+      message: 'Route debug payment accessible avec auth',
       user: req.user ? req.user.email : 'no user',
       timestamp: new Date().toISOString()
     });
   });
 
-  // Routes publiques (sans authentification)
+  // Routes publiques
   app.get('/api/health', (req, res) => {
     res.status(200).json({ 
       success: true, 
@@ -110,21 +89,21 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   // Routes d'authentification (publiques)
   app.use('/api/auth', authRoutes);
   
-  // ✅ CORRECTION: Webhooks doivent être AVANT l'authentification
+  // Webhooks (publics)
   app.use('/api/webhook', webhookRoutes);
 
-  // Middleware d'authentification (pour les routes suivantes)
+  // ✅ MIDDLEWARE D'AUTHENTIFICATION
   app.use(auth);
   app.use(sessionCheck);
 
-  // ✅ CORRECTION: Routes protégées - BIEN MONTER paymentRoutes ICI
+  // ✅ ROUTES PROTÉGÉES - BIEN MONTER paymentRoutes ICI
   app.use('/api/payment', paymentRoutes);
   app.use('/api/quiz', quizRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/access-code', accessCodeRoutes);
   app.use('/api/auth', tokenRoutes);
 
-  // Middleware de gestion des erreurs de base de données
+  // Middleware de gestion des erreurs
   app.use(handleDatabaseError);
 
   // Gestion des routes non trouvées
@@ -132,7 +111,8 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
     res.status(404).json({ 
       success: false, 
       message: 'Route not found',
-      path: req.originalUrl
+      path: req.originalUrl,
+      method: req.method
     });
   });
 
@@ -148,17 +128,16 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 
   const PORT = process.env.PORT || 5000;
   const server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log('🔄 Routes montées:');
-    console.log('   - /api/health (public)');
-    console.log('   - /api/auth (public)');
-    console.log('   - /api/webhook (public)');
-    console.log('   - /api/payment (protégé)');
-    console.log('   - /api/quiz (protégé)');
-    console.log('   - /api/user (protégé)');
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log('📋 Routes montées:');
+    console.log('   - GET  /api/health');
+    console.log('   - GET  /api/debug/payment-test');
+    console.log('   - GET  /api/debug/payment-test-protected (protected)');
+    console.log('   - POST /api/payment/initiate (protected)');
+    console.log('   - ALL  /api/auth');
+    console.log('   - ALL  /api/webhook');
   });
 
-  // Gestion propre de la fermeture
   process.on('SIGINT', () => {
     console.log('Shutting down gracefully');
     server.close(() => {
@@ -170,15 +149,6 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   });
 })
 .catch(err => {
-  console.error('Could not connect to MongoDB', err);
+  console.error('❌ Could not connect to MongoDB', err);
   process.exit(1);
-});
-
-// Gestion des erreurs de connexion après initialisation
-mongoose.connection.on('error', err => {
-  console.error('MongoDB connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
 });

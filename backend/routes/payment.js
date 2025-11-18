@@ -2,13 +2,10 @@ const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const auth = require('../middleware/auth');
-const Transaction = require('../models/Transaction');
-const AccessCode = require('../models/AccessCode');
-const { sendAccessCodeEmail } = require('../controllers/paymentController');
 
-// ✅ TOUTES LES ROUTES SONT PROTÉGÉES PAR AUTH
+console.log('✅ Payment routes loaded');
 
-// Route pour initier un paiement
+// ✅ ROUTE INITIATE - DOIT ÊTRE PRÉSENTE
 router.post('/initiate', auth, paymentController.initiatePayment);
 
 // Route pour traiter le retour de paiement
@@ -23,17 +20,16 @@ router.get('/latest-access-code', auth, paymentController.getLatestAccessCode);
 // Route pour renvoyer le code d'accès
 router.post('/resend-code', auth, async (req, res) => {
   try {
-    console.log('🔄 Tentative de renvoi de code d\'accès pour:', req.user.email);
-    
-    // Chercher d'abord dans les transactions
+    const Transaction = require('../models/Transaction');
+    const AccessCode = require('../models/AccessCode');
+    const { sendAccessCodeEmail } = require('../controllers/paymentController');
+
     const transaction = await Transaction.findOne({
       userId: req.user._id,
-      status: 'completed',
-      accessCode: { $exists: true, $ne: null }
+      status: 'completed'
     }).sort({ createdAt: -1 });
 
     if (transaction && transaction.accessCode) {
-      console.log('📦 Code trouvé dans transaction:', transaction.accessCode);
       const emailSent = await sendAccessCodeEmail(req.user.email, transaction.accessCode, req.user.name);
       
       if (emailSent) {
@@ -49,7 +45,6 @@ router.post('/resend-code', auth, async (req, res) => {
       }
     }
 
-    // Sinon chercher dans les codes d'accès
     const accessCode = await AccessCode.findOne({
       userId: req.user._id,
       used: false,
@@ -63,7 +58,6 @@ router.post('/resend-code', auth, async (req, res) => {
       });
     }
 
-    console.log('📦 Code trouvé dans AccessCode:', accessCode.code);
     const emailSent = await sendAccessCodeEmail(req.user.email, accessCode.code, req.user.name);
     
     if (emailSent) {
@@ -78,10 +72,10 @@ router.post('/resend-code', auth, async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('❌ Erreur lors du renvoi du code:', error);
+    console.error('Erreur lors du renvoi du code:', error);
     res.status(500).json({
       success: false,
-      message: "Erreur serveur lors du renvoi du code"
+      message: "Erreur serveur"
     });
   }
 });
