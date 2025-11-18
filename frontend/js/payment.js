@@ -5,7 +5,7 @@ export class Payment {
     constructor() {
         this.auth = new Auth();
         this.setupEventListeners();
-        this.checkPaymentReturn(); // Cette fonction doit exister
+        this.checkPaymentReturn();
     }
 
     async getActiveAPIUrl() {
@@ -52,16 +52,13 @@ export class Payment {
         });
     }
 
-    // ✅ CORRECTION: Ajout de la fonction manquante checkPaymentReturn
     checkPaymentReturn() {
         const urlParams = new URLSearchParams(window.location.search);
         const transactionId = urlParams.get('transactionId');
-        const userId = urlParams.get('userId');
         
-        if (transactionId && userId) {
+        if (transactionId && window.location.pathname.includes('payment-callback.html')) {
             console.log('🔄 Détection retour paiement. Vérification statut...');
             this.showAlert('Paiement en cours de confirmation. Veuillez patienter...', 'info');
-            this.checkStatusAndRedirect(transactionId, userId, 0);
         }
     }
 
@@ -105,11 +102,10 @@ export class Payment {
             console.log('📨 Réponse serveur complète:', data);
             console.log('📊 Statut HTTP:', response.status);
 
-            subscribeBtn.innerHTML = originalText;
-            subscribeBtn.disabled = false;
-
             if (data.success && data.paymentUrl) {
                 console.log('✅ Redirection vers KkiaPay:', data.paymentUrl);
+                // Stocker l'ID de transaction pour le callback
+                localStorage.setItem('pendingTransaction', data.transactionId);
                 window.location.href = data.paymentUrl;
             } else {
                 console.error('❌ Erreur serveur détaillée:', {
@@ -122,67 +118,106 @@ export class Payment {
             }
         } catch (error) {
             console.error('💥 Erreur initiatePayment:', error);
-            
+            this.showAlert('Erreur de connexion. Vérifiez votre internet.', 'danger');
+        } finally {
             const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
             if (subscribeBtn) {
                 subscribeBtn.innerHTML = 'S\'abonner';
                 subscribeBtn.disabled = false;
             }
-            
-            this.showAlert('Erreur de connexion. Vérifiez votre internet.', 'danger');
         }
     }
-    
-    async checkStatusAndRedirect(transactionId, userId, attempt) {
-        const MAX_ATTEMPTS = 5;
-        const DELAY = 3000;
 
+    // ✅ FONCTION MANQUANTE AJOUTÉE
+    async processPaymentReturn() {
         try {
-            console.log(`🔍 Vérification statut transaction... (Tentative ${attempt + 1}/${MAX_ATTEMPTS})`);
-            const token = this.auth.getToken();
+            const urlParams = new URLSearchParams(window.location.search);
+            const transactionId = urlParams.get('transactionId') || localStorage.getItem('pendingTransaction');
             
+            if (!transactionId) {
+                throw new Error('Aucun ID de transaction trouvé');
+            }
+
+            console.log('🔄 Traitement du retour de paiement pour la transaction:', transactionId);
+
+            const token = this.auth.getToken();
             if (!token) {
-                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'danger');
-                return;
+                throw new Error('Utilisateur non connecté');
             }
 
             const API_BASE_URL = await this.getActiveAPIUrl();
-            const response = await fetch(`${API_BASE_URL}/api/payment/check/${transactionId}`, {
-                method: 'GET',
+            
+            const response = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
-                }
+                },
+                body: JSON.stringify({ transactionId })
             });
 
             const data = await response.json();
-            console.log('📨 Réponse check-status:', data);
+            console.log('📨 Réponse process-return:', data);
 
-            if (data.success && data.transactionStatus === 'completed') {
-                console.log('✅ Paiement confirmé, code d\'accès reçu.');
-                this.showAlert('Votre paiement a été confirmé! Un code d\'accès vous a été envoyé par email.', 'success');
-                const accessCodeModal = new bootstrap.Modal(document.getElementById('codeModal'));
-                accessCodeModal.show();
-                
-                if (data.accessCode) {
-                    document.getElementById('accessCode').value = data.accessCode;
+            if (data.success) {
+                if (data.status === 'completed') {
+                    this.showPaymentSuccess(data.accessCode, data.user);
+                    localStorage.removeItem('pendingTransaction');
+                } else {
+                    this.showPaymentPending();
                 }
-                return;
-            } else if (data.transactionStatus === 'pending' && attempt < MAX_ATTEMPTS) {
-                console.log('⏳ Paiement en attente, nouvelle tentative...');
-                setTimeout(() => this.checkStatusAndRedirect(transactionId, userId, attempt + 1), DELAY);
             } else {
-                console.error('❌ Échec confirmation paiement après plusieurs tentatives.');
-                this.showAlert('Le paiement n\'a pas pu être confirmé. Vérifiez votre email ou contactez le support.', 'warning');
+                throw new Error(data.message || 'Erreur lors du traitement du paiement');
             }
         } catch (error) {
-            console.error('💥 Erreur vérification paiement:', error);
-            if (attempt < MAX_ATTEMPTS) {
-                setTimeout(() => this.checkStatusAndRedirect(transactionId, userId, attempt + 1), DELAY);
-            } else {
-                this.showAlert('Erreur de connexion. Veuillez réessayer plus tard.', 'danger');
-            }
+            console.error('Erreur lors du traitement du retour de paiement:', error);
+            this.showPaymentError(error.message);
         }
+    }
+
+    showPaymentSuccess(accessCode, user) {
+        const statusElement = document.getElementById('payment-status');
+        statusElement.innerHTML = `
+            <div class="alert alert-success">
+                <h4>✅ Paiement Réussi!</h4>
+                <p>Votre abonnement premium a été activé avec succès.</p>
+                <div class="access-code my-3">
+                    <strong>Votre code d'accès:</strong>
+                    <div class="h4 text-primary">${accessCode}</div>
+                </div>
+                <p>Un email de confirmation vous a été envoyé.</p>
+                <button onclick="window.location.href = '/quiz.html'" class="btn btn-success">Commencer les quiz</button>
+            </div>
+        `;
+
+        // Mettre à jour l'utilisateur dans le localStorage
+        if (user) {
+            localStorage.setItem('quizUser', JSON.stringify(user));
+            this.auth.user = user;
+        }
+    }
+
+    showPaymentPending() {
+        const statusElement = document.getElementById('payment-status');
+        statusElement.innerHTML = `
+            <div class="alert alert-warning">
+                <h4>⏳ Paiement en Cours de Validation</h4>
+                <p>Votre paiement est en cours de traitement. Cela peut prendre quelques minutes.</p>
+                <p>Vous recevrez un email de confirmation une fois le paiement validé.</p>
+                <button onclick="window.location.href = '/'" class="btn btn-primary">Retour à l'accueil</button>
+            </div>
+        `;
+    }
+
+    showPaymentError(message) {
+        const statusElement = document.getElementById('payment-status');
+        statusElement.innerHTML = `
+            <div class="alert alert-danger">
+                <h4>❌ Erreur de Paiement</h4>
+                <p>${message}</p>
+                <button onclick="window.location.href = '/payment.html'" class="btn btn-primary">Réessayer</button>
+            </div>
+        `;
     }
 
     async validateAccessCode() {
@@ -278,7 +313,7 @@ export class Payment {
 
             const API_BASE_URL = await this.getActiveAPIUrl();
             
-            const response = await fetch(`${API_BASE_URL}/api/access-code/resend`, {
+            const response = await fetch(`${API_BASE_URL}/api/payment/resend-code`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -345,11 +380,5 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Module Payment initialisé avec succès');
     } catch (error) {
         console.error('❌ Erreur initialisation Payment:', error);
-    }
-    
-    const pendingCode = localStorage.getItem('pendingAccessCode');
-    if (pendingCode && document.getElementById('accessCode')) {
-        document.getElementById('accessCode').value = pendingCode;
-        localStorage.removeItem('pendingAccessCode');
     }
 });

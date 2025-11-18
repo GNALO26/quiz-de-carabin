@@ -1,7 +1,6 @@
-// backend/controllers/paymentController.js
 const User = require('../models/User');
 const AccessCode = require('../models/AccessCode');
-const generateCode = require('../utils/generateCode'); // Assurez-vous que ce fichier existe
+const generateCode = require('../utils/generateCode');
 const Transaction = require('../models/Transaction');
 const crypto = require('crypto');
 const transporter = require('../config/email');
@@ -95,8 +94,8 @@ exports.initiatePayment = async (req, res) => {
 
     const user = req.user;
     const uniqueReference = generateUniqueReference();
-
     const transactionID = generateUniqueTransactionID();
+
     const transaction = new Transaction({
       userId: req.user._id,
       transactionId: transactionID,
@@ -107,70 +106,65 @@ exports.initiatePayment = async (req, res) => {
 
     await transaction.save();
 
-    // Configuration KkiaPay
-    const frontendUrl = process.env.FRONTEND_URL;
+    // ✅ CORRECTION: Configuration KkiaPay avec URL correcte
+    const frontendUrl = process.env.FRONTEND_URL || 'https://quiz-de-carabin.netlify.app';
     
     const paymentData = {
       amount: plan.amount,
-      phone: user.phone, // Optionnel - peut être null
+      phone: user.phone || '+22900000000',
+      email: user.email,
+      callback: `${frontendUrl}/payment-callback.html?transactionId=${transactionID}`,
       metadata: {
         user_id: req.user._id.toString(),
         user_email: req.user.email,
-        service: 'premium_subscription',
         transaction_id: transactionID,
-        unique_reference: uniqueReference,
-        timestamp: Date.now().toString(),
         plan_id: planId
-      },
-      // ✅ CORRECTION: S'assurer que le callback est bon
-      callback: `${frontendUrl}/payment-callback.html?transactionId=${transactionID}`,
+      }
     };
 
-    console.log('Création du paiement KkiaPay pour le plan', planId, '...');
+    console.log('📤 Création paiement KkiaPay avec données:', paymentData);
     
     const paymentResponse = await kkiapay.createPayment(paymentData);
     
-    if (paymentResponse && paymentResponse.payment_link) { // ✅ CORRECTION: Vérifier 'payment_link' ou 'url' selon Kkiapay
+    if (paymentResponse && paymentResponse.success && paymentResponse.payment_link) {
       transaction.kkiapayTransactionId = paymentResponse.transactionId;
-      transaction.kkiapayPaymentUrl = paymentResponse.payment_link || paymentResponse.url; // S'assurer de capturer la bonne URL
+      transaction.kkiapayPaymentUrl = paymentResponse.payment_link;
       await transaction.save();
 
-      console.log('✅ Paiement KkiaPay créé avec succès');
+      console.log('✅ Paiement KkiaPay créé avec succès:', paymentResponse.payment_link);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: "Paiement initié avec succès",
-        paymentUrl: paymentResponse.payment_link || paymentResponse.url,
+        paymentUrl: paymentResponse.payment_link,
         transactionId: transactionID
       });
     } else {
       transaction.status = 'failed';
       await transaction.save();
 
-      console.error('❌ Échec de la création du paiement KkiaPay:', paymentResponse);
+      console.error('❌ Échec création paiement KkiaPay:', paymentResponse);
       
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
-        message: "Erreur lors de la création du paiement: " + (paymentResponse?.message || 'Erreur inconnue')
+        message: "Erreur lors de la création du paiement: " + (paymentResponse?.message || 'Réponse invalide de KkiaPay')
       });
     }
   } catch (error) {
-    // ✅ CORRECTION: Gestion d'erreur détaillée pour le 500
-    console.error('❌ Erreur dans initiatePayment (server-side):', error.message);
+    console.error('❌ Erreur dans initiatePayment:', error.message);
     
     if (error.response) {
-         console.error('Détail Erreur API Kkiapay:', JSON.stringify(error.response.data, null, 2));
-         return res.status(error.response.status || 500).json({ 
-             success: false, 
-             message: error.response.data.message || 'Erreur lors de la création du paiement Kkiapay.',
-             details: error.response.data 
-         });
+      console.error('Détail erreur API Kkiapay:', error.response.data);
+      return res.status(error.response.status || 500).json({ 
+        success: false, 
+        message: error.response.data.message || 'Erreur API KkiaPay'
+      });
     }
     
     return res.status(500).json({ 
-        success: false, 
-        message: 'Erreur interne du serveur lors de l\'initialisation du paiement.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      success: false, 
+      message: 'Erreur interne du serveur',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -207,7 +201,6 @@ exports.activatePremiumSubscription = async (transaction) => {
     console.log(`✅ Abonnement activé pour l'utilisateur ${user.email}`);
 };
 
-
 // Fonction de traitement du retour de paiement
 exports.processPaymentReturn = async (req, res) => {
     try {
@@ -243,7 +236,6 @@ exports.processPaymentReturn = async (req, res) => {
             const paymentStatus = await kkiapay.verifyTransaction(transaction.kkiapayTransactionId);
             
             if (paymentStatus && paymentStatus.status === 'SUCCESS') {
-                // ✅ UTILISATION DE LA FONCTION EXPORTÉE
                 await exports.activatePremiumSubscription(transaction); 
                 
                 const user = await User.findById(transaction.userId);
@@ -299,7 +291,6 @@ exports.checkTransactionStatus = async (req, res) => {
             const paymentStatus = await kkiapay.verifyTransaction(transaction.kkiapayTransactionId);
             
             if (paymentStatus && paymentStatus.status === 'SUCCESS') {
-                // ✅ UTILISATION DE LA FONCTION EXPORTÉE
                 await exports.activatePremiumSubscription(transaction);
                 
                 const user = await User.findById(transaction.userId);
@@ -326,7 +317,6 @@ exports.checkTransactionStatus = async (req, res) => {
     }
 };
 
-
 // Obtenir le code d'accès de la dernière transaction
 exports.getLatestAccessCode = async (req, res) => {
   try {
@@ -350,7 +340,57 @@ exports.getLatestAccessCode = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Erreur serveur"
+      message: "Erreur server"
     });
   }
+};
+
+// ✅ AJOUT: Handler pour les webhooks KkiaPay
+exports.handleKkiapayWebhook = async (req, res) => {
+    try {
+        console.log('=== DÉBUT WEBHOOK KKiaPay ===');
+        console.log('Body reçu:', JSON.stringify(req.body, null, 2));
+        
+        const { transactionId, status, metadata } = req.body;
+        
+        if (!transactionId) {
+            console.error('❌ Webhook: transactionId manquant');
+            return res.status(400).send('transactionId manquant');
+        }
+
+        // Trouver la transaction par l'ID KkiaPay
+        const transaction = await Transaction.findOne({ 
+            kkiapayTransactionId: transactionId 
+        });
+
+        if (!transaction) {
+            console.error(`❌ Webhook: Transaction non trouvée: ${transactionId}`);
+            return res.status(404).send('Transaction non trouvée');
+        }
+
+        console.log(`📦 Webhook: Transaction trouvée - ${transaction.transactionId}, Statut: ${status}`);
+
+        if (status === 'SUCCESS' && transaction.status !== 'completed') {
+            console.log('🎉 Webhook: Paiement réussi, activation de l\'abonnement...');
+            
+            // Activer l'abonnement premium
+            await exports.activatePremiumSubscription(transaction);
+            
+            console.log(`✅ Webhook: Abonnement activé pour ${transaction.userId}`);
+            
+            return res.status(200).send('Webhook traité avec succès');
+        } else if (status === 'FAILED') {
+            transaction.status = 'failed';
+            await transaction.save();
+            console.log(`❌ Webhook: Paiement échoué pour ${transaction.transactionId}`);
+            return res.status(200).send('Webhook traité - paiement échoué');
+        } else {
+            console.log(`ℹ Webhook: Statut ${status} ignoré pour ${transaction.transactionId}`);
+            return res.status(200).send('Webhook traité - statut ignoré');
+        }
+
+    } catch (error) {
+        console.error('❌ ERREUR WEBHOOK:', error);
+        res.status(500).send('Erreur interne du serveur');
+    }
 };

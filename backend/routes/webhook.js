@@ -1,4 +1,4 @@
-const express = require('express');
+/*const express = require('express');
 const kkiapay = require('../config/kkiapay');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
@@ -103,5 +103,14 @@ router.post('/kkiapay', express.json(), async (req, res) => {
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
+
+module.exports = router;*/
+const express = require('express');
+const router = express.Router();
+const paymentController = require('../controllers/paymentController');
+const verifyWebhook = require('../middleware/verifyWebhook');
+
+// Webhook KkiaPay
+router.post('/kkiapay', verifyWebhook, paymentController.handleKkiapayWebhook);
 
 module.exports = router;

@@ -3,100 +3,106 @@ const crypto = require('crypto');
 
 class KkiaPay {
   constructor() {
-    // ✅ CORRECTION: Utilisation de .trim() pour supprimer les espaces ou sauts de ligne invisibles
-    this.publicKey = process.env.KKIAPAY_PUBLIC_KEY ? process.env.KKIAPAY_PUBLIC_KEY.trim() : null;
-    this.privateKey = process.env.KKIAPAY_PRIVATE_KEY ? process.env.KKIAPAY_PRIVATE_KEY.trim() : null;
-    this.secretKey = process.env.KKIAPAY_SECRET_KEY ? process.env.KKIAPAY_SECRET_KEY.trim() : null;
-    
+    this.publicKey = process.env.KKIAPAY_PUBLIC_KEY?.trim();
+    this.privateKey = process.env.KKIAPAY_PRIVATE_KEY?.trim();
+    this.secretKey = process.env.KKIAPAY_SECRET_KEY?.trim();
     this.mode = process.env.KKIAPAY_MODE || 'live';
     this.baseURL = this.mode === 'test' 
       ? 'https://api-sandbox.kkiapay.me' 
       : 'https://api.kkiapay.me';
+    
+    console.log('🔧 Configuration KkiaPay chargée - Mode:', this.mode);
   }
 
-  // Créer un paiement - CORRIGÉ
   async createPayment(paymentData) {
     try {
-      console.log('💰 Création paiement KkiaPay...');
-
-      const url = `${this.baseURL}/api/v1/payments`;
-
+      console.log('💰 Tentative de création de paiement KkiaPay...');
+      
+      // ✅ CORRECTION: Utiliser le bon endpoint et format
       const payload = {
         amount: Math.round(paymentData.amount),
-        reason: paymentData.description || `Abonnement ${paymentData.planId || 'Premium'}`,
-        name: paymentData.name || 'Client Quiz',
+        apikey: this.publicKey,
         phone: paymentData.phone,
         email: paymentData.email,
         callback: paymentData.callback,
-        partnerId: paymentData.metadata?.user_id,
-        metadata: paymentData.metadata
+        data: paymentData.metadata,
+        theme: "#13a718ff",
+        name: "Quiz de Carabin"
       };
 
-      console.log('🌐 URL:', url);
+      // Nettoyer les champs vides
+      Object.keys(payload).forEach(key => {
+        if (payload[key] === '' || payload[key] === null || payload[key] === undefined) {
+          delete payload[key];
+        }
+      });
 
-      // APPEL API AVEC LES BONS HEADERS (maintenant nettoyés)
-      const response = await axios.post(url, payload, {
+      console.log('📤 Payload envoyé à KkiaPay:', JSON.stringify(payload, null, 2));
+
+      const response = await axios.post(`${this.baseURL}/api/v1/url, payload`, {
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'x-api-key': this.publicKey,
-          'x-private-key': this.privateKey,
-          'x-secret-key': this.secretKey
+          'Accept': 'application/json'
         },
         timeout: 15000
       });
 
-      console.log('✅ Réponse KkiaPay réussie. Statut:', response.status);
-      return response.data;
+      console.log('✅ Réponse KkiaPay reçue:', JSON.stringify(response.data, null, 2));
+
+      if (response.data && response.data.url) {
+        return {
+          success: true,
+          payment_link: response.data.url,
+          transactionId: response.data.transactionId || `KKP_${Date.now()}`
+        };
+      } else {
+        throw new Error('URL de paiement non reçue dans la réponse');
+      }
 
     } catch (error) {
       console.error('❌ Erreur KkiaPay createPayment:');
       if (error.response) {
-        console.error(`Status: ${error.response.status}`);
-        console.error('Data:', JSON.stringify(error.response.data, null, 2));
+        console.error('Status:', error.response.status);
+        console.error('Data:', error.response.data);
+      } else if (error.request) {
+        console.error('Aucune réponse reçue');
       } else {
-        console.error('Message:', error.message);
+        console.error('Erreur configuration:', error.message);
       }
-      throw error; 
-    }
-  }
-
-  // Vérifier le statut d'une transaction
-  async verifyTransaction(transactionId) {
-    try {
-      const url = `${this.baseURL}/api/v1/transactions/verify`;
-      console.log('🔍 Vérification transaction:', transactionId);
-
-      const response = await axios.post(url, {
-        transactionId: transactionId
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.publicKey,
-          'x-private-key': this.privateKey,
-          'x-secret-key': this.secretKey
-        }
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error('Erreur KkiaPay verifyTransaction:', error.response?.data || error.message);
       throw error;
     }
   }
 
-  // Valider une signature webhook
+  async verifyTransaction(transactionId) {
+    try {
+      const response = await axios.get(
+        `${this.baseURL}/api/v1/transactions/${transactionId}/status`,
+        {
+          headers: {
+            'Accept': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+      
+      return response.data;
+    } catch (error) {
+      console.error('Erreur vérification transaction:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
   verifyWebhookSignature(payload, signature) {
     try {
-        const computedSignature = crypto
+      const computedSignature = crypto
         .createHmac('sha256', this.secretKey)
         .update(JSON.stringify(payload))
         .digest('hex');
-        
-        return computedSignature === signature;
-    } catch(e) {
-        console.error("Erreur de vérification de signature:", e);
-        return false;
+      
+      return computedSignature === signature;
+    } catch (error) {
+      console.error("Erreur vérification signature:", error);
+      return false;
     }
   }
 }

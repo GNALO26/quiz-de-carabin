@@ -1,63 +1,19 @@
-// backend/routes/payment.js
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const auth = require('../middleware/auth');
 const Transaction = require('../models/Transaction');
-const { sendAccessCodeEmail } = require('../controllers/paymentController');
 const AccessCode = require('../models/AccessCode');
+const { sendAccessCodeEmail } = require('../controllers/paymentController');
 
-// Importation des middlewares pour le webhook
-// ✅ Ces imports ne sont plus nécessaires car la route est déplacée
-// const verifyPaydunyaSignature = require('../middleware/verifyWebhook'); 
-// const webhookLogger = require('../middleware/webhookLogger');
-
-// Route pour initier un paiement
+// ✅ ROUTE INITIATE MANQUANTE - AJOUTÉE
 router.post('/initiate', auth, paymentController.initiatePayment);
-
-// ✅ La route /callback a été déplacée dans le fichier webhook.js
 
 // Route pour traiter le retour de paiement
 router.post('/process-return', auth, paymentController.processPaymentReturn);
 
 // Route pour vérifier manuellement une transaction
-router.get('/transaction/:transactionId/status', auth, paymentController.checkTransactionStatus);
-
-// Route pour récupérer le code d'accès d'une transaction spécifique
-router.get('/transaction/:transactionId/access-code', auth, async (req, res) => {
-  try {
-    const { transactionId } = req.params;
-    
-    const transaction = await Transaction.findOne({
-      transactionId,
-      userId: req.user._id
-    });
-    
-    if (!transaction) {
-      return res.status(404).json({
-        success: false,
-        message: "Transaction non trouvée"
-      });
-    }
-    
-    if (!transaction.accessCode) {
-      return res.status(404).json({
-        success: false,
-        message: "Aucun code d'accès trouvé pour cette transaction"
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      accessCode: transaction.accessCode
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur"
-    });
-  }
-});
+router.get('/check-status/:transactionId', auth, paymentController.checkTransactionStatus);
 
 // Route pour obtenir le code d'accès de la dernière transaction
 router.get('/latest-access-code', auth, paymentController.getLatestAccessCode);
@@ -121,60 +77,13 @@ router.post('/resend-code', auth, async (req, res) => {
   }
 });
 
-// Route de test pour vérifier l'envoi d'emails
-router.get('/test-email', async (req, res) => {
-  try {
-    const result = await sendAccessCodeEmail('test@example.com', 'TEST123', 'Test User');
-    
-    if (result) {
-      res.json({ success: true, message: 'Email de test envoyé avec succès' });
-    } else {
-      res.status(500).json({ success: false, message: 'Erreur lors de l\'envoi de l\'email' });
-    }
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Route de debug pour simuler un webhook PayDunya (à utiliser en développement seulement)
-router.post('/debug-webhook', async (req, res) => {
-  try {
-    if (process.env.NODE_ENV !== 'development') {
-      return res.status(403).json({ error: 'Cette route n\'est disponible qu\'en mode développement' });
-    }
-    
-    const { transactionId, status } = req.body;
-    
-    if (!transactionId || !status) {
-      return res.status(400).json({ error: 'transactionId et status requis' });
-    }
-    
-    const transaction = await Transaction.findOne({ transactionId });
-    if (!transaction) {
-      return res.status(404).json({ error: 'Transaction non trouvée' });
-    }
-    
-    const mockWebhook = {
-      status: status,
-      invoice: {
-        token: transaction.paydunyaInvoiceToken,
-        customer: {
-          email: 'test@example.com'
-        }
-      },
-      custom_data: {
-        user_id: transaction.userId.toString(),
-        transaction_id: transaction.transactionId
-      }
-    };
-    
-    req.body = mockWebhook;
-    
-    await paymentController.handleCallback(req, res);
-    
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+// Route de test pour vérifier que le routeur fonctionne
+router.get('/test', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Route payment fonctionne!',
+    timestamp: new Date().toISOString()
+  });
 });
 
 module.exports = router;
