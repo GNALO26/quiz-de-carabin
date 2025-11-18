@@ -132,6 +132,22 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
     });
   });
 
+  // Routes de paiement
+const paymentController = require('./controllers/paymentController');
+app.post('/api/payments/initiate', authMiddleware, paymentController.initiatePayment);
+app.post('/api/payments/process-return', authMiddleware, paymentController.processPaymentReturn);
+app.get('/api/payments/check-status/:transactionId', authMiddleware, paymentController.checkTransactionStatus);
+app.get('/api/payments/latest-access-code', authMiddleware, paymentController.getLatestAccessCode);
+
+// Route de santé pour les tests
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'API is running', 
+    timestamp: new Date().toISOString() 
+  });
+});
+
   // Gestionnaire d'erreurs global
   app.use((err, req, res, next) => {
     console.error('Error:', err);

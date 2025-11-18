@@ -84,93 +84,116 @@ exports.sendAccessCodeEmail = sendAccessCodeEmail;
 exports.initiatePayment = async (req, res) => {
   try {
     console.log('=== DÉBUT INITIATION PAIEMENT KKiaPay ===');
-    
+    console.log('Données reçues:', req.body);
+    console.log('Utilisateur:', req.user.email);
+
     const { planId, amount } = req.body;
     const plan = pricing[planId];
     
-    if (!plan || plan.amount !== parseInt(amount)) {
-      console.error('❌ Erreur: Plan d\'abonnement ou montant invalide:', { planId, amount });
-      return res.status(400).json({ success: false, message: 'Plan d\'abonnement ou montant invalide.' });
+    if (!plan) {
+      console.error('❌ Plan non trouvé:', planId);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Plan d\'abonnement invalide.' 
+      });
+    }
+
+    if (plan.amount !== parseInt(amount)) {
+      console.error('❌ Montant incorrect:', amount, 'attendu:', plan.amount);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Montant incorrect pour ce plan.' 
+      });
     }
 
     const user = req.user;
     const uniqueReference = generateUniqueReference();
-
     const transactionID = generateUniqueTransactionID();
+
+    // Créer la transaction
     const transaction = new Transaction({
-      userId: req.user._id,
+      userId: user._id,
       transactionId: transactionID,
       amount: plan.amount,
       durationInMonths: plan.duration,
-      status: 'pending'
+      status: 'pending',
+      planId: planId
     });
 
     await transaction.save();
+    console.log('✅ Transaction sauvegardée:', transactionID);
 
     // Configuration KkiaPay
-    const frontendUrl = process.env.FRONTEND_URL;
+    const frontendUrl = process.env.FRONTEND_URL || 'https://quiz-de-carabin.netlify.app';
     
     const paymentData = {
       amount: plan.amount,
-      phone: user.phone, // Optionnel - peut être null
+      phone: user.phone || '+22900000000', // Valeur par défaut
+      name: user.name || 'Client Quiz',
+      email: user.email,
+      reason: plan.description,
+      callback: `${frontendUrl}/payment-callback.html?transactionId=${transactionID}`,
       metadata: {
-        user_id: req.user._id.toString(),
-        user_email: req.user.email,
+        user_id: user._id.toString(),
+        user_email: user.email,
         service: 'premium_subscription',
         transaction_id: transactionID,
         unique_reference: uniqueReference,
         timestamp: Date.now().toString(),
         plan_id: planId
-      },
-      // ✅ CORRECTION: S'assurer que le callback est bon
-      callback: `${frontendUrl}/payment-callback.html?transactionId=${transactionID}`,
+      }
     };
 
-    console.log('Création du paiement KkiaPay pour le plan', planId, '...');
-    
+    console.log('🌐 Création paiement KkiaPay...');
     const paymentResponse = await kkiapay.createPayment(paymentData);
     
-    if (paymentResponse && paymentResponse.payment_link) { // ✅ CORRECTION: Vérifier 'payment_link' ou 'url' selon Kkiapay
-      transaction.kkiapayTransactionId = paymentResponse.transactionId;
-      transaction.kkiapayPaymentUrl = paymentResponse.payment_link || paymentResponse.url; // S'assurer de capturer la bonne URL
+    if (paymentResponse && (paymentResponse.payment_link || paymentResponse.url)) {
+      transaction.kkiapayTransactionId = paymentResponse.transactionId || paymentResponse.id;
+      transaction.kkiapayPaymentUrl = paymentResponse.payment_link || paymentResponse.url;
       await transaction.save();
 
       console.log('✅ Paiement KkiaPay créé avec succès');
+      console.log('🔗 URL de paiement:', transaction.kkiapayPaymentUrl);
 
       res.status(200).json({
         success: true,
         message: "Paiement initié avec succès",
-        paymentUrl: paymentResponse.payment_link || paymentResponse.url,
+        paymentUrl: transaction.kkiapayPaymentUrl,
         transactionId: transactionID
       });
     } else {
       transaction.status = 'failed';
       await transaction.save();
 
-      console.error('❌ Échec de la création du paiement KkiaPay:', paymentResponse);
-      
+      console.error('❌ Échec création paiement KkiaPay:', paymentResponse);
       res.status(400).json({
         success: false,
-        message: "Erreur lors de la création du paiement: " + (paymentResponse?.message || 'Erreur inconnue')
+        message: "Erreur lors de la création du paiement",
+        details: paymentResponse
       });
     }
   } catch (error) {
-    // ✅ CORRECTION: Gestion d'erreur détaillée pour le 500
-    console.error('❌ Erreur dans initiatePayment (server-side):', error.message);
+    console.error('❌ Erreur initiatePayment:', error);
     
+    // Gestion d'erreur détaillée
+    let statusCode = 500;
+    let errorMessage = 'Erreur interne du serveur';
+
     if (error.response) {
-         console.error('Détail Erreur API Kkiapay:', JSON.stringify(error.response.data, null, 2));
-         return res.status(error.response.status || 500).json({ 
-             success: false, 
-             message: error.response.data.message || 'Erreur lors de la création du paiement Kkiapay.',
-             details: error.response.data 
-         });
+      statusCode = error.response.status || 500;
+      errorMessage = error.response.data?.message || 'Erreur API KkiaPay';
+      console.error('Détails erreur KkiaPay:', error.response.data);
+    } else if (error.request) {
+      errorMessage = 'Impossible de contacter le service de paiement';
+      console.error('Erreur réseau:', error.request);
+    } else {
+      errorMessage = error.message;
     }
-    
-    return res.status(500).json({ 
-        success: false, 
-        message: 'Erreur interne du serveur lors de l\'initialisation du paiement.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+
+    res.status(statusCode).json({ 
+      success: false, 
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
