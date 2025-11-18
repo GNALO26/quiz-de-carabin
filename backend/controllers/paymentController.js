@@ -1,6 +1,7 @@
+// backend/controllers/paymentController.js
 const User = require('../models/User');
 const AccessCode = require('../models/AccessCode');
-const generateCode = require('../utils/generateCode');
+const generateCode = require('../utils/generateCode'); // Assurez-vous que ce fichier existe
 const Transaction = require('../models/Transaction');
 const crypto = require('crypto');
 const transporter = require('../config/email');
@@ -121,17 +122,17 @@ exports.initiatePayment = async (req, res) => {
         timestamp: Date.now().toString(),
         plan_id: planId
       },
+      // ✅ CORRECTION: S'assurer que le callback est bon
       callback: `${frontendUrl}/payment-callback.html?transactionId=${transactionID}`,
-      // KkiaPay gère automatiquement les webhooks avec les métadonnées
     };
 
     console.log('Création du paiement KkiaPay pour le plan', planId, '...');
     
     const paymentResponse = await kkiapay.createPayment(paymentData);
     
-    if (paymentResponse && paymentResponse.transactionId) {
+    if (paymentResponse && paymentResponse.payment_link) { // ✅ CORRECTION: Vérifier 'payment_link' ou 'url' selon Kkiapay
       transaction.kkiapayTransactionId = paymentResponse.transactionId;
-      transaction.kkiapayPaymentUrl = paymentResponse.url;
+      transaction.kkiapayPaymentUrl = paymentResponse.payment_link || paymentResponse.url; // S'assurer de capturer la bonne URL
       await transaction.save();
 
       console.log('✅ Paiement KkiaPay créé avec succès');
@@ -139,7 +140,7 @@ exports.initiatePayment = async (req, res) => {
       res.status(200).json({
         success: true,
         message: "Paiement initié avec succès",
-        paymentUrl: paymentResponse.url,
+        paymentUrl: paymentResponse.payment_link || paymentResponse.url,
         transactionId: transactionID
       });
     } else {
@@ -150,19 +151,62 @@ exports.initiatePayment = async (req, res) => {
       
       res.status(400).json({
         success: false,
-        message: "Erreur lors de la création du paiement: " + (paymentResponse.message || 'Erreur inconnue')
+        message: "Erreur lors de la création du paiement: " + (paymentResponse?.message || 'Erreur inconnue')
       });
     }
   } catch (error) {
-    console.error('❌ Erreur dans initiatePayment:', error);
+    // ✅ CORRECTION: Gestion d'erreur détaillée pour le 500
+    console.error('❌ Erreur dans initiatePayment (server-side):', error.message);
     
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de l'initiation du paiement",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    if (error.response) {
+         console.error('Détail Erreur API Kkiapay:', JSON.stringify(error.response.data, null, 2));
+         return res.status(error.response.status || 500).json({ 
+             success: false, 
+             message: error.response.data.message || 'Erreur lors de la création du paiement Kkiapay.',
+             details: error.response.data 
+         });
+    }
+    
+    return res.status(500).json({ 
+        success: false, 
+        message: 'Erreur interne du serveur lors de l\'initialisation du paiement.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
+
+// Fonction utilitaire pour activer l'abonnement premium
+exports.activatePremiumSubscription = async (transaction) => {
+    transaction.status = 'completed';
+    const accessCode = generateCode();
+    transaction.accessCode = accessCode;
+    
+    const user = await User.findById(transaction.userId);
+    
+    if (user) {
+        const newAccessCode = new AccessCode({
+            code: accessCode,
+            email: user.email,
+            userId: user._id,
+            expiresAt: addMonths(Date.now(), transaction.durationInMonths)
+        });
+        await newAccessCode.save();
+
+        let expiresAt = user.premiumExpiresAt && user.premiumExpiresAt > new Date()
+            ? user.premiumExpiresAt
+            : new Date();
+            
+        user.isPremium = true;
+        user.premiumExpiresAt = addMonths(expiresAt, transaction.durationInMonths);
+        await user.save();
+        
+        await sendAccessCodeEmail(user.email, accessCode, user.name);
+    }
+    
+    await transaction.save();
+    console.log(`✅ Abonnement activé pour l'utilisateur ${user.email}`);
+};
+
 
 // Fonction de traitement du retour de paiement
 exports.processPaymentReturn = async (req, res) => {
@@ -199,9 +243,8 @@ exports.processPaymentReturn = async (req, res) => {
             const paymentStatus = await kkiapay.verifyTransaction(transaction.kkiapayTransactionId);
             
             if (paymentStatus && paymentStatus.status === 'SUCCESS') {
-                console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement confirmé manuellement. Provisionnement de l'abonnement...`);
-                
-                await this.activatePremiumSubscription(transaction);
+                // ✅ UTILISATION DE LA FONCTION EXPORTÉE
+                await exports.activatePremiumSubscription(transaction); 
                 
                 const user = await User.findById(transaction.userId);
                 
@@ -256,7 +299,8 @@ exports.checkTransactionStatus = async (req, res) => {
             const paymentStatus = await kkiapay.verifyTransaction(transaction.kkiapayTransactionId);
             
             if (paymentStatus && paymentStatus.status === 'SUCCESS') {
-                await this.activatePremiumSubscription(transaction);
+                // ✅ UTILISATION DE LA FONCTION EXPORTÉE
+                await exports.activatePremiumSubscription(transaction);
                 
                 const user = await User.findById(transaction.userId);
                 
@@ -282,37 +326,6 @@ exports.checkTransactionStatus = async (req, res) => {
     }
 };
 
-// Fonction utilitaire pour activer l'abonnement premium
-exports.activatePremiumSubscription = async (transaction) => {
-    transaction.status = 'completed';
-    const accessCode = generateCode();
-    transaction.accessCode = accessCode;
-    
-    const user = await User.findById(transaction.userId);
-    
-    if (user) {
-        const newAccessCode = new AccessCode({
-            code: accessCode,
-            email: user.email,
-            userId: user._id,
-            expiresAt: addMonths(Date.now(), transaction.durationInMonths)
-        });
-        await newAccessCode.save();
-
-        let expiresAt = user.premiumExpiresAt && user.premiumExpiresAt > new Date()
-            ? user.premiumExpiresAt
-            : new Date();
-            
-        user.isPremium = true;
-        user.premiumExpiresAt = addMonths(expiresAt, transaction.durationInMonths);
-        await user.save();
-        
-        await sendAccessCodeEmail(user.email, accessCode, user.name);
-    }
-    
-    await transaction.save();
-    console.log(`✅ Abonnement activé pour l'utilisateur ${user.email}`);
-};
 
 // Obtenir le code d'accès de la dernière transaction
 exports.getLatestAccessCode = async (req, res) => {

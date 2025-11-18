@@ -1,8 +1,9 @@
 const axios = require('axios');
+const crypto = require('crypto');
 
 class KkiaPay {
   constructor() {
-    // CORRECTION: Utilisation de .trim() pour supprimer les espaces ou sauts de ligne invisibles
+    // ✅ CORRECTION: Utilisation de .trim() pour supprimer les espaces ou sauts de ligne invisibles
     this.publicKey = process.env.KKIAPAY_PUBLIC_KEY ? process.env.KKIAPAY_PUBLIC_KEY.trim() : null;
     this.privateKey = process.env.KKIAPAY_PRIVATE_KEY ? process.env.KKIAPAY_PRIVATE_KEY.trim() : null;
     this.secretKey = process.env.KKIAPAY_SECRET_KEY ? process.env.KKIAPAY_SECRET_KEY.trim() : null;
@@ -18,10 +19,8 @@ class KkiaPay {
     try {
       console.log('💰 Création paiement KkiaPay...');
 
-      // URL CORRIGÉE: Utilisation du endpoint /api/v1/payments
       const url = `${this.baseURL}/api/v1/payments`;
 
-      // CONSTRUCTION DU PAYLOAD
       const payload = {
         amount: Math.round(paymentData.amount),
         reason: paymentData.description || `Abonnement ${paymentData.planId || 'Premium'}`,
@@ -58,7 +57,6 @@ class KkiaPay {
       } else {
         console.error('Message:', error.message);
       }
-      // On lance l'erreur pour que le controller (paymentController.js) puisse la gérer
       throw error; 
     }
   }
@@ -87,10 +85,9 @@ class KkiaPay {
     }
   }
 
-  // Valider une signature webhook (laissez comme avant si elle fonctionne)
+  // Valider une signature webhook
   verifyWebhookSignature(payload, signature) {
     try {
-        const crypto = require('crypto');
         const computedSignature = crypto
         .createHmac('sha256', this.secretKey)
         .update(JSON.stringify(payload))

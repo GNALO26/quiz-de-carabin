@@ -66,7 +66,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   const userRoutes = require('./routes/user');
   const accessCodeRoutes = require('./routes/accessCode');
   const tokenRoutes = require('./routes/token');
-  const webhookRoutes = require('./routes/webhook'); // 👈 Importation du nouveau routeur
+  const webhookRoutes = require('./routes/webhook');
 
   const app = express();
 
@@ -107,9 +107,8 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   // Routes d'authentification (publiques)
   app.use('/api/auth', authRoutes);
   
-  // ✅ CORRECTION MAJEURE: Le webhook PayDunya est une route publique.
-  // Nous l'ajoutons en utilisant son propre routeur, avant le middleware d'authentification.
-  app.use('/api/payment', webhookRoutes);
+  // ✅ CORRECTION: Montage du routeur de webhook sur '/api/webhook' (Ligne 87)
+  app.use('/api/webhook', webhookRoutes);
 
   // Middleware d'authentification (pour les routes suivantes)
   app.use(auth);
