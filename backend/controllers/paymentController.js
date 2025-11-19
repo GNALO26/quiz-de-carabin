@@ -25,10 +25,6 @@ const generateUniqueTransactionID = () => {
   return 'TXN_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
 };
 
-const generateUniqueReference = () => {
-  return 'REF_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-};
-
 // Fonction pour envoyer des emails avec code d'accès
 const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') => {
   try {
@@ -76,7 +72,6 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur') 
   }
 };
 
-// Exporter la fonction
 exports.sendAccessCodeEmail = sendAccessCodeEmail;
 
 // Initier un paiement avec Widget KkiaPay
@@ -125,7 +120,7 @@ exports.initiatePayment = async (req, res) => {
         amount: plan.amount,
         key: process.env.KKIAPAY_PUBLIC_KEY,
         callback: `${process.env.FRONTEND_URL}/payment-callback.html?transactionId=${transactionID}`,
-        sandbox: process.env.KKIAPAY_MODE === 'test'
+        sandbox: false
       }
     });
 
@@ -431,108 +426,3 @@ exports.handleKkiapayWebhook = async (req, res) => {
         res.status(500).send('Erreur interne du serveur');
     }
 };
-
-// ✅ SOLUTION DE SECOURS : Activation manuelle (pour tests)
-exports.initiateManualPayment = async (req, res) => {
-  try {
-    console.log('=== DÉBUT PAIEMENT MANUEL (TEST) ===');
-    
-    const { planId, amount } = req.body;
-    const plan = pricing[planId];
-    
-    if (!plan || plan.amount !== parseInt(amount)) {
-      return res.status(400).json({ success: false, message: 'Plan invalide' });
-    }
-
-    const user = req.user;
-    const transactionID = generateUniqueTransactionID();
-
-    console.log('🎯 ACTIVATION MANUELLE - Création transaction:', {
-      user: user.email,
-      plan: planId,
-      amount: plan.amount,
-      transactionId: transactionID
-    });
-
-    // Créer la transaction directement complétée
-    const transaction = new Transaction({
-      userId: req.user._id,
-      transactionId: transactionID,
-      amount: plan.amount,
-      durationInMonths: plan.duration,
-      status: 'completed',
-      paymentGateway: 'manual',
-      description: `Abonnement activé manuellement - ${plan.description}`
-    });
-
-    // Générer le code d'accès
-    const accessCode = generateCode();
-    transaction.accessCode = accessCode;
-
-    // Activer l'abonnement premium pour l'utilisateur
-    const userUpdate = await User.findById(req.user._id);
-    if (userUpdate) {
-      let expiresAt = userUpdate.premiumExpiresAt && userUpdate.premiumExpiresAt > new Date()
-        ? userUpdate.premiumExpiresAt
-        : new Date();
-        
-      userUpdate.isPremium = true;
-      userUpdate.premiumExpiresAt = addMonths(expiresAt, plan.duration);
-      await userUpdate.save();
-      
-      console.log('✅ Abonnement premium activé pour:', userUpdate.email);
-    }
-
-    // Créer le code d'accès
-    const newAccessCode = new AccessCode({
-      code: accessCode,
-      email: user.email,
-      userId: user._id,
-      expiresAt: addMonths(Date.now(), plan.duration)
-    });
-    await newAccessCode.save();
-
-    // Sauvegarder la transaction
-    await transaction.save();
-
-    // Envoyer l'email avec le code
-    const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name);
-    
-    if (emailSent) {
-      console.log('📧 Email de confirmation envoyé à:', user.email);
-    } else {
-      console.warn('⚠ Email non envoyé mais abonnement activé pour:', user.email);
-    }
-
-    console.log('✅ TRANSACTION MANUELLE RÉUSSIE:', {
-      transactionId: transactionID,
-      accessCode: accessCode,
-      user: user.email
-    });
-
-    // Retourner la réponse de succès
-    return res.status(200).json({
-      success: true,
-      message: "Abonnement activé avec succès ! (Mode manuel)",
-      accessCode: accessCode,
-      transactionId: transactionID,
-      user: {
-        email: user.email,
-        isPremium: true,
-        premiumExpiresAt: userUpdate.premiumExpiresAt
-      },
-      note: "Mode manuel activé - Paiement simulé pour déblocage"
-    });
-
-  } catch (error) {
-    console.error('❌ Erreur initiateManualPayment:', error.message);
-    
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Erreur lors de l\'activation manuelle',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-module.exports = exports;

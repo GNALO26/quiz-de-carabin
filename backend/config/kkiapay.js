@@ -7,9 +7,8 @@ class KkiaPay {
     this.privateKey = process.env.KKIAPAY_PRIVATE_KEY?.trim();
     this.secretKey = process.env.KKIAPAY_SECRET_KEY?.trim();
     this.mode = process.env.KKIAPAY_MODE || 'live';
-    this.baseURL = this.mode === 'test' 
-      ? 'https://api-sandbox.kkiapay.me' 
-      : 'https://api.kkiapay.me';
+    
+    this.baseURL = 'https://api.kkiapay.me';
     
     console.log('🔧 Configuration KkiaPay chargée - Mode:', this.mode);
     console.log('🔑 Clé publique:', this.publicKey ? '✓ Configurée' : '✗ Manquante');
@@ -20,20 +19,18 @@ class KkiaPay {
     try {
       console.log('💰 Tentative de création de paiement KkiaPay...');
       
-      // ✅ FORMAT CORRECT POUR L'API KKiaPay
       const payload = {
         amount: Math.round(paymentData.amount),
-        apikey: this.publicKey,
+        api_key: this.publicKey,
         phone: paymentData.phone || '+2290156035888',
         email: paymentData.email,
         callback: paymentData.callback,
-        data: JSON.stringify(paymentData.metadata || {}), // ✅ Doit être une string
+        data: JSON.stringify(paymentData.metadata || {}),
         theme: "#13a718",
         name: "Quiz de Carabin",
-        sandbox: this.mode === 'test' // ✅ Ajouter le paramètre sandbox si en test
+        sandbox: false
       };
 
-      // Nettoyer les champs vides
       Object.keys(payload).forEach(key => {
         if (payload[key] === '' || payload[key] === null || payload[key] === undefined) {
           delete payload[key];
@@ -41,17 +38,14 @@ class KkiaPay {
       });
 
       console.log('📤 Payload envoyé à KkiaPay:', JSON.stringify(payload, null, 2));
-      console.log('🌐 URL appelée:', `${this.baseURL}/api/v1/transactions`);
 
-      // ✅ CORRECTION: Utiliser axios avec le bon format
       const response = await axios({
         method: 'POST',
         url: `${this.baseURL}/api/v1/transactions`,
         data: payload,
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-API-KEY': this.publicKey
+          'Accept': 'application/json'
         },
         timeout: 30000
       });
@@ -77,19 +71,17 @@ class KkiaPay {
         console.error('URL:', error.response.config?.url);
       } else if (error.request) {
         console.error('Aucune réponse reçue - Timeout ou problème réseau');
-        console.error('Request:', error.request);
       } else {
         console.error('Erreur configuration:', error.message);
       }
       
-      // ✅ AMÉLIORATION: Message d'erreur plus précis
       let errorMessage = 'Erreur lors de la création du paiement';
       if (error.response?.status === 404) {
-        errorMessage = 'Endpoint KkiaPay non trouvé. Vérifiez l\'URL de l\'API.';
+        errorMessage = 'Endpoint KkiaPay non trouvé. Vérifiez votre configuration.';
       } else if (error.response?.status === 401) {
-        errorMessage = 'Clé API KkiaPay invalide. Vérifiez vos clés.';
+        errorMessage = 'Clé API KkiaPay invalide ou expirée.';
       } else if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Timeout de connexion à KkiaPay. Réessayez.';
+        errorMessage = 'Timeout de connexion à KkiaPay.';
       }
       
       throw new Error(errorMessage);

@@ -7,18 +7,8 @@ const webhookLogger = require('../middleware/webhookLogger');
 // Appliquer le logger pour tous les webhooks
 router.use(webhookLogger);
 
-// Webhook KkiaPay
+// Webhook KkiaPay PRODUCTION
 router.post('/kkiapay', verifyWebhook, paymentController.handleKkiapayWebhook);
-
-// Route de test webhook
-router.post('/test', (req, res) => {
-  console.log('🧪 Webhook test reçu:', req.body);
-  res.status(200).json({ 
-    success: true, 
-    message: 'Webhook test reçu',
-    body: req.body 
-  });
-});
 
 module.exports = router;
 /*const express = require('express');

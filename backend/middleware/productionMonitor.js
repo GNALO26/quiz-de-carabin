@@ -1,29 +1,23 @@
-// Surveillance en production
+// Middleware de monitoring pour la production
 const productionMonitor = (req, res, next) => {
-  // Logger les requêtes importantes
-  if (req.path.includes('/payment') || req.path.includes('/webhook')) {
-    console.log(`[LIVE] ${new Date().toISOString()} - ${req.method} ${req.path}`, {
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      body: req.body // Ne pas logger les données sensibles en prod
-    });
-  }
-  
-  // Surveiller la santé de l'application
-  if (req.path === '/api/health') {
-    const health = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      paydunya: 'live'
-    };
+    const start = Date.now();
     
-    // Ajouter les infos de santé à la réponse
-    req.healthData = health;
-  }
-  
-  next();
+    // Log des requêtes importantes
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        const logLevel = res.statusCode >= 400 ? 'WARN' : 'INFO';
+        
+        if (req.path.includes('/api/') && !req.path.includes('/health')) {
+            console.log(`[${logLevel}] ${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms - IP: ${req.ip}`);
+        }
+        
+        // Alertes pour les erreurs serveur
+        if (res.statusCode >= 500) {
+            console.error(`🚨 ERREUR SERVEUR: ${req.method} ${req.originalUrl} - ${res.statusCode}`);
+        }
+    });
+    
+    next();
 };
 
 module.exports = productionMonitor;
