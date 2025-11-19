@@ -11,15 +11,13 @@ const sessionCheck = require('./middleware/sessionCheck');
 const handleDatabaseError = require('./middleware/handleDatabaseError');
 const productionMonitor = require('./middleware/productionMonitor');
 
-// Configuration MongoDB
+// ✅ CORRECTION: Configuration MongoDB simplifiée et corrigée
 const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   maxPoolSize: 10,
   serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
-  bufferCommands: false,
-  bufferMaxEntries: 0
+  socketTimeoutMS: 45000
 };
 
 // Connexion à MongoDB
@@ -186,9 +184,6 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   // ✅ GESTION DES ROUTES NON TROUVÉES
   app.use('*', (req, res) => {
     console.log(`❌ Route non trouvée - PRODUCTION: ${req.method} ${req.originalUrl}`);
-    console.log(`   Headers:`, req.headers);
-    console.log(`   IP: ${req.ip}`);
-    console.log(`   User-Agent: ${req.get('User-Agent')}`);
     
     res.status(404).json({ 
       success: false, 
@@ -207,7 +202,6 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
       url: req.originalUrl,
       method: req.method,
       ip: req.ip,
-      userAgent: req.get('User-Agent'),
       timestamp: new Date().toISOString()
     });
     
