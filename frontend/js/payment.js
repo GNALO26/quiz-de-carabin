@@ -64,7 +64,7 @@ export class Payment {
 
     async initiatePayment(planId, amount) {
     try {
-        console.log(`💰 Initialisation paiement: ${planId} - ${amount} FCFA`);
+        console.log(`💰 Initialisation paiement Widget KkiaPay: ${planId} - ${amount} FCFA`);
         
         if (!this.auth.isAuthenticated()) {
             this.auth.showLoginModal();
@@ -78,14 +78,14 @@ export class Payment {
         console.log('👤 Utilisateur:', user.email);
         
         const API_BASE_URL = await this.getActiveAPIUrl();
-        console.log('🌐 API utilisée:', API_BASE_URL);
         
         const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
         const originalText = subscribeBtn.innerHTML;
-        subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traitement...';
+        subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Préparation...';
         subscribeBtn.disabled = true;
 
-        console.log('📤 Envoi requête paiement...');
+        // 1. Créer la transaction côté backend
+        console.log('📤 Création transaction backend...');
         const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
             method: 'POST',
             headers: {
@@ -98,39 +98,112 @@ export class Payment {
             })
         });
 
-        // Vérifier d'abord le statut HTTP
         if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error(`Route non trouvée (404). Vérifiez l'URL: ${API_BASE_URL}/api/payment/initiate`);
-            }
             throw new Error(`Erreur HTTP ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('📨 Réponse serveur complète:', data);
+        console.log('📨 Réponse transaction:', data);
 
-        if (data.success && data.paymentUrl) {
-            console.log('✅ Redirection vers KkiaPay:', data.paymentUrl);
-            // Stocker l'ID de transaction pour le callback
-            localStorage.setItem('pendingTransaction', data.transactionId);
-            window.location.href = data.paymentUrl;
-        } else {
-            console.error('❌ Erreur serveur détaillée:', {
-                success: data.success,
-                message: data.message,
-                error: data.error
-            });
-            this.showAlert(data.message || 'Erreur lors de la création du paiement', 'danger');
+        if (!data.success) {
+            throw new Error(data.message || 'Erreur création transaction');
         }
+
+        const transactionId = data.transactionId;
+        console.log('✅ Transaction créée:', transactionId);
+
+        // 2. Charger le script KkiaPay
+        await this.loadKkiaPayScript();
+
+        // 3. Ouvrir le widget KkiaPay
+        this.openKkiaPayWidget(amount, user, transactionId);
+
     } catch (error) {
         console.error('💥 Erreur initiatePayment:', error);
-        this.showAlert(error.message || 'Erreur de connexion. Vérifiez votre internet.', 'danger');
+        this.showAlert(error.message || 'Erreur lors de la préparation du paiement', 'danger');
     } finally {
         const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
         if (subscribeBtn) {
             subscribeBtn.innerHTML = 'S\'abonner';
             subscribeBtn.disabled = false;
         }
+    }
+}
+
+// Charger le script KkiaPay
+loadKkiaPayScript() {
+    return new Promise((resolve, reject) => {
+        if (window.Kkiapay) {
+            console.log('✅ Script KkiaPay déjà chargé');
+            resolve();
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://cdn.kkiapay.me/k.js';
+        script.onload = () => {
+            console.log('✅ Script KkiaPay chargé avec succès');
+            resolve();
+        };
+        script.onerror = (error) => {
+            console.error('❌ Erreur chargement script KkiaPay:', error);
+            reject(new Error('Impossible de charger le service de paiement'));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+// Ouvrir le widget KkiaPay
+openKkiaPayWidget(amount, user, transactionId) {
+    try {
+        console.log('🎯 Ouverture widget KkiaPay...');
+        
+        const kkiapay = window.Kkiapay && window.Kkiapay.init('2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751', {
+            amount: parseInt(amount),
+            name: "Quiz de Carabin",
+            email: user.email,
+            phone: user.phone || '+2290156035888',
+            data: JSON.stringify({
+                transaction_id: transactionId,
+                user_id: user._id,
+                user_email: user.email
+            }),
+            callback: `${window.location.origin}/payment-callback.html?transactionId=${transactionId}`,
+            theme: "#13a718",
+            position: "center",
+            sandbox: false // ⚠ MODE PRODUCTION
+        });
+
+        if (!kkiapay) {
+            throw new Error('Widget KkiaPay non initialisé');
+        }
+
+        console.log('✅ Widget KkiaPay initialisé, ouverture...');
+        kkiapay.open();
+
+        // Écouter les événements du widget
+        window.addEventListener('message', (event) => {
+            if (event.data.from === 'kkiapay_widget') {
+                console.log('📨 Message du widget:', event.data);
+                
+                switch (event.data.message) {
+                    case 'payment_initiated':
+                        this.showAlert('Paiement initié avec succès', 'info');
+                        break;
+                    case 'payment_success':
+                        console.log('✅ Paiement réussi via widget');
+                        this.showAlert('Paiement réussi ! Redirection...', 'success');
+                        break;
+                    case 'payment_failed':
+                        this.showAlert('Paiement échoué', 'danger');
+                        break;
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erreur ouverture widget:', error);
+        this.showAlert('Erreur lors de l\'ouverture du paiement', 'danger');
     }
 }
 

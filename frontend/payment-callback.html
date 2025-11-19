@@ -3,35 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paiement Réussi - Quiz de Carabin</title>
+    <title>Callback Paiement - Quiz de Carabin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
     <style>
         body {
             background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
-            padding: 20px 0;
         }
-        
-        .success-container {
-            text-align: center;
-            padding: 3rem;
-            margin: 2rem auto;
-            max-width: 600px;
+        .status-card {
+            border: none;
             border-radius: 15px;
-            background: white;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-        
-        .success-icon {
-            color: #28a745;
-            font-size: 4rem;
-            margin-bottom: 1rem;
-        }
-        
         .loader {
             border: 5px solid #f3f3f3;
             border-top: 5px solid #3498db;
@@ -41,161 +27,154 @@
             animation: spin 2s linear infinite;
             margin: 20px auto;
         }
-        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
-        
-        .transaction-details {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="success-container">
-            <div class="success-icon">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <h1 class="text-success">Paiement Réussi!</h1>
-            <p class="lead">Votre paiement a été traité avec succès.</p>
-            
-            <div class="transaction-details">
-                <p><strong>Un code d'accès a été envoyé à votre adresse email.</strong></p>
-                <p class="text-muted">Vérifiez votre boîte de réception et vos spams.</p>
-            </div>
-            
-            <div class="loader" id="loader"></div>
-            <p id="countdown" class="text-muted">Redirection automatique dans <span id="countdown-value">5</span> secondes</p>
-            
-            <div class="mt-4">
-                <a href="access-code.html" class="btn btn-success me-2">
-                    <i class="fas fa-key me-1"></i>Valider mon code maintenant
-                </a>
-                <a href="index.html" class="btn btn-outline-secondary">
-                    <i class="fas fa-home me-1"></i>Retour à l'accueil
-                </a>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card status-card">
+                    <div class="card-body text-center p-5">
+                        <div id="loading">
+                            <div class="loader"></div>
+                            <h3 class="mt-3">Vérification du paiement...</h3>
+                            <p class="text-muted">Veuillez patienter pendant que nous confirmons votre paiement.</p>
+                        </div>
+                        
+                        <div id="success" class="d-none">
+                            <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                            <h3 class="mt-3 text-success">Paiement Réussi !</h3>
+                            <p>Votre abonnement premium a été activé avec succès.</p>
+                            <div class="mt-4">
+                                <a href="quiz.html" class="btn btn-success btn-lg">
+                                    <i class="fas fa-play me-2"></i>Commencer les quiz
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div id="pending" class="d-none">
+                            <i class="fas fa-clock text-warning" style="font-size: 4rem;"></i>
+                            <h3 class="mt-3">Paiement en Cours</h3>
+                            <p>Votre paiement est en cours de traitement. Vous recevrez un email de confirmation.</p>
+                            <div class="mt-4">
+                                <a href="index.html" class="btn btn-primary">Retour à l'accueil</a>
+                            </div>
+                        </div>
+                        
+                        <div id="error" class="d-none">
+                            <i class="fas fa-times-circle text-danger" style="font-size: 4rem;"></i>
+                            <h3 class="mt-3 text-danger">Erreur de Paiement</h3>
+                            <p id="errorMessage">Une erreur s'est produite lors du traitement de votre paiement.</p>
+                            <div class="mt-4">
+                                <a href="quiz.html" class="btn btn-primary">Réessayer</a>
+                                <a href="index.html" class="btn btn-outline-secondary ms-2">Accueil</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Fonction pour valider le token JWT
-        function validateToken(token) {
-            try {
-                if (!token || typeof token !== 'string') {
-                    return false;
-                }
-                
-                const parts = token.split('.');
-                if (parts.length !== 3) {
-                    return false;
-                }
-                
-                try {
-                    parts.forEach(part => {
-                        const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
-                        window.atob(base64);
-                    });
-                    return true;
-                } catch (e) {
-                    return false;
-                }
-            } catch (error) {
-                console.error('Token validation error:', error);
-                return false;
-            }
-        }
-        
-        // Vérifier et restaurer la session utilisateur
-        function restoreUserSession() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-            const userData = urlParams.get('user');
-            
-            if (token && validateToken(token)) {
-                localStorage.setItem('quizToken', token);
-                console.log('Token restauré depuis URL');
-            }
-            
-            if (userData) {
-                try {
-                    const user = JSON.parse(decodeURIComponent(userData));
-                    localStorage.setItem('quizUser', JSON.stringify(user));
-                    console.log('Données utilisateur restaurées depuis URL');
-                } catch (e) {
-                    console.error('Erreur parsing user data:', e);
-                }
-            }
-            
-            // Vérifier si l'utilisateur est connecté
-            const storedToken = localStorage.getItem('quizToken');
-            if (!storedToken || !validateToken(storedToken)) {
-                console.warn('Aucun token valide trouvé, redirection vers login');
-                window.location.href = 'index.html?message=Veuillez vous reconnecter après votre paiement';
-                return false;
-            }
-            
-            return true;
-        }
-        
         // Vérifier le statut du paiement
-        async function checkPaymentStatus(transactionId, userId) {
+        async function checkPaymentStatus() {
             try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const transactionId = urlParams.get('transactionId');
+                
+                if (!transactionId) {
+                    throw new Error('Aucun ID de transaction trouvé');
+                }
+
+                console.log('🔄 Vérification statut transaction:', transactionId);
+
+                const token = localStorage.getItem('quizToken');
+                if (!token) {
+                    throw new Error('Session expirée');
+                }
+
                 const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
+                
                 const response = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ transactionId, userId })
+                    body: JSON.stringify({ transactionId })
                 });
-                
-                const data = await response.json();
-                
-                if (data.success && data.status === 'completed') {
-                    window.location.href = 'access-code.html';
-                } else {
-                    setTimeout(() => checkPaymentStatus(transactionId, userId), 3000);
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP ${response.status}`);
                 }
+
+                const data = await response.json();
+                console.log('📨 Réponse statut:', data);
+
+                if (data.success) {
+                    if (data.status === 'completed') {
+                        // Succès
+                        showSuccess();
+                        
+                        // Mettre à jour l'utilisateur localement
+                        if (data.user) {
+                            localStorage.setItem('quizUser', JSON.stringify(data.user));
+                        }
+                    } else {
+                        // En attente
+                        showPending();
+                    }
+                } else {
+                    throw new Error(data.message || 'Erreur de paiement');
+                }
+
             } catch (error) {
-                setTimeout(() => checkPaymentStatus(transactionId, userId), 3000);
+                console.error('❌ Erreur vérification:', error);
+                showError(error.message);
             }
         }
-        
-        // Restaurer la session au chargement
+
+        function showSuccess() {
+            document.getElementById('loading').classList.add('d-none');
+            document.getElementById('success').classList.remove('d-none');
+        }
+
+        function showPending() {
+            document.getElementById('loading').classList.add('d-none');
+            document.getElementById('pending').classList.remove('d-none');
+        }
+
+        function showError(message) {
+            document.getElementById('loading').classList.add('d-none');
+            document.getElementById('error').classList.remove('d-none');
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        // Démarrer la vérification au chargement
         document.addEventListener('DOMContentLoaded', function() {
-            if (restoreUserSession()) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const transactionId = urlParams.get('transaction_id') || urlParams.get('transactionId');
-                const userId = urlParams.get('user_id') || urlParams.get('userId');
-                
-                if (transactionId && userId) {
-                    // Vérifier le statut du paiement
-                    checkPaymentStatus(transactionId, userId);
-                    
-                    // Démarrer le compte à rebours
-                    let seconds = 5;
-                    const countdownElement = document.getElementById('countdown-value');
-                    const countdownInterval = setInterval(() => {
-                        seconds--;
-                        countdownElement.textContent = seconds;
-                        
-                        if (seconds <= 0) {
-                            clearInterval(countdownInterval);
-                            document.getElementById('loader').style.display = 'none';
-                            window.location.href = 'access-code.html';
-                        }
-                    }, 1000);
+            console.log('🔍 Début vérification paiement...');
+            checkPaymentStatus();
+            
+            // Vérifier à nouveau toutes les 5 secondes pendant 30 secondes
+            let attempts = 0;
+            const maxAttempts = 6;
+            const interval = setInterval(() => {
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    showPending(); // Passer en mode attente après 30 secondes
+                } else {
+                    checkPaymentStatus();
                 }
-            }
+            }, 5000);
         });
     </script>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -12,6 +12,9 @@ router.get('/status/:transactionId', auth, paymentController.checkTransactionSta
 router.get('/latest-access-code', auth, paymentController.getLatestAccessCode);
 router.post('/resend-code', auth, paymentController.resendAccessCode);
 
+// ✅ ROUTE DE SECOURS MANUELLE
+router.post('/initiate-manual', auth, paymentController.initiateManualPayment);
+
 // ✅ ROUTE DE TEST
 router.get('/test', auth, (req, res) => {
   res.json({ 
