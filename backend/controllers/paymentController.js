@@ -344,6 +344,51 @@ exports.getLatestAccessCode = async (req, res) => {
     });
   }
 };
+// Ajouter cette fonction dans exports
+exports.resendAccessCode = async (req, res) => {
+  try {
+    console.log('🔄 Tentative de renvoi de code d\'accès...');
+    
+    const Transaction = require('../models/Transaction');
+    const { sendAccessCodeEmail } = require('./paymentController');
+
+    // Trouver la dernière transaction complétée
+    const transaction = await Transaction.findOne({
+      userId: req.user._id,
+      status: 'completed',
+      accessCode: { $exists: true, $ne: null }
+    }).sort({ createdAt: -1 });
+
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: "Aucune transaction avec code d'accès trouvée"
+      });
+    }
+
+    console.log(`📧 Renvoi du code ${transaction.accessCode} à ${req.user.email}`);
+
+    const emailSent = await sendAccessCodeEmail(req.user.email, transaction.accessCode, req.user.name);
+    
+    if (emailSent) {
+      return res.status(200).json({
+        success: true,
+        message: "Code d'accès renvoyé avec succès à votre email"
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: "Erreur lors de l'envoi de l'email"
+      });
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors du renvoi du code:', error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors du renvoi du code"
+    });
+  }
+};
 
 // ✅ AJOUT: Handler pour les webhooks KkiaPay
 exports.handleKkiapayWebhook = async (req, res) => {

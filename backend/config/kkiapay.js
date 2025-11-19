@@ -12,21 +12,22 @@ class KkiaPay {
       : 'https://api.kkiapay.me';
     
     console.log('🔧 Configuration KkiaPay chargée - Mode:', this.mode);
+    console.log('🔑 Clé publique:', this.publicKey ? '✓ Configurée' : '✗ Manquante');
   }
 
   async createPayment(paymentData) {
     try {
       console.log('💰 Tentative de création de paiement KkiaPay...');
       
-      // ✅ CORRECTION: Utiliser le bon endpoint et format
+      // ✅ CORRECTION: Format correct pour l'API KkiaPay
       const payload = {
         amount: Math.round(paymentData.amount),
         apikey: this.publicKey,
-        phone: paymentData.phone,
+        phone: paymentData.phone || '+22900000000',
         email: paymentData.email,
         callback: paymentData.callback,
         data: paymentData.metadata,
-        theme: "#13a718ff",
+        theme: "#13a718",
         name: "Quiz de Carabin"
       };
 
@@ -39,13 +40,18 @@ class KkiaPay {
 
       console.log('📤 Payload envoyé à KkiaPay:', JSON.stringify(payload, null, 2));
 
-      const response = await axios.post(`${this.baseURL}/api/v1/url, payload`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 15000
-      });
+      // ✅ CORRECTION CRITIQUE: URL corrigée et bon format axios
+      const response = await axios.post(
+        `${this.baseURL}/api/v1/transactions`, 
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          timeout: 15000
+        }
+      );
 
       console.log('✅ Réponse KkiaPay reçue:', JSON.stringify(response.data, null, 2));
 
@@ -64,8 +70,9 @@ class KkiaPay {
       if (error.response) {
         console.error('Status:', error.response.status);
         console.error('Data:', error.response.data);
+        console.error('Headers:', error.response.config?.headers);
       } else if (error.request) {
-        console.error('Aucune réponse reçue');
+        console.error('Aucune réponse reçue - Timeout ou réseau');
       } else {
         console.error('Erreur configuration:', error.message);
       }
@@ -75,19 +82,23 @@ class KkiaPay {
 
   async verifyTransaction(transactionId) {
     try {
+      console.log(`🔍 Vérification transaction KkiaPay: ${transactionId}`);
+      
       const response = await axios.get(
         `${this.baseURL}/api/v1/transactions/${transactionId}/status`,
         {
           headers: {
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'X-API-KEY': this.publicKey
           },
           timeout: 10000
         }
       );
       
+      console.log('✅ Statut transaction:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Erreur vérification transaction:', error.response?.data || error.message);
+      console.error('❌ Erreur vérification transaction:', error.response?.data || error.message);
       throw error;
     }
   }
@@ -99,9 +110,12 @@ class KkiaPay {
         .update(JSON.stringify(payload))
         .digest('hex');
       
-      return computedSignature === signature;
+      const isValid = computedSignature === signature;
+      console.log(`🔐 Vérification signature: ${isValid ? 'VALIDE' : 'INVALIDE'}`);
+      
+      return isValid;
     } catch (error) {
-      console.error("Erreur vérification signature:", error);
+      console.error("❌ Erreur vérification signature:", error);
       return false;
     }
   }

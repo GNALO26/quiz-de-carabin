@@ -1,3 +1,26 @@
+const express = require('express');
+const router = express.Router();
+const paymentController = require('../controllers/paymentController');
+const verifyWebhook = require('../middleware/verifyWebhook');
+const webhookLogger = require('../middleware/webhookLogger');
+
+// Appliquer le logger pour tous les webhooks
+router.use(webhookLogger);
+
+// Webhook KkiaPay
+router.post('/kkiapay', verifyWebhook, paymentController.handleKkiapayWebhook);
+
+// Route de test webhook
+router.post('/test', (req, res) => {
+  console.log('🧪 Webhook test reçu:', req.body);
+  res.status(200).json({ 
+    success: true, 
+    message: 'Webhook test reçu',
+    body: req.body 
+  });
+});
+
+module.exports = router;
 /*const express = require('express');
 const kkiapay = require('../config/kkiapay');
 const Transaction = require('../models/Transaction');
@@ -105,12 +128,3 @@ function generateCode() {
 }
 
 module.exports = router;*/
-const express = require('express');
-const router = express.Router();
-const paymentController = require('../controllers/paymentController');
-const verifyWebhook = require('../middleware/verifyWebhook');
-
-// Webhook KkiaPay
-router.post('/kkiapay', verifyWebhook, paymentController.handleKkiapayWebhook);
-
-module.exports = router;

@@ -42,18 +42,20 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
       'http://localhost:3000',
       'http://localhost:3001'
     ],
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   }));
 
   // Middleware pour parser le JSON
   app.use(express.json({ 
-    limit: '1mb',
+    limit: '10mb',
     verify: (req, res, buf) => {
       req.rawBody = buf;
     }
   }));
   
-  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Détection d'appareil
   app.use(deviceDetection);
@@ -82,21 +84,22 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
       success: true, 
       message: 'Server is running correctly',
       timestamp: new Date().toISOString(),
-      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      environment: process.env.NODE_ENV
     });
   });
 
   // Routes d'authentification (publiques)
   app.use('/api/auth', authRoutes);
   
-  // Webhooks (publics)
+  // ✅ CORRECTION: Webhooks DOIVENT être publics (sans auth)
   app.use('/api/webhook', webhookRoutes);
 
-  // ✅ MIDDLEWARE D'AUTHENTIFICATION
+  // ✅ MIDDLEWARE D'AUTHENTIFICATION pour routes protégées
   app.use(auth);
   app.use(sessionCheck);
 
-  // ✅ ROUTES PROTÉGÉES - BIEN MONTER paymentRoutes ICI
+  // ✅ ROUTES PROTÉGÉES
   app.use('/api/payment', paymentRoutes);
   app.use('/api/quiz', quizRoutes);
   app.use('/api/user', userRoutes);
@@ -108,6 +111,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 
   // Gestion des routes non trouvées
   app.use('*', (req, res) => {
+    console.log(`❌ Route non trouvée: ${req.method} ${req.originalUrl}`);
     res.status(404).json({ 
       success: false, 
       message: 'Route not found',
@@ -118,7 +122,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 
   // Gestionnaire d'erreurs global
   app.use((err, req, res, next) => {
-    console.error('Error:', err);
+    console.error('❌ Error:', err);
     res.status(500).json({ 
       success: false, 
       message: 'Internal server error',
@@ -129,20 +133,23 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   const PORT = process.env.PORT || 5000;
   const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
+    console.log('🌍 Environment:', process.env.NODE_ENV);
     console.log('📋 Routes montées:');
     console.log('   - GET  /api/health');
     console.log('   - GET  /api/debug/payment-test');
     console.log('   - GET  /api/debug/payment-test-protected (protected)');
     console.log('   - POST /api/payment/initiate (protected)');
+    console.log('   - POST /api/payment/process-return (protected)');
+    console.log('   - POST /api/webhook/kkiapay (public)');
     console.log('   - ALL  /api/auth');
-    console.log('   - ALL  /api/webhook');
   });
 
+  // Graceful shutdown
   process.on('SIGINT', () => {
-    console.log('Shutting down gracefully');
+    console.log('🛑 Shutting down gracefully...');
     server.close(() => {
       mongoose.connection.close(false, () => {
-        console.log('MongoDB connection closed');
+        console.log('✅ MongoDB connection closed');
         process.exit(0);
       });
     });

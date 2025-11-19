@@ -63,70 +63,76 @@ export class Payment {
     }
 
     async initiatePayment(planId, amount) {
-        try {
-            console.log(`💰 Initialisation paiement: ${planId} - ${amount} FCFA`);
-            
-            if (!this.auth.isAuthenticated()) {
-                this.auth.showLoginModal();
-                this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
-                return;
+    try {
+        console.log(`💰 Initialisation paiement: ${planId} - ${amount} FCFA`);
+        
+        if (!this.auth.isAuthenticated()) {
+            this.auth.showLoginModal();
+            this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
+            return;
+        }
+
+        const user = this.auth.getUser();
+        const token = this.auth.getToken();
+        
+        console.log('👤 Utilisateur:', user.email);
+        
+        const API_BASE_URL = await this.getActiveAPIUrl();
+        console.log('🌐 API utilisée:', API_BASE_URL);
+        
+        const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
+        const originalText = subscribeBtn.innerHTML;
+        subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traitement...';
+        subscribeBtn.disabled = true;
+
+        console.log('📤 Envoi requête paiement...');
+        const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                planId, 
+                amount: parseInt(amount)
+            })
+        });
+
+        // Vérifier d'abord le statut HTTP
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error(`Route non trouvée (404). Vérifiez l'URL: ${API_BASE_URL}/api/payment/initiate`);
             }
+            throw new Error(`Erreur HTTP ${response.status}`);
+        }
 
-            const user = this.auth.getUser();
-            const token = this.auth.getToken();
-            
-            console.log('👤 Utilisateur:', user.email);
-            
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            console.log('🌐 API utilisée:', API_BASE_URL);
-            
-            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
-            const originalText = subscribeBtn.innerHTML;
-            subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traitement...';
-            subscribeBtn.disabled = true;
+        const data = await response.json();
+        console.log('📨 Réponse serveur complète:', data);
 
-            console.log('📤 Envoi requête paiement...');
-            const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ 
-                    planId, 
-                    amount: parseInt(amount)
-                })
+        if (data.success && data.paymentUrl) {
+            console.log('✅ Redirection vers KkiaPay:', data.paymentUrl);
+            // Stocker l'ID de transaction pour le callback
+            localStorage.setItem('pendingTransaction', data.transactionId);
+            window.location.href = data.paymentUrl;
+        } else {
+            console.error('❌ Erreur serveur détaillée:', {
+                success: data.success,
+                message: data.message,
+                error: data.error
             });
-
-            const data = await response.json();
-            console.log('📨 Réponse serveur complète:', data);
-            console.log('📊 Statut HTTP:', response.status);
-
-            if (data.success && data.paymentUrl) {
-                console.log('✅ Redirection vers KkiaPay:', data.paymentUrl);
-                // Stocker l'ID de transaction pour le callback
-                localStorage.setItem('pendingTransaction', data.transactionId);
-                window.location.href = data.paymentUrl;
-            } else {
-                console.error('❌ Erreur serveur détaillée:', {
-                    success: data.success,
-                    message: data.message,
-                    error: data.error,
-                    status: response.status
-                });
-                this.showAlert(data.message || `Erreur serveur (${response.status})`, 'danger');
-            }
-        } catch (error) {
-            console.error('💥 Erreur initiatePayment:', error);
-            this.showAlert('Erreur de connexion. Vérifiez votre internet.', 'danger');
-        } finally {
-            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
-            if (subscribeBtn) {
-                subscribeBtn.innerHTML = 'S\'abonner';
-                subscribeBtn.disabled = false;
-            }
+            this.showAlert(data.message || 'Erreur lors de la création du paiement', 'danger');
+        }
+    } catch (error) {
+        console.error('💥 Erreur initiatePayment:', error);
+        this.showAlert(error.message || 'Erreur de connexion. Vérifiez votre internet.', 'danger');
+    } finally {
+        const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
+        if (subscribeBtn) {
+            subscribeBtn.innerHTML = 'S\'abonner';
+            subscribeBtn.disabled = false;
         }
     }
+}
 
     // ✅ FONCTION MANQUANTE AJOUTÉE
     async processPaymentReturn() {
@@ -371,53 +377,6 @@ export class Payment {
         }, 5000);
     }
 }
-
-    async function diagnostic() {
-    try {
-        const token = localStorage.getItem('token');
-        const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
-        
-        console.log('🔍 DIAGNOSTIC DÉBUT');
-        
-        // Test 1: Route publique
-        const test1 = await fetch(`${API_BASE_URL}/api/payment/debug-test`);
-        console.log('Test 1 (public):', await test1.json());
-        
-        // Test 2: Route protégée sans token
-        const test2 = await fetch(`${API_BASE_URL}/api/payment/debug-test-protected`);
-        console.log('Test 2 (sans token):', test2.status);
-        
-        // Test 3: Route protégée avec token
-        if (token) {
-            const test3 = await fetch(`${API_BASE_URL}/api/payment/debug-test-protected`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            console.log('Test 3 (avec token):', await test3.json());
-        }
-        
-        // Test 4: Route initiate
-        if (token) {
-            const test4 = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ planId: '1-month', amount: 5000 })
-            });
-            console.log('Test 4 (initiate):', {
-                status: test4.status,
-                statusText: test4.statusText,
-                response: await test4.text()
-            });
-        }
-        
-        console.log('🔍 DIAGNOSTIC FIN');
-    } catch (error) {
-        console.error('❌ Erreur diagnostic:', error);
-    }
-}
-
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
