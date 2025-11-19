@@ -10,16 +10,11 @@ export class Payment {
 
     async getActiveAPIUrl() {
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
                 method: 'GET',
                 cache: 'no-cache',
-                signal: controller.signal
+                timeout: 5000
             });
-            
-            clearTimeout(timeoutId);
             
             if (response.ok) {
                 return CONFIG.API_BASE_URL;
@@ -32,40 +27,50 @@ export class Payment {
     }
 
     setupEventListeners() {
-        console.log('🎯 SetupEventListeners: Initialisation des écouteurs PRODUCTION');
+        console.log('🎯 Initialisation des écouteurs de paiement');
         
+        // Boutons d'abonnement
         document.querySelectorAll('.subscribe-btn').forEach(button => {
             button.addEventListener('click', (e) => {
+                e.preventDefault();
                 const planId = e.currentTarget.getAttribute('data-plan-id');
                 const amount = e.currentTarget.getAttribute('data-plan-price');
-                console.log(`🖱 Clic sur bouton PRODUCTION: ${planId} - ${amount} FCFA`);
+                console.log(`🖱 Clic sur abonnement: ${planId} - ${amount} FCFA`);
                 this.initiatePayment(planId, amount);
             });
         });
         
+        // Validation de code d'accès
         document.getElementById('validate-code')?.addEventListener('click', () => {
             this.validateAccessCode();
         });
         
+        // Renvoi de code
         document.getElementById('resend-code')?.addEventListener('click', () => {
             this.resendAccessCode();
+        });
+
+        // Entrée dans le champ code
+        document.getElementById('accessCode')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.validateAccessCode();
+            }
         });
     }
 
     checkPaymentReturn() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const transactionId = urlParams.get('transactionId');
-        
-        if (transactionId && window.location.pathname.includes('payment-callback.html')) {
-            console.log('🔄 Détection retour paiement PRODUCTION. Vérification statut...');
+        // Vérifier si on est sur la page de callback
+        if (window.location.pathname.includes('payment-callback.html')) {
+            console.log('🔄 Page de callback détectée, traitement automatique...');
             this.processPaymentReturn();
         }
     }
 
     async initiatePayment(planId, amount) {
         try {
-            console.log(`💰 Initialisation paiement PRODUCTION: ${planId} - ${amount} FCFA`);
+            console.log(`💰 Début processus paiement: ${planId} - ${amount} FCFA`);
             
+            // Vérifier l'authentification
             if (!this.auth.isAuthenticated()) {
                 this.auth.showLoginModal();
                 this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
@@ -78,14 +83,14 @@ export class Payment {
             console.log('👤 Utilisateur:', user.email);
             
             const API_BASE_URL = await this.getActiveAPIUrl();
-            console.log('🌐 API utilisée:', API_BASE_URL);
             
+            // Désactiver le bouton pendant le traitement
             const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
             const originalText = subscribeBtn.innerHTML;
-            subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Préparation...';
+            subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traitement...';
             subscribeBtn.disabled = true;
 
-            console.log('📤 Envoi requête paiement PRODUCTION...');
+            console.log('📤 Création de transaction...');
             const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
                 method: 'POST',
                 headers: {
@@ -99,30 +104,30 @@ export class Payment {
             });
 
             if (!response.ok) {
-                if (response.status === 404) {
-                    throw new Error(`Route non trouvée (404). Vérifiez l'URL: ${API_BASE_URL}/api/payment/initiate`);
-                }
-                throw new Error(`Erreur HTTP ${response.status}`);
+                const errorText = await response.text();
+                throw new Error(`Erreur serveur (${response.status}): ${errorText}`);
             }
 
             const data = await response.json();
-            console.log('📨 Réponse serveur PRODUCTION:', data);
+            console.log('✅ Réponse transaction:', data);
 
             if (data.success && data.transactionId) {
-                console.log('✅ Transaction créée, redirection vers KkiaPay...');
+                console.log('🎯 Redirection vers KkiaPay...');
                 
-                // Stocker l'ID de transaction pour le callback
+                // Stocker la transaction en cours
                 localStorage.setItem('pendingTransaction', data.transactionId);
                 
-                // ✅ CORRECTION: Redirection directe vers KkiaPay
-                await this.redirectToKkiaPay(parseInt(amount), user, data.transactionId);
+                // Redirection vers KkiaPay
+                this.redirectToKkiaPay(parseInt(amount), user, data.transactionId);
+                
             } else {
-                throw new Error(data.message || 'Erreur lors de la création de la transaction');
+                throw new Error(data.message || 'Erreur lors de la création du paiement');
             }
         } catch (error) {
-            console.error('💥 Erreur initiatePayment PRODUCTION:', error);
-            this.showAlert(error.message || 'Erreur de connexion. Vérifiez votre internet.', 'danger');
+            console.error('💥 Erreur initiatePayment:', error);
+            this.showAlert('Erreur: ' + error.message, 'danger');
         } finally {
+            // Réactiver le bouton
             const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
             if (subscribeBtn) {
                 subscribeBtn.innerHTML = 'S\'abonner';
@@ -131,54 +136,110 @@ export class Payment {
         }
     }
 
-    // ✅ CORRECTION: Redirection directe vers KkiaPay
-    async redirectToKkiaPay(amount, user, transactionId) {
+    // ✅ REDIRECTION VERS KKiaPay - APPROCHE AMÉLIORÉE
+    redirectToKkiaPay(amount, user, transactionId) {
         try {
-            console.log('🎯 Redirection vers KkiaPay...');
+            console.log('🔗 Construction URL KkiaPay...');
             
-            // Construction de l'URL de paiement KkiaPay
-            const baseUrl = 'https://kkiapay.me';
+            // URL de callback
             const callbackUrl = `${window.location.origin}/payment-callback.html?transactionId=${transactionId}`;
             
-            const paymentParams = new URLSearchParams({
+            // Paramètres de base
+            const baseParams = {
                 amount: amount,
                 apikey: '2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751',
+                callback: callbackUrl,
                 phone: user.phone || '+2290156035888',
                 email: user.email,
-                callback: callbackUrl,
-                data: JSON.stringify({
-                    transaction_id: transactionId,
-                    user_id: user._id,
-                    user_email: user.email,
-                    plan: 'quiz-premium'
-                }),
-                theme: '#13a718',
                 name: 'Quiz de Carabin',
-                sandbox: 'false'
-            });
+                theme: '#13a718'
+            };
 
-            const paymentUrl = `${baseUrl}/pay?${paymentParams.toString()}`;
+            // Données supplémentaires
+            const metadata = {
+                transaction_id: transactionId,
+                user_id: user._id,
+                user_email: user.email,
+                plan: 'premium'
+            };
+
+            // Construction de l'URL
+            const params = new URLSearchParams();
+            Object.keys(baseParams).forEach(key => {
+                if (baseParams[key]) {
+                    params.append(key, baseParams[key]);
+                }
+            });
+            params.append('data', JSON.stringify(metadata));
+
+            const paymentUrl = `https://kkiapay.me/pay?${params.toString()}`;
             
-            console.log('🔗 URL de paiement générée:', paymentUrl);
+            console.log('🌐 URL de paiement:', paymentUrl);
             
-            this.showAlert('Redirection vers la page de paiement sécurisée KkiaPay...', 'info');
-            
-            // Redirection après un court délai pour que l'utilisateur voie le message
+            // Afficher un message de confirmation
+            this.showAlert(`
+                <div class="text-center">
+                    <h5>🎯 Redirection vers KkiaPay</h5>
+                    <p>Vous serez redirigé vers la page de paiement sécurisée...</p>
+                    <p><strong>Montant:</strong> ${amount} FCFA</p>
+                    <div class="spinner-border text-primary mt-2"></div>
+                </div>
+            `, 'info');
+
+            // Redirection après 2 secondes
             setTimeout(() => {
                 console.log('🚀 Redirection vers KkiaPay...');
                 window.location.href = paymentUrl;
-            }, 1500);
-            
+            }, 2000);
+
         } catch (error) {
-            console.error('❌ Erreur redirection KkiaPay:', error);
+            console.error('❌ Erreur redirection:', error);
             
-            // ✅ SECOURS : URL de secours
-            this.showAlert('Redirection vers le paiement...', 'info');
-            setTimeout(() => {
-                const fallbackUrl = `https://kkiapay.me/pay?amount=${amount}&apikey=2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751&callback=${encodeURIComponent(window.location.origin + '/payment-callback.html?transactionId=' + transactionId)}`;
-                window.location.href = fallbackUrl;
-            }, 1000);
+            // ✅ SECOURS : Formulaire de paiement alternatif
+            this.showKkiaPayFallback(amount, user, transactionId);
         }
+    }
+
+    // ✅ SECOURS : Formulaire alternatif
+    showKkiaPayFallback(amount, user, transactionId) {
+        console.log('🔄 Lancement secours formulaire...');
+        
+        const callbackUrl = `${window.location.origin}/payment-callback.html?transactionId=${transactionId}`;
+        
+        const fallbackHTML = `
+            <div class="modal fade" id="kkiapayFallbackModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Paiement KkiaPay</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <p>🔄 Redirection échouée. Veuillez cliquer sur le bouton ci-dessous :</p>
+                            <a href="https://kkiapay.me/pay?amount=${amount}&apikey=2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751&callback=${encodeURIComponent(callbackUrl)}" 
+                               class="btn btn-success btn-lg" target="_blank">
+                                🎯 Payer avec KkiaPay
+                            </a>
+                            <p class="mt-3 text-muted small">
+                                Une nouvelle fenêtre s'ouvrira pour le paiement.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Ajouter le modal au DOM
+        document.body.insertAdjacentHTML('beforeend', fallbackHTML);
+        
+        // Afficher le modal
+        const modal = new bootstrap.Modal(document.getElementById('kkiapayFallbackModal'));
+        modal.show();
+        
+        // Nettoyer après fermeture
+        document.getElementById('kkiapayFallbackModal').addEventListener('hidden.bs.modal', function () {
+            this.remove();
+        });
     }
 
     async processPaymentReturn() {
@@ -190,11 +251,13 @@ export class Payment {
                 throw new Error('Aucun ID de transaction trouvé');
             }
 
-            console.log('🔄 Traitement du retour de paiement PRODUCTION pour la transaction:', transactionId);
+            console.log('🔄 Vérification statut paiement:', transactionId);
 
             const token = this.auth.getToken();
             if (!token) {
-                throw new Error('Utilisateur non connecté');
+                // Rediriger vers la connexion
+                window.location.href = 'index.html?message=Veuillez vous reconnecter pour vérifier votre paiement';
+                return;
             }
 
             const API_BASE_URL = await this.getActiveAPIUrl();
@@ -213,56 +276,56 @@ export class Payment {
             }
 
             const data = await response.json();
-            console.log('📨 Réponse process-return PRODUCTION:', data);
+            console.log('📊 Statut paiement:', data);
 
             if (data.success) {
                 if (data.status === 'completed') {
                     this.showPaymentSuccess(data.accessCode, data.user);
                     localStorage.removeItem('pendingTransaction');
-                    
-                    // Mettre à jour l'interface utilisateur
-                    if (data.user) {
-                        localStorage.setItem('quizUser', JSON.stringify(data.user));
-                        this.auth.user = data.user;
-                        this.auth.updateUI();
-                    }
                 } else {
                     this.showPaymentPending();
                 }
             } else {
-                throw new Error(data.message || 'Erreur lors du traitement du paiement');
+                throw new Error(data.message || 'Erreur lors de la vérification');
             }
         } catch (error) {
-            console.error('Erreur lors du traitement du retour de paiement PRODUCTION:', error);
+            console.error('❌ Erreur vérification paiement:', error);
             this.showPaymentError(error.message);
         }
     }
 
     showPaymentSuccess(accessCode, user) {
         const statusElement = document.getElementById('payment-status');
-        if (statusElement) {
-            statusElement.innerHTML = `
-                <div class="alert alert-success">
-                    <h4>✅ Paiement Réussi!</h4>
-                    <p>Votre abonnement premium a été activé avec succès.</p>
-                    <div class="access-code my-3">
-                        <strong>Votre code d'accès:</strong>
-                        <div class="h4 text-primary">${accessCode}</div>
+        if (!statusElement) return;
+
+        statusElement.innerHTML = `
+            <div class="alert alert-success">
+                <div class="text-center">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h3>Paiement Réussi !</h3>
+                    <p class="lead">Votre abonnement premium est maintenant actif.</p>
+                    
+                    <div class="card mt-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Votre code d'accès</h5>
+                            <div class="display-4 text-primary font-weight-bold my-3">${accessCode}</div>
+                            <p class="text-muted">Ce code a été envoyé à votre email</p>
+                        </div>
                     </div>
-                    <p>Un email de confirmation vous a été envoyé.</p>
-                    <div class="mt-3">
-                        <button onclick="window.location.href = '/quiz.html'" class="btn btn-success me-2">
-                            <i class="fas fa-play me-1"></i>Commencer les quiz
-                        </button>
-                        <button onclick="window.location.href = '/index.html'" class="btn btn-outline-secondary">
-                            <i class="fas fa-home me-1"></i>Retour à l'accueil
-                        </button>
+                    
+                    <div class="mt-4">
+                        <a href="quiz.html" class="btn btn-success btn-lg me-3">
+                            <i class="fas fa-play me-2"></i>Commencer les quiz
+                        </a>
+                        <a href="index.html" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-2"></i>Retour à l'accueil
+                        </a>
                     </div>
                 </div>
-            `;
-        }
+            </div>
+        `;
 
-        // Mettre à jour l'utilisateur dans le localStorage
+        // Mettre à jour l'utilisateur
         if (user) {
             localStorage.setItem('quizUser', JSON.stringify(user));
             this.auth.user = user;
@@ -272,56 +335,67 @@ export class Payment {
 
     showPaymentPending() {
         const statusElement = document.getElementById('payment-status');
-        if (statusElement) {
-            statusElement.innerHTML = `
-                <div class="alert alert-warning">
-                    <h4>⏳ Paiement en Cours de Validation</h4>
-                    <p>Votre paiement est en cours de traitement. Cela peut prendre quelques minutes.</p>
-                    <p>Vous recevrez un email de confirmation une fois le paiement validé.</p>
-                    <div class="mt-3">
-                        <button onclick="window.location.href = '/index.html'" class="btn btn-primary me-2">
-                            <i class="fas fa-home me-1"></i>Retour à l'accueil
+        if (!statusElement) return;
+
+        statusElement.innerHTML = `
+            <div class="alert alert-warning">
+                <div class="text-center">
+                    <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                    <h3>Paiement en Cours</h3>
+                    <p>Votre paiement est en cours de traitement.</p>
+                    <p class="text-muted">Vous recevrez un email de confirmation sous peu.</p>
+                    
+                    <div class="mt-4">
+                        <button onclick="location.reload()" class="btn btn-primary me-2">
+                            <i class="fas fa-sync me-2"></i>Actualiser
                         </button>
-                        <button onclick="location.reload()" class="btn btn-outline-secondary">
-                            <i class="fas fa-sync me-1"></i>Actualiser
-                        </button>
+                        <a href="index.html" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-2"></i>Accueil
+                        </a>
                     </div>
                 </div>
-            `;
-        }
+            </div>
+        `;
     }
 
     showPaymentError(message) {
         const statusElement = document.getElementById('payment-status');
-        if (statusElement) {
-            statusElement.innerHTML = `
-                <div class="alert alert-danger">
-                    <h4>❌ Erreur de Paiement</h4>
+        if (!statusElement) return;
+
+        statusElement.innerHTML = `
+            <div class="alert alert-danger">
+                <div class="text-center">
+                    <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
+                    <h3>Erreur de Paiement</h3>
                     <p>${message}</p>
-                    <div class="mt-3">
-                        <button onclick="window.location.href = '/quiz.html'" class="btn btn-primary me-2">
-                            <i class="fas fa-credit-card me-1"></i>Réessayer le paiement
-                        </button>
-                        <button onclick="window.location.href = '/index.html'" class="btn btn-outline-secondary">
-                            <i class="fas fa-home me-1"></i>Retour à l'accueil
-                        </button>
+                    
+                    <div class="mt-4">
+                        <a href="quiz.html" class="btn btn-primary me-2">
+                            <i class="fas fa-credit-card me-2"></i>Réessayer
+                        </a>
+                        <a href="index.html" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-2"></i>Accueil
+                        </a>
                     </div>
-                    <div class="mt-3">
-                        <p class="text-muted small">
-                            Si le problème persiste, contactez le support: 
-                            <br>📧 support@quizdecarabin.bj
-                            <br>📱 +229 53 91 46 48
+                    
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <p class="small text-muted mb-1">Besoin d'aide ? Contactez-nous :</p>
+                        <p class="mb-1">
+                            <i class="fas fa-envelope me-2"></i>support@quizdecarabin.bj
+                        </p>
+                        <p class="mb-0">
+                            <i class="fab fa-whatsapp me-2"></i>+229 53 91 46 48
                         </p>
                     </div>
                 </div>
-            `;
-        }
+            </div>
+        `;
     }
 
     async validateAccessCode() {
         try {
             const codeInput = document.getElementById('accessCode');
-            const code = codeInput.value.trim();
+            const code = codeInput?.value.trim();
             
             if (!code || code.length < 5) {
                 this.showAlert('Veuillez entrer un code valide', 'warning');
@@ -332,15 +406,17 @@ export class Payment {
             const token = this.auth.getToken();
             
             if (!token) {
-                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
+                this.showAlert('Session expirée', 'warning');
                 this.auth.logout();
                 return;
             }
             
             const validateButton = document.getElementById('validate-code');
-            const originalText = validateButton.innerHTML;
-            validateButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Validation...';
-            validateButton.disabled = true;
+            if (validateButton) {
+                const originalText = validateButton.innerHTML;
+                validateButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Validation...';
+                validateButton.disabled = true;
+            }
 
             const response = await fetch(`${API_BASE_URL}/api/access-code/validate`, {
                 method: 'POST',
@@ -351,24 +427,25 @@ export class Payment {
                 body: JSON.stringify({ code })
             });
 
-            validateButton.innerHTML = originalText;
-            validateButton.disabled = false;
+            if (validateButton) {
+                validateButton.innerHTML = 'Valider';
+                validateButton.disabled = false;
+            }
 
             if (response.status === 401) {
-                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
+                this.showAlert('Session expirée', 'warning');
                 this.auth.logout();
                 return;
             }
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
+                throw new Error(`Erreur serveur (${response.status})`);
             }
 
             const data = await response.json();
 
             if (data.success) {
-                this.showAlert(data.message, 'success');
+                this.showAlert('✅ Code validé avec succès !', 'success');
                 
                 if (data.user) {
                     localStorage.setItem('quizUser', JSON.stringify(data.user));
@@ -376,11 +453,13 @@ export class Payment {
                     this.auth.updateUI();
                 }
                 
+                // Fermer le modal après succès
                 setTimeout(() => {
                     const codeModal = bootstrap.Modal.getInstance(document.getElementById('codeModal'));
                     if (codeModal) {
                         codeModal.hide();
                     }
+                    // Recharger si sur la page d'accueil
                     if (window.location.pathname.includes('index.html')) {
                         window.location.reload();
                     }
@@ -389,8 +468,8 @@ export class Payment {
                 this.showAlert(data.message, 'danger');
             }
         } catch (error) {
-            console.error('💥 Erreur validation code:', error);
-            this.showAlert('Erreur lors de la validation du code: ' + error.message, 'danger');
+            console.error('💥 Erreur validation:', error);
+            this.showAlert('Erreur: ' + error.message, 'danger');
         }
     }
 
@@ -399,15 +478,16 @@ export class Payment {
             const token = this.auth.getToken();
             
             if (!token) {
-                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
-                this.auth.logout();
+                this.showAlert('Session expirée', 'warning');
                 return;
             }
             
             const resendBtn = document.getElementById('resend-code');
-            const originalText = resendBtn.innerHTML;
-            resendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Envoi...';
-            resendBtn.disabled = true;
+            if (resendBtn) {
+                const originalText = resendBtn.innerHTML;
+                resendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Envoi...';
+                resendBtn.disabled = true;
+            }
 
             const API_BASE_URL = await this.getActiveAPIUrl();
             
@@ -419,29 +499,24 @@ export class Payment {
                 }
             });
 
-            resendBtn.innerHTML = originalText;
-            resendBtn.disabled = false;
-
-            if (response.status === 401) {
-                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
-                this.auth.logout();
-                return;
+            if (resendBtn) {
+                resendBtn.innerHTML = 'Renvoyer le code';
+                resendBtn.disabled = false;
             }
 
             if (!response.ok) {
-                throw new Error(`HTTP error ${response.status}`);
+                throw new Error(`Erreur serveur (${response.status})`);
             }
 
             const data = await response.json();
 
             if (data.success) {
-                this.showAlert('Un nouveau code a été renvoyé à votre adresse email.', 'success');
+                this.showAlert('📧 Code renvoyé avec succès !', 'success');
             } else {
-                this.showAlert(data.message || 'Erreur lors de l\'envoi du code', 'danger');
-            }
+                this.showAlert(data.message || 'Erreur lors de l\'envoi', 'danger');}
         } catch (error) {
-            console.error('💥 Erreur renvoi code:', error);
-            this.showAlert('Erreur lors de l\'envoi du code. Veuillez réessayer.', 'danger');
+            console.error('💥 Erreur renvoi:', error);
+            this.showAlert('Erreur: ' + error.message, 'danger');
         }
     }
     
@@ -451,24 +526,25 @@ export class Payment {
         
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${type} alert-dismissible fade show global-alert`;
-        alertDiv.style.position = 'fixed';
-        alertDiv.style.top = '20px';
-        alertDiv.style.right = '20px';
-        alertDiv.style.zIndex = '9999';
-        alertDiv.style.minWidth = '300px';
-        alertDiv.style.maxWidth = '500px';
+        alertDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            max-width: 500px;
+        `;
+        
         alertDiv.innerHTML = `
             <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                    ${message}
-                </div>
+                <div class="flex-grow-1">${message}</div>
                 <button type="button" class="btn-close ms-2" data-bs-dismiss="alert"></button>
             </div>
         `;
         
         document.body.appendChild(alertDiv);
         
-        // Auto-suppression après 5 secondes pour les alertes de succès/info
+        // Auto-suppression après 5 secondes
         if (type === 'success' || type === 'info') {
             setTimeout(() => {
                 if (alertDiv.parentNode) {
@@ -479,18 +555,13 @@ export class Payment {
     }
 }
 
-// Initialisation PRODUCTION
+// Initialisation
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('💰 Initialisation du module Payment PRODUCTION...');
+    console.log('💰 Initialisation module Payment...');
     try {
         window.payment = new Payment();
-        console.log('✅ Module Payment initialisé avec succès - MODE PRODUCTION');
-        
-        // Vérifier si on est sur la page de callback
-        if (window.location.pathname.includes('payment-callback.html')) {
-            console.log('🔍 Page de callback détectée, traitement automatique...');
-        }
+        console.log('✅ Module Payment initialisé');
     } catch (error) {
-        console.error('❌ Erreur initialisation Payment PRODUCTION:', error);
+        console.error('❌ Erreur initialisation Payment:', error);
     }
 });
