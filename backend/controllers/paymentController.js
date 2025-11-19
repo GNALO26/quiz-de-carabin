@@ -106,14 +106,14 @@ exports.initiatePayment = async (req, res) => {
 
     await transaction.save();
 
-    // ✅ CORRECTION: Configuration KkiaPay avec URL correcte
+    // ✅ CORRECTION: URL de callback simplifiée
     const frontendUrl = process.env.FRONTEND_URL || 'https://quiz-de-carabin.netlify.app';
     
     const paymentData = {
       amount: plan.amount,
-      phone: user.phone || '+22900000000',
+      phone: user.phone || '+2290156035888',
       email: user.email,
-      callback: `${frontendUrl}/payment-callback.html?transactionId=${transactionID}`,
+      callback: `${frontendUrl}/payment-callback.html`,
       metadata: {
         user_id: req.user._id.toString(),
         user_email: req.user.email,
@@ -153,17 +153,24 @@ exports.initiatePayment = async (req, res) => {
   } catch (error) {
     console.error('❌ Erreur dans initiatePayment:', error.message);
     
-    if (error.response) {
-      console.error('Détail erreur API Kkiapay:', error.response.data);
-      return res.status(error.response.status || 500).json({ 
-        success: false, 
-        message: error.response.data.message || 'Erreur API KkiaPay'
-      });
+    // ✅ AMÉLIORATION: Gestion d'erreur détaillée
+    let statusCode = 500;
+    let errorMessage = 'Erreur interne du serveur';
+    
+    if (error.message.includes('Endpoint KkiaPay non trouvé')) {
+      statusCode = 503;
+      errorMessage = 'Service de paiement temporairement indisponible';
+    } else if (error.message.includes('Clé API invalide')) {
+      statusCode = 500;
+      errorMessage = 'Problème de configuration du paiement';
+    } else if (error.message.includes('Timeout')) {
+      statusCode = 408;
+      errorMessage = 'Temps d\'attente dépassé. Réessayez.';
     }
     
-    return res.status(500).json({ 
+    return res.status(statusCode).json({ 
       success: false, 
-      message: 'Erreur interne du serveur',
+      message: errorMessage,
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -438,4 +445,44 @@ exports.handleKkiapayWebhook = async (req, res) => {
         console.error('❌ ERREUR WEBHOOK:', error);
         res.status(500).send('Erreur interne du serveur');
     }
+};
+// Dans paymentController.js - AJOUTER cette fonction
+exports.getPaymentWidgetConfig = async (req, res) => {
+  try {
+    const { planId, amount } = req.body;
+    const plan = pricing[planId];
+    
+    if (!plan || plan.amount !== parseInt(amount)) {
+      return res.status(400).json({ success: false, message: 'Plan invalide' });
+    }
+
+    const transactionID = generateUniqueTransactionID();
+    
+    // Sauvegarder la transaction
+    const transaction = new Transaction({
+      userId: req.user._id,
+      transactionId: transactionID,
+      amount: plan.amount,
+      durationInMonths: plan.duration,
+      status: 'pending'
+    });
+    await transaction.save();
+
+    // Retourner la config pour le widget
+    res.status(200).json({
+      success: true,
+      widgetConfig: {
+        amount: plan.amount,
+        email: req.user.email,
+        phone: req.user.phone || '+2290156035888',
+        transactionId: transactionID,
+        publicKey: process.env.KKIAPAY_PUBLIC_KEY,
+        callback: `${process.env.FRONTEND_URL}/payment-callback.html`
+      }
+    });
+    
+  } catch (error) {
+    console.error('Erreur getPaymentWidgetConfig:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
 };
