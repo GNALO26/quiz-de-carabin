@@ -8,104 +8,66 @@ class KkiaPay {
     this.secretKey = process.env.KKIAPAY_SECRET_KEY?.trim();
     this.mode = process.env.KKIAPAY_MODE || 'live';
     
-    this.baseURL = 'https://api.kkiapay.me';
-    
-    console.log('🔧 Configuration KkiaPay chargée - Mode:', this.mode);
-    console.log('🔑 Clé publique:', this.publicKey ? '✓ Configurée' : '✗ Manquante');
-    console.log('🌐 Base URL:', this.baseURL);
+    console.log('🔧 Configuration KkiaPay Liens Directs - Mode:', this.mode);
+    console.log('🔧 Clé publique:', this.publicKey ? '✓ Définie' : '✗ Manquante');
   }
 
   async createPayment(paymentData) {
     try {
-      console.log('💰 Tentative de création de paiement KkiaPay...');
+      console.log('💰 Utilisation des liens directs KkiaPay...');
       
-      const payload = {
-        amount: Math.round(paymentData.amount),
-        api_key: this.publicKey,
-        phone: paymentData.phone || '+2290156035888',
-        email: paymentData.email,
-        callback: paymentData.callback,
-        data: JSON.stringify(paymentData.metadata || {}),
-        theme: "#13a718",
-        name: "Quiz de Carabin",
-        sandbox: false
+      // ✅ MAPPING DES LIENS DIRECTS PAR PLAN
+      const directLinks = {
+        '1-month': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-5k)-h6j7-M-TL',
+        '3-months': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-12k)-Ov3-yKeZc',
+        '10-months': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-25k)-R6CAqLjlf'
       };
 
-      Object.keys(payload).forEach(key => {
-        if (payload[key] === '' || payload[key] === null || payload[key] === undefined) {
-          delete payload[key];
-        }
-      });
-
-      console.log('📤 Payload envoyé à KkiaPay:', JSON.stringify(payload, null, 2));
-
-      const response = await axios({
-        method: 'POST',
-        url: `${this.baseURL}/api/v1/transactions`,
-        data: payload,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 30000
-      });
-
-      console.log('✅ Réponse KkiaPay reçue:', JSON.stringify(response.data, null, 2));
-
-      if (response.data && response.data.url) {
-        return {
-          success: true,
-          payment_link: response.data.url,
-          transactionId: response.data.transactionId || `KKP_${Date.now()}`
-        };
-      } else {
-        throw new Error('URL de paiement non reçue dans la réponse');
+      const paymentUrl = directLinks[paymentData.metadata?.plan_id];
+      
+      if (!paymentUrl) {
+        throw new Error('Lien direct non trouvé pour le plan: ' + paymentData.metadata?.plan_id);
       }
+
+      console.log('✅ Lien direct sélectionné:', paymentUrl);
+      console.log('📋 Plan:', paymentData.metadata?.plan_id);
+      console.log('💳 Montant:', paymentData.amount);
+
+      return {
+        success: true,
+        paymentUrl: paymentUrl,
+        transactionId: paymentData.metadata.transaction_id
+      };
 
     } catch (error) {
-      console.error('❌ Erreur KkiaPay createPayment:');
-      
-      if (error.response) {
-        console.error('Status:', error.response.status);
-        console.error('Data:', error.response.data);
-        console.error('URL:', error.response.config?.url);
-      } else if (error.request) {
-        console.error('Aucune réponse reçue - Timeout ou problème réseau');
-      } else {
-        console.error('Erreur configuration:', error.message);
-      }
-      
-      let errorMessage = 'Erreur lors de la création du paiement';
-      if (error.response?.status === 404) {
-        errorMessage = 'Endpoint KkiaPay non trouvé. Vérifiez votre configuration.';
-      } else if (error.response?.status === 401) {
-        errorMessage = 'Clé API KkiaPay invalide ou expirée.';
-      } else if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Timeout de connexion à KkiaPay.';
-      }
-      
-      throw new Error(errorMessage);
+      console.error('❌ Erreur sélection lien direct:', error);
+      throw error;
     }
   }
 
   async verifyTransaction(transactionId) {
     try {
-      console.log(`🔍 Vérification transaction KkiaPay: ${transactionId}`);
+      const baseURL = this.mode === 'test' 
+        ? 'https://api-sandbox.kkiapay.me' 
+        : 'https://api.kkiapay.me';
       
-      const response = await axios({
-        method: 'GET',
-        url: `${this.baseURL}/api/v1/transactions/${transactionId}/status`,
+      const url = `${baseURL}/api/v1/transactions/${transactionId}/status`;
+      console.log('🔍 Vérification transaction:', transactionId);
+
+      const response = await axios.get(url, {
         headers: {
           'Accept': 'application/json',
-          'X-API-KEY': this.publicKey
+          'X-API-KEY': this.publicKey,
+          'X-PRIVATE-KEY': this.privateKey,
+          'X-SECRET-KEY': this.secretKey
         },
         timeout: 10000
       });
-      
+
       console.log('✅ Statut transaction:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Erreur vérification transaction:', error.response?.data || error.message);
+      console.error('Erreur vérification transaction:', error.response?.data || error.message);
       throw error;
     }
   }
@@ -117,12 +79,10 @@ class KkiaPay {
         .update(JSON.stringify(payload))
         .digest('hex');
       
-      const isValid = computedSignature === signature;
-      console.log(`🔐 Vérification signature: ${isValid ? 'VALIDE' : 'INVALIDE'}`);
-      
-      return isValid;
+      console.log('🔐 Signature vérifiée:', computedSignature === signature);
+      return computedSignature === signature;
     } catch (error) {
-      console.error("❌ Erreur vérification signature:", error);
+      console.error("Erreur vérification signature:", error);
       return false;
     }
   }

@@ -1,35 +1,39 @@
-const User = require('../models/User'); // Assurez-vous d'avoir le chemin correct
+const User = require('../models/User');
 
-// Middleware pour vérifier et mettre à jour le statut premium
-module.exports = async (req, res, next) => {
-    // Si l'utilisateur n'est pas authentifié, ou s'il n'a pas été chargé par le middleware 'auth'
-    if (!req.user || !req.user._id) {
-        return next();
-    }
-    
-    // Si l'utilisateur est marqué comme premium (ou était premium)
-    if (req.user.isPremium) {
-        const now = new Date();
-        const expiration = req.user.premiumExpiresAt;
-
-        // Si la date d'expiration est dans le passé et qu'elle existe
-        if (expiration && expiration <= now) {
-            console.log(`[PREMIUM] Révocation: Abonnement expiré pour l'utilisateur: ${req.user.email}`);
-            
-            // Mettre à jour l'utilisateur dans la base de données
-            // (Ne pas attendre le résultat pour ne pas bloquer la requête)
-            User.findByIdAndUpdate(req.user._id, {
-                isPremium: false,
-                premiumExpiresAt: null
-            }).exec().catch(err => {
-                console.error(`Erreur BD lors de la révocation premium pour ${req.user.email}:`, err);
-            });
-            
-            // Mettre à jour l'objet req.user pour la requête actuelle
-            req.user.isPremium = false; 
-            req.user.premiumExpiresAt = null;
+const checkPremiumStatus = async (req, res, next) => {
+  try {
+    if (req.user && req.user._id) {
+      const user = await User.findById(req.user._id);
+      
+      if (user) {
+        // Vérifier si l'abonnement a expiré
+        if (user.isPremium && user.premiumExpiresAt && user.premiumExpiresAt < new Date()) {
+          console.log(`🔄 Abonnement expiré pour ${user.email}`);
+          user.isPremium = false;
+          await user.save();
         }
+        
+        // Mettre à jour req.user avec les dernières infos
+        const updatedUser = await User.findById(req.user._id);
+        req.user.isPremium = updatedUser.isPremium;
+        req.user.premiumExpiresAt = updatedUser.premiumExpiresAt;
+        req.user.isPremiumActive = updatedUser.isPremiumActive();
+        req.user.daysRemaining = updatedUser.getDaysRemaining();
+        
+        console.log(`👤 Statut premium ${user.email}:`, {
+          isPremium: req.user.isPremium,
+          isPremiumActive: req.user.isPremiumActive,
+          daysRemaining: req.user.daysRemaining,
+          expiresAt: req.user.premiumExpiresAt
+        });
+      }
     }
     
     next();
+  } catch (error) {
+    console.error('❌ Erreur vérification statut premium:', error);
+    next();
+  }
 };
+
+module.exports = checkPremiumStatus;

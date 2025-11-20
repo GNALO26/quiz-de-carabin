@@ -2,91 +2,74 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
+  name: { 
+    type: String, 
     required: true,
     trim: true
   },
-  email: {
-    type: String,
-    required: true,
+  email: { 
+    type: String, 
+    required: true, 
     unique: true,
     lowercase: true,
-    validate: {
-      validator: function(email) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-      },
-      message: 'Format d\'email invalide'
-    }
+    trim: true
   },
-  password: {
+  password: { 
+    type: String, 
+    required: true 
+  },
+  phone: { 
     type: String,
-    required: true,
-    minlength: 6,
-    validate: {
-      validator: function(password) {
-        return password.length >= 6;
-      },
-      message: 'Le mot de passe doit contenir au moins 6 caractères'
-    }
+    trim: true
   },
-  isPremium: {
-    type: Boolean,
-    default: false
+  isPremium: { 
+    type: Boolean, 
+    default: false 
   },
-  premiumExpiresAt: {
-    type: Date,
-    default: null
+  premiumExpiresAt: { 
+    type: Date, 
+    default: null 
   },
-  tokenVersion: {
-    type: Number,
-    default: 0
+  premiumStartedAt: { 
+    type: Date, 
+    default: null 
   },
-  activeSessionId: {
-    type: String,
-    default: null
-  },
-  lastLogin: {
-    type: Date,
-    default: null
-  },
-  loginHistory: [{
-    timestamp: Date,
-    deviceId: String,
-    deviceInfo: Object,
-    ipAddress: String,
-    location: String,
-    success: Boolean,
-    reason: String
+  subscriptionHistory: [{
+    planId: String,
+    amount: Number,
+    startedAt: Date,
+    expiresAt: Date,
+    transactionId: String,
+    durationInMonths: Number
   }],
-  quizHistory: [{
-    quizId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Quiz'
-    },
-    score: Number,
-    totalQuestions: Number,
-    correctAnswers: Number,
-    completedAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  createdAt: {
+  lastLoginAt: {
     type: Date,
-    default: Date.now
+    default: null
   }
+}, {
+  timestamps: true
 });
 
-// Middleware pre-save pour normaliser l'email
-userSchema.pre('save', function(next) {
-  if (this.isModified('email')) {
-    this.email = this.email.toLowerCase().trim();
-  }
-  next();
-});
+// Méthode pour vérifier le mot de passe
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
-// Hash du mot de passe avant sauvegarde
+// Méthode pour vérifier si l'abonnement est actif
+userSchema.methods.isPremiumActive = function() {
+  if (!this.isPremium || !this.premiumExpiresAt) return false;
+  return this.premiumExpiresAt > new Date();
+};
+
+// Méthode pour obtenir les jours restants
+userSchema.methods.getDaysRemaining = function() {
+  if (!this.isPremiumActive()) return 0;
+  const now = new Date();
+  const diffTime = this.premiumExpiresAt - now;
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+// Middleware pour hacher le mot de passe avant sauvegarde
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
@@ -98,15 +81,5 @@ userSchema.pre('save', async function(next) {
     next(error);
   }
 });
-
-// Méthode pour comparer les mots de passe
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
-};
-
-// Méthode statique pour trouver par email (insensible à la casse)
-userSchema.statics.findByEmail = function(email) {
-  return this.findOne({ email: email.toLowerCase().trim() });
-};
 
 module.exports = mongoose.model('User', userSchema);

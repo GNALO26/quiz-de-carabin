@@ -11,16 +11,6 @@ const transactionSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
-  amount: {
-    type: Number,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'completed', 'failed'],
-    default: 'pending'
-  },
-  // Champs KkiaPay
   kkiapayTransactionId: {
     type: String,
     default: null
@@ -29,40 +19,46 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  // Anciens champs PayDunya (à garder pour compatibilité)
-  paydunyaInvoiceToken: {
+  paymentLinkId: {
     type: String,
     default: null
   },
-  paydunyaInvoiceURL: {
-    type: String,
-    default: null
-  },
-  accessCode: {
-    type: String,
-    default: null
-  },
-  accessCodeUsed: {
-    type: Boolean,
-    default: false
+  amount: {
+    type: Number,
+    required: true
   },
   durationInMonths: {
     type: Number,
     required: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  planId: {
+    type: String,
+    required: true
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'cancelled'],
+    default: 'pending'
+  },
+  accessCode: {
+    type: String,
+    default: null
+  },
+  userEmail: {
+    type: String,
+    required: true
+  },
+  metadata: {
+    type: Object,
+    default: {}
   }
+}, {
+  timestamps: true
 });
 
-transactionSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
-});
+// Index pour les recherches fréquentes
+transactionSchema.index({ userId: 1, status: 1 });
+transactionSchema.index({ transactionId: 1 });
+transactionSchema.index({ createdAt: 1 });
 
 module.exports = mongoose.model('Transaction', transactionSchema);
