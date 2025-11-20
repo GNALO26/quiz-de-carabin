@@ -99,6 +99,3 @@ export const formatDate = (dateString) => {
     day: 'numeric'
   });
 };
-
-// Export global pour compatibilité
-window.APP_CONFIG = CONFIG;
