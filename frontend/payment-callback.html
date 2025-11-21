@@ -197,7 +197,7 @@
         if (subscriptionEnd) {
             const expiryDate = new Date(subscriptionEnd).toLocaleDateString('fr-FR');
             const expiryElement = document.createElement('p');
-            expiryElement.innerHTML = <strong>Date d'expiration : ${expiryDate}</strong>;
+            expiryElement.innerHTML = `<strong>Date d'expiration : ${expiryDate}</strong>`;
             document.querySelector('#success .alert-success').insertBefore(expiryElement, document.querySelector('.access-code'));
         }
         
