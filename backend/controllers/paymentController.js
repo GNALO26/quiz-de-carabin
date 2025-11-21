@@ -15,9 +15,9 @@ const SUBSCRIPTION_PLANS = {
 
 // Configuration pour les liens directs KkiaPay
 const DIRECT_PAYMENT_LINKS = {
-  '1-month': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-test)-syVfYIPZV',
-  '3-months': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-12k)-Ov3-yKeZc',
-  '10-months': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-25k)-R6CAqLjlf'
+  '1-month': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-test)-Nspyd2qLE',
+  '3-months': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-12k)-glrVnSRX7',
+  '10-months': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-25k)-g1Zc3Pma-'
 };
 
 // Fonction utilitaire pour ajouter des mois à une date
