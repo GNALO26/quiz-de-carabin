@@ -2,58 +2,13 @@ const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const verifyWebhook = require('../middleware/verifyWebhook');
+const webhookLogger = require('../middleware/webhookLogger');
 
-console.log('✅ Webhook routes loaded');
+// Appliquer le logger pour tous les webhooks
+router.use(webhookLogger);
 
-// Webhook KkiaPay - DOIT ÊTRE PUBLIC (pas d'auth)
-router.post('/kkiapay', express.raw({type: 'application/json'}), verifyWebhook, paymentController.handleKkiapayWebhook);
-
-// Route de test pour webhook (développement seulement)
-router.post('/test', express.json(), async (req, res) => {
-  if (process.env.NODE_ENV !== 'development') {
-    return res.status(403).json({ error: 'Test webhook disponible uniquement en développement' });
-  }
-
-  try {
-    console.log('🧪 Test webhook reçu:', req.body);
-    
-    // Simuler un webhook KkiaPay réussi
-    const mockWebhook = {
-      transactionId: 'TEST_' + Date.now(),
-      status: 'SUCCESS',
-      metadata: {
-        transaction_id: 'TXN_TEST_123',
-        user_id: req.body.userId || 'test_user',
-        plan_id: req.body.planId || '1-month'
-      }
-    };
-
-    // Traiter le webhook simulé
-    await paymentController.handleKkiapayWebhook(
-      { body: mockWebhook },
-      { status: () => ({ send: () => {} }) },
-      () => {}
-    );
-
-    res.json({ 
-      success: true, 
-      message: 'Webhook test traité avec succès',
-      simulated_data: mockWebhook 
-    });
-  } catch (error) {
-    console.error('❌ Erreur webhook test:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Health check pour webhooks
-router.get('/health', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Webhook endpoint operational',
-    timestamp: new Date().toISOString()
-  });
-});
+// Webhook KkiaPay PRODUCTION
+router.post('/kkiapay', verifyWebhook, paymentController.handleKkiapayWebhook);
 
 module.exports = router;
 /*const express = require('express');

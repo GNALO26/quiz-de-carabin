@@ -11,6 +11,16 @@ const transactionSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  amount: {
+    type: Number,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'cancelled'],
+    default: 'pending'
+  },
+  // ✅ CHAMPS KKiaPay
   kkiapayTransactionId: {
     type: String,
     default: null
@@ -19,46 +29,59 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  paymentLinkId: {
+  paymentGateway: {
     type: String,
-    default: null
-  },
-  amount: {
-    type: Number,
-    required: true
-  },
-  durationInMonths: {
-    type: Number,
-    required: true
+    enum: ['kkiapay_widget', 'kkiapay_direct'],
+    default: 'kkiapay_direct'
   },
   planId: {
     type: String,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'completed', 'failed', 'cancelled'],
-    default: 'pending'
+    required: true,
+    enum: ['5k', '12k', '25k']
   },
   accessCode: {
     type: String,
     default: null
   },
-  userEmail: {
-    type: String,
+  accessCodeUsed: {
+    type: Boolean,
+    default: false
+  },
+  durationInMonths: {
+    type: Number,
     required: true
   },
-  metadata: {
-    type: Object,
-    default: {}
+  subscriptionStart: {
+    type: Date,
+    default: null
+  },
+  subscriptionEnd: {
+    type: Date,
+    default: null
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
-}, {
-  timestamps: true
 });
 
-// Index pour les recherches fréquentes
+transactionSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
+// Index pour les recherches courantes
 transactionSchema.index({ userId: 1, status: 1 });
 transactionSchema.index({ transactionId: 1 });
+transactionSchema.index({ kkiapayTransactionId: 1 });
 transactionSchema.index({ createdAt: 1 });
 
 module.exports = mongoose.model('Transaction', transactionSchema);

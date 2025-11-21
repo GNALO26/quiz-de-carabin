@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const accessCodeSchema = new mongoose.Schema({
+const AccessCodeSchema = new mongoose.Schema({
   code: {
     type: String,
     required: true,
@@ -15,39 +15,25 @@ const accessCodeSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  transactionId: {
-    type: String,
-    required: true
+  expiresAt: {
+    type: Date,
+    required: true,
+    default: () => new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
   },
   used: {
     type: Boolean,
     default: false
   },
-  usedAt: {
+  createdAt: {
     type: Date,
-    default: null
-  },
-  expiresAt: {
-    type: Date,
-    required: true
-  },
-  planId: {
-    type: String,
-    required: true
+    default: Date.now
   }
-}, {
-  timestamps: true
 });
 
-// Index pour la recherche et la validation
-accessCodeSchema.index({ code: 1 });
-accessCodeSchema.index({ userId: 1 });
-accessCodeSchema.index({ expiresAt: 1 });
-accessCodeSchema.index({ email: 1, used: 1 });
+// Index pour l'expiration automatique
+AccessCodeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-// Méthode pour vérifier si le code est valide
-accessCodeSchema.methods.isValid = function() {
-  return !this.used && this.expiresAt > new Date();
-};
+// Index pour les recherches par code et utilisateur
+AccessCodeSchema.index({ code: 1, userId: 1 });
 
-module.exports = mongoose.model('AccessCode', accessCodeSchema);
+module.exports = mongoose.model('AccessCode', AccessCodeSchema);

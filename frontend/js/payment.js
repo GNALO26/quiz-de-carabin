@@ -6,6 +6,7 @@ export class Payment {
         this.auth = new Auth();
         this.setupEventListeners();
         this.checkPaymentReturn();
+        this.displaySubscriptionInfo();
     }
 
     async getActiveAPIUrl() {
@@ -34,11 +35,21 @@ export class Payment {
     setupEventListeners() {
         console.log('🎯 SetupEventListeners: Initialisation des écouteurs PRODUCTION');
         
+        // Écouteurs pour paiements directs (nouveaux boutons)
+        document.querySelectorAll('.subscribe-btn-direct').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const planKey = e.currentTarget.getAttribute('data-plan-key');
+                console.log(`🖱 Clic sur bouton DIRECT: ${planKey}`);
+                this.initiateDirectPayment(planKey);
+            });
+        });
+        
+        // Écouteurs pour paiements widget (boutons existants)
         document.querySelectorAll('.subscribe-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 const planId = e.currentTarget.getAttribute('data-plan-id');
                 const amount = e.currentTarget.getAttribute('data-plan-price');
-                console.log(`🖱 Clic sur bouton PRODUCTION: ${planId} - ${amount} FCFA`);
+                console.log(`🖱 Clic sur bouton WIDGET: ${planId} - ${amount} FCFA`);
                 this.initiatePayment(planId, amount);
             });
         });
@@ -59,6 +70,58 @@ export class Payment {
         if (transactionId && window.location.pathname.includes('payment-callback.html')) {
             console.log('🔄 Détection retour paiement PRODUCTION. Vérification statut...');
             this.processPaymentReturn();
+        }
+    }
+
+    // ✅ NOUVELLE MÉTHODE POUR PAIEMENTS DIRECTS
+    async initiateDirectPayment(planKey) {
+        try {
+            console.log(`💰 Initialisation paiement DIRECT: ${planKey}`);
+            
+            if (!this.auth.isAuthenticated()) {
+                this.auth.showLoginModal();
+                this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
+                return;
+            }
+
+            const token = this.auth.getToken();
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            
+            // Afficher le loading
+            this.showAlert('Préparation du paiement...', 'info');
+            
+            const response = await fetch(`${API_BASE_URL}/api/payment/direct/initiate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ planKey })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('📨 Réponse paiement direct:', data);
+
+            if (data.success && data.paymentUrl) {
+                // Stocker l'ID de transaction pour vérification ultérieure
+                localStorage.setItem('pendingTransaction', data.transactionId);
+                
+                // Redirection vers le lien direct KkiaPay
+                this.showAlert('Redirection vers la page de paiement sécurisée...', 'success');
+                setTimeout(() => {
+                    window.location.href = data.paymentUrl;
+                }, 2000);
+            } else {
+                throw new Error(data.message || 'Erreur lors de la génération du lien de paiement');
+            }
+
+        } catch (error) {
+            console.error('💥 Erreur paiement direct:', error);
+            this.showAlert(error.message, 'danger');
         }
     }
 
@@ -217,7 +280,7 @@ export class Payment {
 
             if (data.success) {
                 if (data.status === 'completed') {
-                    this.showPaymentSuccess(data.accessCode, data.user);
+                    this.showPaymentSuccess(data.accessCode, data.user, data.subscriptionEnd);
                     localStorage.removeItem('pendingTransaction');
                     
                     // Mettre à jour l'interface utilisateur
@@ -225,6 +288,7 @@ export class Payment {
                         localStorage.setItem('quizUser', JSON.stringify(data.user));
                         this.auth.user = data.user;
                         this.auth.updateUI();
+                        this.displaySubscriptionInfo();
                     }
                 } else {
                     this.showPaymentPending();
@@ -238,13 +302,16 @@ export class Payment {
         }
     }
 
-    showPaymentSuccess(accessCode, user) {
+    showPaymentSuccess(accessCode, user, subscriptionEnd) {
         const statusElement = document.getElementById('payment-status');
         if (statusElement) {
+            const expiryDate = subscriptionEnd ? new Date(subscriptionEnd).toLocaleDateString('fr-FR') : 'date inconnue';
+            
             statusElement.innerHTML = `
                 <div class="alert alert-success">
                     <h4>✅ Paiement Réussi!</h4>
                     <p>Votre abonnement premium a été activé avec succès.</p>
+                    <p><strong>Date d'expiration : ${expiryDate}</strong></p>
                     <div class="access-code my-3">
                         <strong>Votre code d'accès:</strong>
                         <div class="h4 text-primary">${accessCode}</div>
@@ -267,6 +334,7 @@ export class Payment {
             localStorage.setItem('quizUser', JSON.stringify(user));
             this.auth.user = user;
             this.auth.updateUI();
+            this.displaySubscriptionInfo();
         }
     }
 
@@ -374,6 +442,7 @@ export class Payment {
                     localStorage.setItem('quizUser', JSON.stringify(data.user));
                     this.auth.user = data.user;
                     this.auth.updateUI();
+                    this.displaySubscriptionInfo();
                 }
                 
                 setTimeout(() => {
@@ -445,8 +514,101 @@ export class Payment {
         }
     }
     
+    // ✅ NOUVELLE MÉTHODE POUR AFFICHER LES INFORMATIONS D'ABONNEMENT
+    async displaySubscriptionInfo() {
+        try {
+            if (!this.auth.isAuthenticated()) return;
+            
+            const subscription = await this.checkUserSubscription();
+            const premiumBadge = document.getElementById('premium-badge');
+            const subscriptionInfo = document.getElementById('subscription-info');
+            
+            if (subscription && subscription.hasActiveSubscription) {
+                // Utilisateur a un abonnement actif
+                if (premiumBadge) {
+                    premiumBadge.style.display = 'inline';
+                    premiumBadge.textContent = 'Premium Actif';
+                    
+                    // Ajouter la date d'expiration si disponible
+                    if (subscription.premiumExpiresAt) {
+                        const expiryDate = new Date(subscription.premiumExpiresAt).toLocaleDateString('fr-FR');
+                        premiumBadge.title = `Expire le ${expiryDate}`;
+                    }
+                }
+                
+                // Masquer les boutons d'abonnement ou afficher un message
+                document.querySelectorAll('.subscribe-btn-direct, .subscribe-btn').forEach(btn => {
+                    btn.style.display = 'none';
+                });
+                
+                // Afficher un message d'abonnement actif
+                if (subscriptionInfo) {
+                    const expiryDate = subscription.premiumExpiresAt ? 
+                        new Date(subscription.premiumExpiresAt).toLocaleDateString('fr-FR') : 'date inconnue';
+                    
+                    subscriptionInfo.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-crown me-2"></i>
+                            <strong>Abonnement Premium Actif</strong>
+                            <br>Votre abonnement est valide jusqu'au ${expiryDate}
+                        </div>
+                    `;
+                    subscriptionInfo.style.display = 'block';
+                }
+            } else {
+                // Utilisateur n'a pas d'abonnement actif
+                if (premiumBadge) {
+                    premiumBadge.style.display = 'none';
+                }
+                
+                // Afficher les boutons d'abonnement
+                document.querySelectorAll('.subscribe-btn-direct, .subscribe-btn').forEach(btn => {
+                    btn.style.display = 'inline-block';
+                });
+                
+                if (subscriptionInfo) {
+                    subscriptionInfo.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-graduation-cap me-2"></i>
+                            <strong>Accédez à tous les quiz Premium</strong>
+                            <br>Choisissez une formule d'abonnement pour débloquer l'accès complet
+                        </div>
+                    `;
+                    subscriptionInfo.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error('Erreur affichage info abonnement:', error);
+        }
+    }
+    
+    // ✅ NOUVELLE MÉTHODE POUR VÉRIFIER L'ABONNEMENT UTILISATEUR
+    async checkUserSubscription() {
+        try {
+            if (!this.auth.isAuthenticated()) return null;
+            
+            const token = this.auth.getToken();
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            
+            const response = await fetch(`${API_BASE_URL}/api/payment/subscription/info`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.success ? data.subscription : null;
+            }
+            return null;
+        } catch (error) {
+            console.error('Erreur vérification abonnement:', error);
+            return null;
+        }
+    }
+    
     showAlert(message, type) {
-        // Supprimer les alertes existantes
         document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
         
         const alertDiv = document.createElement('div');

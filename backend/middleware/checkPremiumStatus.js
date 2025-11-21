@@ -1,37 +1,26 @@
 const User = require('../models/User');
 
+// Middleware pour vérifier et mettre à jour le statut premium
 const checkPremiumStatus = async (req, res, next) => {
   try {
-    if (req.user && req.user._id) {
+    if (req.user && req.user.isPremium) {
       const user = await User.findById(req.user._id);
       
-      if (user) {
-        // Vérifier si l'abonnement a expiré
-        if (user.isPremium && user.premiumExpiresAt && user.premiumExpiresAt < new Date()) {
-          console.log(`🔄 Abonnement expiré pour ${user.email}`);
-          user.isPremium = false;
-          await user.save();
-        }
+      // Vérifier si l'abonnement a expiré
+      if (user.premiumExpiresAt && new Date() > new Date(user.premiumExpiresAt)) {
+        user.isPremium = false;
+        await user.save();
         
-        // Mettre à jour req.user avec les dernières infos
-        const updatedUser = await User.findById(req.user._id);
-        req.user.isPremium = updatedUser.isPremium;
-        req.user.premiumExpiresAt = updatedUser.premiumExpiresAt;
-        req.user.isPremiumActive = updatedUser.isPremiumActive();
-        req.user.daysRemaining = updatedUser.getDaysRemaining();
+        // Mettre à jour l'utilisateur dans la requête
+        req.user.isPremium = false;
+        req.user.premiumExpiresAt = null;
         
-        console.log(`👤 Statut premium ${user.email}:`, {
-          isPremium: req.user.isPremium,
-          isPremiumActive: req.user.isPremiumActive,
-          daysRemaining: req.user.daysRemaining,
-          expiresAt: req.user.premiumExpiresAt
-        });
+        console.log(`⏰ Abonnement expiré pour ${user.email}`);
       }
     }
-    
     next();
   } catch (error) {
-    console.error('❌ Erreur vérification statut premium:', error);
+    console.error('Erreur vérification statut premium:', error);
     next();
   }
 };
