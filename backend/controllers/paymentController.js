@@ -235,7 +235,7 @@ exports.activatePremiumSubscription = async (transaction) => {
     }
 };
 
-// Fonction de traitement du retour de paiement
+// Fonction de traitement du retour de paiement - VERSION AMÉLIORÉE
 exports.processPaymentReturn = async (req, res) => {
     try {
         const { transactionId } = req.body;
@@ -243,13 +243,30 @@ exports.processPaymentReturn = async (req, res) => {
         console.log(`[${new Date().toISOString()}] [RETOUR] === Début du traitement du retour de paiement ===`);
         console.log(`[${new Date().toISOString()}] [RETOUR] ID de la transaction: ${transactionId}`);
         
-        const transaction = await Transaction.findOne({ transactionId });
+        // ✅ CORRECTION: Recherche plus robuste
+        let transaction = await Transaction.findOne({ transactionId });
         
         if (!transaction) {
+            console.log(`[${new Date().toISOString()}] [INFO] Transaction non trouvée par transactionId, recherche par kkiapayTransactionId...`);
+            transaction = await Transaction.findOne({ kkiapayTransactionId: transactionId });
+        }
+
+        if (!transaction) {
             console.error(`[${new Date().toISOString()}] [ERREUR] Retour: Transaction non trouvée: ${transactionId}`);
-            return res.status(404).json({ success: false, message: 'Transaction non trouvée' });
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Transaction non trouvée',
+                details: `ID recherché: ${transactionId}`
+            });
         }
         
+        console.log(`[${new Date().toISOString()}] [INFO] Transaction trouvée:`, {
+            id: transaction._id,
+            transactionId: transaction.transactionId,
+            kkiapayId: transaction.kkiapayTransactionId,
+            status: transaction.status
+        });
+
         if (transaction.status === 'completed') {
             console.log(`[${new Date().toISOString()}] [INFO] Retour: Transaction déjà confirmée par le webhook.`);
             
@@ -264,12 +281,38 @@ exports.processPaymentReturn = async (req, res) => {
             });
         }
         
-        // Si le webhook a échoué, on vérifie manuellement
-        console.log(`[${new Date().toISOString()}] [RETOUR] Vérification manuelle du paiement...`);
+        // Si le webhook a échoué, on vérifie manuellement avec KkiaPay
+        console.log(`[${new Date().toISOString()}] [RETOUR] Vérification manuelle du paiement chez KkiaPay...`);
         
-        // Pour KkiaPay Widget, on ne peut pas vérifier directement
-        // On retourne un statut pending et on attend le webhook
-        console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement toujours en attente de confirmation webhook.`);
+        try {
+            // Vérifier directement avec l'API KkiaPay
+            const kkiapayStatus = await kkiapay.verifyTransaction(transaction.kkiapayTransactionId || transactionId);
+            console.log(`[${new Date().toISOString()}] [RETOUR] Statut KkiaPay:`, kkiapayStatus);
+            
+            if (kkiapayStatus.status === 'SUCCESS') {
+                console.log(`[${new Date().toISOString()}] [RETOUR] Paiement confirmé par KkiaPay, activation manuelle...`);
+                
+                // Activer manuellement l'abonnement
+                const activationSuccess = await exports.activatePremiumSubscription(transaction);
+                
+                if (activationSuccess) {
+                    const user = await User.findById(transaction.userId);
+                    return res.status(200).json({
+                        success: true,
+                        status: 'completed',
+                        accessCode: transaction.accessCode,
+                        user: user,
+                        subscriptionEnd: user.premiumExpiresAt,
+                        message: "Paiement confirmé manuellement"
+                    });
+                }
+            }
+        } catch (kkiapayError) {
+            console.log(`[${new Date().toISOString()}] [INFO] Impossible de vérifier avec KkiaPay:`, kkiapayError.message);
+        }
+        
+        // Si on arrive ici, le paiement est toujours en attente
+        console.log(`[${new Date().toISOString()}] [INFO] Retour: Paiement toujours en attente de confirmation.`);
         
         return res.status(200).json({
             success: true,
@@ -281,7 +324,8 @@ exports.processPaymentReturn = async (req, res) => {
         console.error(`[${new Date().toISOString()}] [ERREUR] Retour: Erreur lors du traitement du retour de paiement: ${error.message}`);
         res.status(500).json({
             success: false,
-            message: "Erreur serveur lors du traitement du retour de paiement"
+            message: "Erreur serveur lors du traitement du retour de paiement",
+            error: error.message
         });
     }
 };
