@@ -34,10 +34,11 @@ const transactionSchema = new mongoose.Schema({
     enum: ['kkiapay_widget', 'kkiapay_direct'],
     default: 'kkiapay_direct'
   },
+  // ✅ CORRECTION: Changer l'enum pour matcher avec le frontend
   planId: {
     type: String,
     required: true,
-    enum: ['5k', '12k', '25k']
+    enum: ['1-month', '3-months', '10-months']
   },
   accessCode: {
     type: String,

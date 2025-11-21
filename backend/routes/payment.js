@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
-const directPaymentController = require('../controllers/directPaymentController');
 const auth = require('../middleware/auth');
 
 console.log('✅ Payment routes loaded - MODE PRODUCTION');
 
 // ✅ ROUTES PAIEMENT DIRECT (Liens KkiaPay)
-router.post('/direct/initiate', auth, directPaymentController.initiateDirectPayment);
-router.get('/direct/status/:transactionId', auth, directPaymentController.checkDirectPaymentStatus);
-router.get('/subscription/info', auth, directPaymentController.getUserSubscriptionInfo);
+router.post('/direct/initiate', auth, paymentController.initiateDirectPayment);
+router.get('/direct/status/:transactionId', auth, paymentController.checkDirectPaymentStatus);
+router.get('/subscription/info', auth, paymentController.getUserSubscriptionInfo);
 
 // ✅ ROUTES WIDGET KKiaPay (existantes)
 router.post('/initiate', auth, paymentController.initiatePayment);

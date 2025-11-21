@@ -87,6 +87,10 @@ export class Payment {
             const token = this.auth.getToken();
             const API_BASE_URL = await this.getActiveAPIUrl();
             
+            console.log('📤 Envoi requête vers:', `${API_BASE_URL}/api/payment/direct/initiate`);
+            console.log('🔑 Token présent:', !!token);
+            console.log('📦 Données envoyées:', { planKey });
+
             // Afficher le loading
             this.showAlert('Préparation du paiement...', 'info');
             
@@ -99,12 +103,26 @@ export class Payment {
                 body: JSON.stringify({ planKey })
             });
 
+            console.log('📨 Statut réponse:', response.status);
+            
             if (!response.ok) {
-                throw new Error(`Erreur HTTP ${response.status}`);
+                // Obtenir le détail de l'erreur
+                const errorText = await response.text();
+                console.error('❌ Détail erreur:', errorText);
+                
+                let errorMessage = `Erreur HTTP ${response.status}`;
+                try {
+                    const errorData = JSON.parse(errorText);
+                    errorMessage = errorData.message || errorMessage;
+                } catch (e) {
+                    errorMessage = errorText || errorMessage;
+                }
+                
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
-            console.log('📨 Réponse paiement direct:', data);
+            console.log('✅ Réponse paiement direct:', data);
 
             if (data.success && data.paymentUrl) {
                 // Stocker l'ID de transaction pour vérification ultérieure
@@ -121,7 +139,7 @@ export class Payment {
 
         } catch (error) {
             console.error('💥 Erreur paiement direct:', error);
-            this.showAlert(error.message, 'danger');
+            this.showAlert(`Erreur: ${error.message}`, 'danger');
         }
     }
 
@@ -462,58 +480,6 @@ export class Payment {
             this.showAlert('Erreur lors de la validation du code: ' + error.message, 'danger');
         }
     }
-
-    async resendAccessCode() {
-        try {
-            const token = this.auth.getToken();
-            
-            if (!token) {
-                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
-                this.auth.logout();
-                return;
-            }
-            
-            const resendBtn = document.getElementById('resend-code');
-            const originalText = resendBtn.innerHTML;
-            resendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Envoi...';
-            resendBtn.disabled = true;
-
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            
-            const response = await fetch(`${API_BASE_URL}/api/payment/resend-code`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            resendBtn.innerHTML = originalText;
-            resendBtn.disabled = false;
-
-            if (response.status === 401) {
-                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
-                this.auth.logout();
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error(`HTTP error ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                this.showAlert('Un nouveau code a été renvoyé à votre adresse email.', 'success');
-            } else {
-                this.showAlert(data.message || 'Erreur lors de l\'envoi du code', 'danger');
-            }
-        } catch (error) {
-            console.error('💥 Erreur renvoi code:', error);
-            this.showAlert('Erreur lors de l\'envoi du code. Veuillez réessayer.', 'danger');
-        }
-    }
-    
     // ✅ NOUVELLE MÉTHODE POUR AFFICHER LES INFORMATIONS D'ABONNEMENT
     async displaySubscriptionInfo() {
         try {

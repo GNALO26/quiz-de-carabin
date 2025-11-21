@@ -476,14 +476,27 @@ exports.handleKkiapayWebhook = async (req, res) => {
 exports.initiateDirectPayment = async (req, res) => {
   try {
     console.log('=== DÉBUT PAIEMENT DIRECT KKiaPay ===');
+    console.log('📦 Body reçu:', req.body);
+    console.log('👤 User:', req.user ? req.user.email : 'No user');
     
     const { planKey } = req.body;
+    
+    if (!planKey) {
+      console.error('❌ planKey manquant dans le body');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Plan key manquant' 
+      });
+    }
+
     const plan = SUBSCRIPTION_PLANS[planKey];
     
     if (!plan) {
+      console.error('❌ Plan non trouvé:', planKey);
+      console.log('📋 Plans disponibles:', Object.keys(SUBSCRIPTION_PLANS));
       return res.status(400).json({ 
         success: false, 
-        message: 'Plan d\'abonnement invalide' 
+        message: `Plan d'abonnement invalide: ${planKey}` 
       });
     }
 
