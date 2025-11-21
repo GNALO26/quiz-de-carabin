@@ -15,7 +15,7 @@ const SUBSCRIPTION_PLANS = {
 
 // Configuration pour les liens directs KkiaPay
 const DIRECT_PAYMENT_LINKS = {
-  '1-month': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-5k)-h6j7-M-TL',
+  '1-month': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-test)-syVfYIPZV',
   '3-months': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-12k)-Ov3-yKeZc',
   '10-months': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-25k)-R6CAqLjlf'
 };
