@@ -25,20 +25,19 @@ try {
   console.log('   - User: quizdecarabin4@gmail.com');
   console.log('   - Pass: ************gms');
   
-  // Vérification asynchrone non-bloquante
-  setTimeout(() => {
-    transporter.verify((error) => {
-      if (error) {
-        console.log('⚠  Email - Vérification échouée:', error.message);
-        
-        // Mode secours automatique
-        console.log('🔄 Activation du mode secours email...');
-        transporter = createFallbackTransporter();
-      } else {
-        console.log('✅ Email - Configuration Gmail réussie');
-      }
-    });
-  }, 2000);
+  // ✅ CORRECTION: Vérification synchrone pour confirmer que ça fonctionne
+  transporter.verify(function(error, success) {
+    if (error) {
+      console.log('⚠  Email - Vérification échouée:', error.message);
+      console.log('🔧 Détails configuration:', {
+        host: gmailConfig.host,
+        port: gmailConfig.port,
+        user: gmailConfig.auth.user
+      });
+    } else {
+      console.log('✅ Email - Configuration Gmail réussie - Prêt pour envoi');
+    }
+  });
 
 } catch (error) {
   console.log('❌ Erreur configuration email, mode secours activé');

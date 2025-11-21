@@ -212,55 +212,54 @@ export class Payment {
         }
     }
 
-    // ✅ CORRECTION: Redirection directe vers KkiaPay
-    async redirectToKkiaPay(amount, user, transactionId) {
-        try {
-            console.log('🎯 Redirection vers KkiaPay...');
-            
-            // Construction de l'URL de paiement KkiaPay
-            const baseUrl = 'https://kkiapay.me';
-            const callbackUrl = `${window.location.origin}/payment-callback.html?transactionId=${transactionId}`;
-            
-            const paymentParams = new URLSearchParams({
-                amount: amount,
-                apikey: '2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751',
-                phone: user.phone || '+2290156035888',
-                email: user.email,
-                callback: callbackUrl,
-                data: JSON.stringify({
-                    transaction_id: transactionId,
-                    user_id: user._id,
-                    user_email: user.email,
-                    plan: 'quiz-premium'
-                }),
-                theme: '#13a718',
-                name: 'Quiz de Carabin',
-                sandbox: 'false'
-            });
+    // ✅ CORRECTION: Redirection améliorée vers KkiaPay
+async redirectToKkiaPay(amount, user, transactionId) {
+    try {
+        console.log('🎯 Redirection vers KkiaPay...');
+        
+        // Construction de l'URL de paiement KkiaPay
+        const baseUrl = 'https://kkiapay.me';
+        
+        // ✅ CORRECTION IMPORTANTE: URL de callback qui redirige vers NOTRE site
+        const callbackUrl = `${window.location.origin}/payment-callback.html?transactionId=${transactionId}&success=true`;
+        
+        const paymentParams = new URLSearchParams({
+            amount: amount,
+            apikey: '2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751',
+            phone: user.phone || '+2290156035888',
+            email: user.email,
+            callback: callbackUrl, // ✅ URL de retour APRÈS paiement
+            data: JSON.stringify({
+                transaction_id: transactionId,
+                user_id: user._id,
+                user_email: user.email,
+                plan: 'quiz-premium'
+            }),
+            theme: '#13a718',
+            name: 'Quiz de Carabin',
+            sandbox: 'false'
+        });
 
-            const paymentUrl = `${baseUrl}/pay?${paymentParams.toString()}`;
-            
-            console.log('🔗 URL de paiement générée:', paymentUrl);
-            
-            this.showAlert('Redirection vers la page de paiement sécurisée KkiaPay...', 'info');
-            
-            // Redirection après un court délai pour que l'utilisateur voie le message
-            setTimeout(() => {
-                console.log('🚀 Redirection vers KkiaPay...');
-                window.location.href = paymentUrl;
-            }, 1500);
-            
-        } catch (error) {
-            console.error('❌ Erreur redirection KkiaPay:', error);
-            
-            // ✅ SECOURS : URL de secours
-            this.showAlert('Redirection vers le paiement...', 'info');
-            setTimeout(() => {
-                const fallbackUrl = `https://kkiapay.me/pay?amount=${amount}&apikey=2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751&callback=${encodeURIComponent(window.location.origin + '/payment-callback.html?transactionId=' + transactionId)}`;
-                window.location.href = fallbackUrl;
-            }, 1000);
-        }
+        const paymentUrl = `${baseUrl}/pay?${paymentParams.toString()}`;
+        
+        console.log('🔗 URL de paiement générée:', paymentUrl);
+        console.log('🔄 URL de callback:', callbackUrl);
+        
+        this.showAlert('Redirection vers la page de paiement sécurisée KkiaPay...', 'success');
+        
+        // Redirection IMMÉDIATE
+        console.log('🚀 Redirection vers KkiaPay...');
+        window.location.href = paymentUrl;
+        
+    } catch (error) {
+        console.error('❌ Erreur redirection KkiaPay:', error);
+        
+        // ✅ SECOURS : URL de secours
+        this.showAlert('Redirection vers le paiement...', 'info');
+        const fallbackUrl = `https://kkiapay.me/pay?amount=${amount}&apikey=2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751&callback=${encodeURIComponent(window.location.origin + '/payment-callback.html?transactionId=' + transactionId)}`;
+        window.location.href = fallbackUrl;
     }
+}
 
     async processPaymentReturn() {
         try {

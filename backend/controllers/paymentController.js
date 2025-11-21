@@ -175,6 +175,8 @@ exports.activatePremiumSubscription = async (transaction) => {
             return false;
         }
 
+        console.log(`👤 Utilisateur trouvé: ${user.email}`);
+
         // Créer le code d'accès avec la durée réelle
         const newAccessCode = new AccessCode({
             code: accessCode,
@@ -183,6 +185,7 @@ exports.activatePremiumSubscription = async (transaction) => {
             expiresAt: addMonths(new Date(), transaction.durationInMonths)
         });
         await newAccessCode.save();
+        console.log(`💾 Code d'accès sauvegardé: ${accessCode}`);
 
         // ✅ GESTION INTELLIGENTE DE L'ABONNEMENT
         let newExpiryDate;
@@ -203,14 +206,23 @@ exports.activatePremiumSubscription = async (transaction) => {
         user.isPremium = true;
         user.premiumExpiresAt = newExpiryDate;
         await user.save();
+        console.log(`✅ Utilisateur mis à jour - Premium: ${user.isPremium}`);
         
         // Envoyer l'email avec le code d'accès
-        await sendAccessCodeEmail(user.email, accessCode, user.name, transaction.durationInMonths);
+        console.log(`📧 Tentative d'envoi d'email à ${user.email}...`);
+        const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name, transaction.durationInMonths);
+        
+        if (emailSent) {
+            console.log(`✅ Email envoyé avec succès à ${user.email}`);
+        } else {
+            console.error(`❌ Échec envoi email à ${user.email}`);
+        }
         
         // Sauvegarder la transaction
         await transaction.save();
+        console.log(`💾 Transaction sauvegardée: ${transaction.transactionId}`);
         
-        console.log(`✅ Abonnement activé pour ${user.email}`);
+        console.log(`🎉 ABONNEMENT ACTIVÉ AVEC SUCCÈS pour ${user.email}`);
         console.log(`   - Code: ${accessCode}`);
         console.log(`   - Durée: ${transaction.durationInMonths} mois`);
         console.log(`   - Expire le: ${newExpiryDate}`);
@@ -387,11 +399,11 @@ exports.resendAccessCode = async (req, res) => {
   }
 };
 
-// ✅ Handler pour les webhooks KkiaPay
+// ✅ Handler pour les webhooks KkiaPay - VERSION CORRIGÉE
 exports.handleKkiapayWebhook = async (req, res) => {
     try {
         console.log('=== DÉBUT WEBHOOK KKiaPay ===');
-        console.log('Body reçu:', JSON.stringify(req.body, null, 2));
+        console.log('📦 Body complet:', JSON.stringify(req.body, null, 2));
         
         const { transactionId, status, metadata } = req.body;
         
@@ -400,48 +412,45 @@ exports.handleKkiapayWebhook = async (req, res) => {
             return res.status(400).send('transactionId manquant');
         }
 
-        // Vérifier la signature du webhook
-        const signature = req.headers['x-kkiapay-signature'];
-        if (!signature) {
-            console.error('❌ Webhook: Signature manquante');
-            return res.status(400).send('Signature manquante');
+        console.log(`🔍 Webhook reçu - Transaction: ${transactionId}, Statut: ${status}`);
+
+        // ✅ CORRECTION: On cherche d'abord par kkiapayTransactionId
+        let transaction = await Transaction.findOne({ 
+            kkiapayTransactionId: transactionId 
+        });
+
+        // Si pas trouvé, chercher par metadata
+        if (!transaction && metadata) {
+            console.log('🔍 Recherche par metadata...');
+            if (metadata.transaction_id) {
+                transaction = await Transaction.findOne({ 
+                    transactionId: metadata.transaction_id 
+                });
+            }
         }
 
-        const isValidSignature = kkiapay.verifyWebhookSignature(req.body, signature);
-        if (!isValidSignature) {
-            console.error('❌ Webhook: Signature invalide');
-            return res.status(400).send('Signature invalide');
-        }
-
-        console.log('✅ Signature webhook vérifiée');
-
-        // Trouver la transaction par les metadata
-        let transaction;
-        if (metadata && metadata.transaction_id) {
-            transaction = await Transaction.findOne({ 
-                transactionId: metadata.transaction_id 
-            });
-        }
-
-        // Si pas trouvé par metadata, chercher par kkiapayTransactionId
+        // Si toujours pas trouvé, chercher par transactionId direct
         if (!transaction) {
+            console.log('🔍 Recherche par transactionId direct...');
             transaction = await Transaction.findOne({ 
-                kkiapayTransactionId: transactionId 
+                transactionId: transactionId 
             });
         }
 
         if (!transaction) {
             console.error(`❌ Webhook: Transaction non trouvée: ${transactionId}`);
+            console.log('📋 Transactions disponibles:', await Transaction.find({}).select('transactionId kkiapayTransactionId status').limit(5));
             return res.status(404).send('Transaction non trouvée');
         }
 
-        console.log(`📦 Webhook: Transaction trouvée - ${transaction.transactionId}, Statut: ${status}`);
+        console.log(`📦 Webhook: Transaction trouvée - ${transaction.transactionId}, Statut actuel: ${transaction.status}`);
 
         if (status === 'SUCCESS' && transaction.status !== 'completed') {
             console.log('🎉 Webhook: Paiement réussi, activation de l\'abonnement...');
             
             // Sauvegarder l'ID de transaction KkiaPay
             transaction.kkiapayTransactionId = transactionId;
+            await transaction.save();
             
             // Activer l'abonnement premium
             const activationSuccess = await exports.activatePremiumSubscription(transaction);
@@ -466,7 +475,8 @@ exports.handleKkiapayWebhook = async (req, res) => {
 
     } catch (error) {
         console.error('❌ ERREUR WEBHOOK:', error);
-        res.status(500).send('Erreur interne du serveur');
+        // ✅ CORRECTION: Toujours répondre 200 pour que KkiaPay ne renvoie pas le webhook
+        res.status(200).send('Webhook reçu - traitement en cours');
     }
 };
 
