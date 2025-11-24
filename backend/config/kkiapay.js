@@ -94,10 +94,13 @@ class KkiaPay {
       
       const response = await axios({
         method: 'GET',
-        url: `${this.baseURL}/api/v1/transactions/${transactionId}/status`,
+        url: `${this.baseURL}/api/v1/transactions/status`,
         headers: {
           'Accept': 'application/json',
           'X-API-KEY': this.publicKey
+        },
+        params: {
+          transactionId: transactionId
         },
         timeout: 10000
       });
@@ -112,7 +115,6 @@ class KkiaPay {
 
   verifyWebhookSignature(payload, signature) {
     try {
-      // ✅ CORRECTION: Si pas de signature, on retourne true temporairement
       if (!signature) {
         console.warn('⚠  Pas de signature fournie - mode DEBUG');
         return true;
@@ -129,7 +131,6 @@ class KkiaPay {
       return isValid;
     } catch (error) {
       console.error("❌ Erreur vérification signature:", error);
-      // ✅ CORRECTION: En cas d'erreur, on retourne true pour ne pas bloquer
       return true;
     }
   }

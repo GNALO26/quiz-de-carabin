@@ -9,11 +9,8 @@ const verifyWebhook = (req, res, next) => {
         console.log('🔐 Webhook reçu - Signature présente:', !!signature);
         console.log('📦 Payload:', req.body);
 
-        // ✅ CORRECTION: En mode production, on accepte les webhooks même sans signature temporairement
         if (!signature) {
             console.warn('⚠  Webhook sans signature - Mode DEBUG activé');
-            // En production, on log mais on continue pour tester
-            // Une fois que tout fonctionne, vous pourrez remettre la vérification stricte
             console.log('🔧 Mode production sans signature - Traitement quand même');
             next();
             return;
@@ -35,7 +32,6 @@ const verifyWebhook = (req, res, next) => {
         next();
     } catch (error) {
         console.error('❌ Erreur vérification signature webhook:', error);
-        // ✅ CORRECTION: En cas d'erreur, on continue quand même pour ne pas bloquer les paiements
         console.log('⚠  Erreur signature, mais on continue le traitement...');
         next();
     }

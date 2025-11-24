@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const AccessCodeSchema = new mongoose.Schema({
+const accessCodeSchema = new mongoose.Schema({
   code: {
     type: String,
     required: true,
@@ -15,25 +15,37 @@ const AccessCodeSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  expiresAt: {
-    type: Date,
-    required: true,
-    default: () => new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
-  },
   used: {
     type: Boolean,
     default: false
   },
-  createdAt: {
+  expiresAt: {
     type: Date,
-    default: Date.now
+    required: true
+  },
+  transactionId: {
+    type: String,
+    ref: 'Transaction'
   }
+}, {
+  timestamps: true
 });
 
-// Index pour l'expiration automatique
-AccessCodeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Index pour les recherches rapides
+accessCodeSchema.index({ code: 1 });
+accessCodeSchema.index({ userId: 1 });
+accessCodeSchema.index({ expiresAt: 1 });
 
-// Index pour les recherches par code et utilisateur
-AccessCodeSchema.index({ code: 1, userId: 1 });
+// Middleware pour supprimer les codes expirés
+accessCodeSchema.post('save', function() {
+  // Supprimer les codes expirés
+  mongoose.model('AccessCode').deleteMany({ 
+    expiresAt: { $lt: new Date() } 
+  }).then(result => {
+    if (result.deletedCount > 0) {
+      console.log(`🧹 ${result.deletedCount} code(s) d'accès expiré(s) supprimé(s)`);
+    }
+  });
+});
 
-module.exports = mongoose.model('AccessCode', AccessCodeSchema);
+module.exports = mongoose.model('AccessCode', accessCodeSchema);

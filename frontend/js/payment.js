@@ -35,7 +35,7 @@ export class Payment {
     setupEventListeners() {
         console.log('🎯 SetupEventListeners: Initialisation des écouteurs PRODUCTION');
         
-        // Écouteurs pour paiements directs (nouveaux boutons)
+        // Écouteurs pour paiements directs
         document.querySelectorAll('.subscribe-btn-direct').forEach(button => {
             button.addEventListener('click', (e) => {
                 const planKey = e.currentTarget.getAttribute('data-plan-key');
@@ -44,7 +44,7 @@ export class Payment {
             });
         });
         
-        // Écouteurs pour paiements widget (boutons existants)
+        // Écouteurs pour paiements widget
         document.querySelectorAll('.subscribe-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 const planId = e.currentTarget.getAttribute('data-plan-id');
@@ -73,7 +73,7 @@ export class Payment {
         }
     }
 
-    // ✅ NOUVELLE MÉTHODE POUR PAIEMENTS DIRECTS
+    // ✅ MÉTHODE POUR PAIEMENTS DIRECTS
     async initiateDirectPayment(planKey) {
         try {
             console.log(`💰 Initialisation paiement DIRECT: ${planKey}`);
@@ -88,10 +88,7 @@ export class Payment {
             const API_BASE_URL = await this.getActiveAPIUrl();
             
             console.log('📤 Envoi requête vers:', `${API_BASE_URL}/api/payment/direct/initiate`);
-            console.log('🔑 Token présent:', !!token);
-            console.log('📦 Données envoyées:', { planKey });
-
-            // Afficher le loading
+            
             this.showAlert('Préparation du paiement...', 'info');
             
             const response = await fetch(`${API_BASE_URL}/api/payment/direct/initiate`, {
@@ -106,7 +103,6 @@ export class Payment {
             console.log('📨 Statut réponse:', response.status);
             
             if (!response.ok) {
-                // Obtenir le détail de l'erreur
                 const errorText = await response.text();
                 console.error('❌ Détail erreur:', errorText);
                 
@@ -125,10 +121,8 @@ export class Payment {
             console.log('✅ Réponse paiement direct:', data);
 
             if (data.success && data.paymentUrl) {
-                // Stocker l'ID de transaction pour vérification ultérieure
                 localStorage.setItem('pendingTransaction', data.transactionId);
                 
-                // Redirection vers le lien direct KkiaPay
                 this.showAlert('Redirection vers la page de paiement sécurisée...', 'success');
                 setTimeout(() => {
                     window.location.href = data.paymentUrl;
@@ -156,10 +150,7 @@ export class Payment {
             const user = this.auth.getUser();
             const token = this.auth.getToken();
             
-            console.log('👤 Utilisateur:', user.email);
-            
             const API_BASE_URL = await this.getActiveAPIUrl();
-            console.log('🌐 API utilisée:', API_BASE_URL);
             
             const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
             const originalText = subscribeBtn.innerHTML;
@@ -192,10 +183,7 @@ export class Payment {
             if (data.success && data.transactionId) {
                 console.log('✅ Transaction créée, redirection vers KkiaPay...');
                 
-                // Stocker l'ID de transaction pour le callback
                 localStorage.setItem('pendingTransaction', data.transactionId);
-                
-                // ✅ CORRECTION: Redirection directe vers KkiaPay
                 await this.redirectToKkiaPay(parseInt(amount), user, data.transactionId);
             } else {
                 throw new Error(data.message || 'Erreur lors de la création de la transaction');
@@ -213,53 +201,46 @@ export class Payment {
     }
 
     // ✅ CORRECTION: Redirection améliorée vers KkiaPay
-async redirectToKkiaPay(amount, user, transactionId) {
-    try {
-        console.log('🎯 Redirection vers KkiaPay...');
-        
-        // Construction de l'URL de paiement KkiaPay
-        const baseUrl = 'https://kkiapay.me';
-        
-        // ✅ CORRECTION IMPORTANTE: URL de callback qui redirige vers NOTRE site
-        const callbackUrl = `${window.location.origin}/payment-callback.html?transactionId=${transactionId}&success=true`;
-        
-        const paymentParams = new URLSearchParams({
-            amount: amount,
-            apikey: '2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751',
-            phone: user.phone || '+2290156035888',
-            email: user.email,
-            callback: callbackUrl, // ✅ URL de retour APRÈS paiement
-            data: JSON.stringify({
-                transaction_id: transactionId,
-                user_id: user._id,
-                user_email: user.email,
-                plan: 'quiz-premium'
-            }),
-            theme: '#13a718',
-            name: 'Quiz de Carabin',
-            sandbox: 'false'
-        });
+    async redirectToKkiaPay(amount, user, transactionId) {
+        try {
+            console.log('🎯 Redirection vers KkiaPay...');
+            
+            const baseUrl = 'https://kkiapay.me';
+            const callbackUrl = `${window.location.origin}/payment-callback.html?transactionId=${transactionId}&success=true`;
+            
+            const paymentParams = new URLSearchParams({
+                amount: amount,
+                apikey: '2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751',
+                phone: user.phone || '+2290156035888',
+                email: user.email,
+                callback: callbackUrl,
+                data: JSON.stringify({
+                    transaction_id: transactionId,
+                    user_id: user._id,
+                    user_email: user.email,
+                    plan: 'quiz-premium'
+                }),
+                theme: '#13a718',
+                name: 'Quiz de Carabin',
+                sandbox: 'false'
+            });
 
-        const paymentUrl = `${baseUrl}/pay?${paymentParams.toString()}`;
-        
-        console.log('🔗 URL de paiement générée:', paymentUrl);
-        console.log('🔄 URL de callback:', callbackUrl);
-        
-        this.showAlert('Redirection vers la page de paiement sécurisée KkiaPay...', 'success');
-        
-        // Redirection IMMÉDIATE
-        console.log('🚀 Redirection vers KkiaPay...');
-        window.location.href = paymentUrl;
-        
-    } catch (error) {
-        console.error('❌ Erreur redirection KkiaPay:', error);
-        
-        // ✅ SECOURS : URL de secours
-        this.showAlert('Redirection vers le paiement...', 'info');
-        const fallbackUrl = `https://kkiapay.me/pay?amount=${amount}&apikey=2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751&callback=${encodeURIComponent(window.location.origin + '/payment-callback.html?transactionId=' + transactionId)}`;
-        window.location.href = fallbackUrl;
+            const paymentUrl = `${baseUrl}/pay?${paymentParams.toString()}`;
+            
+            console.log('🔗 URL de paiement générée:', paymentUrl);
+            
+            this.showAlert('Redirection vers la page de paiement sécurisée KkiaPay...', 'success');
+            
+            console.log('🚀 Redirection vers KkiaPay...');
+            window.location.href = paymentUrl;
+            
+        } catch (error) {
+            console.error('❌ Erreur redirection KkiaPay:', error);
+            this.showAlert('Redirection vers le paiement...', 'info');
+            const fallbackUrl = `https://kkiapay.me/pay?amount=${amount}&apikey=2c79c85d47f4603c5c9acc9f9ca7b8e32d65c751&callback=${encodeURIComponent(window.location.origin + '/payment-callback.html?transactionId=' + transactionId)}`;
+            window.location.href = fallbackUrl;
+        }
     }
-}
 
     async processPaymentReturn() {
         try {
@@ -279,43 +260,64 @@ async redirectToKkiaPay(amount, user, transactionId) {
 
             const API_BASE_URL = await this.getActiveAPIUrl();
             
-            const response = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
-                method: 'POST',
+            // ✅ ESSAYER LA NOUVELLE ROUTE DE VÉRIFICATION
+            console.log('📤 Envoi requête vérification statut...');
+            const response = await fetch(`${API_BASE_URL}/api/payment/transaction/${transactionId}/status`, {
+                method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ transactionId })
+                }
             });
 
+            console.log('📨 Statut réponse:', response.status);
+            
             if (!response.ok) {
-                throw new Error(`Erreur serveur (${response.status})`);
-            }
-
-            const data = await response.json();
-            console.log('📨 Réponse process-return PRODUCTION:', data);
-
-            if (data.success) {
-                if (data.status === 'completed') {
-                    this.showPaymentSuccess(data.accessCode, data.user, data.subscriptionEnd);
-                    localStorage.removeItem('pendingTransaction');
-                    
-                    // Mettre à jour l'interface utilisateur
-                    if (data.user) {
-                        localStorage.setItem('quizUser', JSON.stringify(data.user));
-                        this.auth.user = data.user;
-                        this.auth.updateUI();
-                        this.displaySubscriptionInfo();
-                    }
-                } else {
-                    this.showPaymentPending();
+                // Si la nouvelle route ne fonctionne pas, essayer l'ancienne
+                console.log('🔄 Tentative avec ancienne route...');
+                const response2 = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ transactionId })
+                });
+                
+                if (!response2.ok) {
+                    throw new Error(`Erreur serveur (${response2.status})`);
                 }
+                
+                const data = await response2.json();
+                this.processPaymentResponse(data);
             } else {
-                throw new Error(data.message || 'Erreur lors du traitement du paiement');
+                const data = await response.json();
+                this.processPaymentResponse(data);
             }
         } catch (error) {
             console.error('Erreur lors du traitement du retour de paiement PRODUCTION:', error);
             this.showPaymentError(error.message);
+        }
+    }
+
+    processPaymentResponse(data) {
+        console.log('✅ Réponse statut PRODUCTION:', data);
+
+        if (data.success) {
+            if (data.transactionStatus === 'completed' || data.status === 'completed') {
+                this.showPaymentSuccess(data.accessCode, data.user, data.subscriptionEnd);
+                localStorage.removeItem('pendingTransaction');
+                
+                if (data.user) {
+                    localStorage.setItem('quizUser', JSON.stringify(data.user));
+                    this.auth.user = data.user;
+                    this.auth.updateUI();
+                    this.displaySubscriptionInfo();
+                }
+            } else {
+                this.showPaymentPending();
+            }
+        } else {
+            throw new Error(data.message || 'Erreur lors de la vérification du paiement');
         }
     }
 
@@ -346,7 +348,6 @@ async redirectToKkiaPay(amount, user, transactionId) {
             `;
         }
 
-        // Mettre à jour l'utilisateur dans le localStorage
         if (user) {
             localStorage.setItem('quizUser', JSON.stringify(user));
             this.auth.user = user;
@@ -447,7 +448,7 @@ async redirectToKkiaPay(amount, user, transactionId) {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
+                throw new Error(`errorData.message || Erreur HTTP ${response.status}`);
             }
 
             const data = await response.json();
@@ -479,7 +480,51 @@ async redirectToKkiaPay(amount, user, transactionId) {
             this.showAlert('Erreur lors de la validation du code: ' + error.message, 'danger');
         }
     }
-    // ✅ NOUVELLE MÉTHODE POUR AFFICHER LES INFORMATIONS D'ABONNEMENT
+
+    async resendAccessCode() {
+        try {
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            const token = this.auth.getToken();
+            
+            if (!token) {
+                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
+                return;
+            }
+
+            const resendButton = document.getElementById('resend-code');
+            const originalText = resendButton.innerHTML;
+            resendButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Envoi...';
+            resendButton.disabled = true;
+
+            const response = await fetch(`${API_BASE_URL}/api/payment/resend-access-code`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            resendButton.innerHTML = originalText;
+            resendButton.disabled = false;
+
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.showAlert(data.message, 'success');
+            } else {
+                this.showAlert(data.message, 'danger');
+            }
+        } catch (error) {
+            console.error('💥 Erreur renvoi code:', error);
+            this.showAlert('Erreur lors du renvoi du code: ' + error.message, 'danger');
+        }
+    }
+
+    // ✅ MÉTHODE POUR AFFICHER LES INFORMATIONS D'ABONNEMENT
     async displaySubscriptionInfo() {
         try {
             if (!this.auth.isAuthenticated()) return;
@@ -489,24 +534,20 @@ async redirectToKkiaPay(amount, user, transactionId) {
             const subscriptionInfo = document.getElementById('subscription-info');
             
             if (subscription && subscription.hasActiveSubscription) {
-                // Utilisateur a un abonnement actif
                 if (premiumBadge) {
                     premiumBadge.style.display = 'inline';
                     premiumBadge.textContent = 'Premium Actif';
                     
-                    // Ajouter la date d'expiration si disponible
                     if (subscription.premiumExpiresAt) {
                         const expiryDate = new Date(subscription.premiumExpiresAt).toLocaleDateString('fr-FR');
                         premiumBadge.title = `Expire le ${expiryDate}`;
                     }
                 }
                 
-                // Masquer les boutons d'abonnement ou afficher un message
                 document.querySelectorAll('.subscribe-btn-direct, .subscribe-btn').forEach(btn => {
                     btn.style.display = 'none';
                 });
                 
-                // Afficher un message d'abonnement actif
                 if (subscriptionInfo) {
                     const expiryDate = subscription.premiumExpiresAt ? 
                         new Date(subscription.premiumExpiresAt).toLocaleDateString('fr-FR') : 'date inconnue';
@@ -521,12 +562,10 @@ async redirectToKkiaPay(amount, user, transactionId) {
                     subscriptionInfo.style.display = 'block';
                 }
             } else {
-                // Utilisateur n'a pas d'abonnement actif
                 if (premiumBadge) {
                     premiumBadge.style.display = 'none';
                 }
                 
-                // Afficher les boutons d'abonnement
                 document.querySelectorAll('.subscribe-btn-direct, .subscribe-btn').forEach(btn => {
                     btn.style.display = 'inline-block';
                 });
@@ -547,7 +586,7 @@ async redirectToKkiaPay(amount, user, transactionId) {
         }
     }
     
-    // ✅ NOUVELLE MÉTHODE POUR VÉRIFIER L'ABONNEMENT UTILISATEUR
+    // ✅ MÉTHODE POUR VÉRIFIER L'ABONNEMENT UTILISATEUR
     async checkUserSubscription() {
         try {
             if (!this.auth.isAuthenticated()) return null;
@@ -595,7 +634,6 @@ async redirectToKkiaPay(amount, user, transactionId) {
         
         document.body.appendChild(alertDiv);
         
-        // Auto-suppression après 5 secondes pour les alertes de succès/info
         if (type === 'success' || type === 'info') {
             setTimeout(() => {
                 if (alertDiv.parentNode) {
@@ -613,7 +651,6 @@ document.addEventListener('DOMContentLoaded', function() {
         window.payment = new Payment();
         console.log('✅ Module Payment initialisé avec succès - MODE PRODUCTION');
         
-        // Vérifier si on est sur la page de callback
         if (window.location.pathname.includes('payment-callback.html')) {
             console.log('🔍 Page de callback détectée, traitement automatique...');
         }

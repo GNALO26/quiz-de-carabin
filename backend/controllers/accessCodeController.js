@@ -1,7 +1,6 @@
 const AccessCode = require('../models/AccessCode');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
-const { sendAccessCodeEmail } = require('./paymentController');
 const mongoose = require('mongoose');
 
 // Logique pour valider un code d'accès
@@ -24,16 +23,15 @@ exports.validateAccessCode = async (req, res) => {
       transaction.accessCodeUsed = true;
       await transaction.save();
 
-      // ✅ CORRECTION 1 : CALCUL DE LA DATE D'EXPIRATION EN UTILISANT durationInMonths
+      // ✅ CORRECTION : CALCUL DE LA DATE D'EXPIRATION EN UTILISANT durationInMonths
       const expirationDate = new Date();
-      // Ajoute le nombre de mois de la transaction à la date actuelle
-      expirationDate.setMonth(expirationDate.getMonth() + transaction.durationInMonths); 
+      expirationDate.setMonth(expirationDate.getMonth() + transaction.durationInMonths);
 
       const user = await User.findByIdAndUpdate(
         userId,
         {
           isPremium: true,
-          premiumExpiresAt: expirationDate // Utilisation de la date calculée
+          premiumExpiresAt: expirationDate
         },
         { new: true }
       ).select('-password');
@@ -72,15 +70,15 @@ exports.validateAccessCode = async (req, res) => {
     accessCode.used = true;
     await accessCode.save();
 
-    // ✅ CORRECTION 2 : DÉFINITION D'UNE EXPIRATION PAR DÉFAUT (ex: 1 mois) pour les AccessCode non liés aux transactions
+    // Définition d'une expiration par défaut (1 mois) pour les AccessCode non liés aux transactions
     const defaultExpiration = new Date();
-    defaultExpiration.setMonth(defaultExpiration.getMonth() + 1); // Expiration de 1 mois par défaut
+    defaultExpiration.setMonth(defaultExpiration.getMonth() + 1);
 
     const user = await User.findByIdAndUpdate(
       userId,
       {
         isPremium: true,
-        premiumExpiresAt: defaultExpiration // Utilisation de la nouvelle date
+        premiumExpiresAt: defaultExpiration
       },
       { new: true }
     ).select('-password');
@@ -107,7 +105,6 @@ exports.validateAccessCode = async (req, res) => {
   }
 };
 
-
 // Fonction pour renvoyer un code d'accès
 exports.resendAccessCode = async (req, res) => {
   try {
@@ -127,24 +124,8 @@ exports.resendAccessCode = async (req, res) => {
     }).sort({ createdAt: -1 });
 
     if (transaction && transaction.accessCode) {
-      const transporter = require('../config/email');
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: 'Votre code d\'accès Quiz de Carabin',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #4CAF50;">Code d'accès Quiz de Carabin</h2>
-            <p>Votre code d'accès est :</p>
-            <div style="text-align: center; margin: 20px 0;">
-              <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #4CAF50;">${transaction.accessCode}</span>
-            </div>
-            <p>Ce code expirera dans 30 minutes.</p>
-            <br>
-            <p>L'équipe Quiz de Carabin</p>
-          </div>
-        `
-      });
+      const { sendAccessCodeEmail } = require('./emailController');
+      await sendAccessCodeEmail(user.email, transaction.accessCode, user.name, transaction.durationInMonths);
 
       return res.status(200).json({
         success: true,
@@ -159,24 +140,8 @@ exports.resendAccessCode = async (req, res) => {
     });
 
     if (existingCode) {
-      const transporter = require('../config/email');
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: 'Votre code d\'accès Quiz de Carabin',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #4CAF50;">Code d'accès Quiz de Carabin</h2>
-            <p>Votre code d\'accès est :</p>
-            <div style="text-align: center; margin: 20px 0;">
-              <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #4CAF50;">${existingCode.code}</span>
-            </div>
-            <p>Ce code expirera dans 30 minutes.</p>
-            <br>
-            <p>L'équipe Quiz de Carabin</p>
-          </div>
-        `
-      });
+      const { sendAccessCodeEmail } = require('./emailController');
+      await sendAccessCodeEmail(user.email, existingCode.code, user.name, 1);
 
       return res.status(200).json({
         success: true,
@@ -184,48 +149,11 @@ exports.resendAccessCode = async (req, res) => {
       });
     }
 
-    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    const accessCode = new AccessCode({
-      code: newCode,
-      email: user.email,
-      userId: user._id,
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000)
+    return res.status(404).json({
+      success: false,
+      message: 'Aucun code d\'accès valide trouvé'
     });
 
-    await accessCode.save();
-
-    try {
-      const transporter = require('../config/email');
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: 'Votre code d\'accès Quiz de Carabin',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #4CAF50;">Code d'accès Quiz de Carabin</h2>
-            <p>Votre code d\'accès est :</p>
-            <div style="text-align: center; margin: 20px 0;">
-              <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #4CAF50;">${newCode}</span>
-            </div>
-            <p>Ce code expirera dans 30 minutes.</p>
-            <br>
-            <p>L'équipe Quiz de Carabin</p>
-          </div>
-        `
-      });
-
-      res.status(200).json({
-        success: true,
-        message: 'Nouveau code envoyé par email'
-      });
-    } catch (emailError) {
-      console.error('Erreur envoi email:', emailError);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur lors de l\'envoi de l\'email'
-      });
-    }
   } catch (error) {
     console.error('Erreur lors du renvoi du code:', error);
     res.status(500).json({

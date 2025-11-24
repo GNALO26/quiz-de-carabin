@@ -1,10 +1,20 @@
+const AccessCode = require('../models/AccessCode');
+
 const generateCode = () => {
-  const chars = '0123456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+const generateUniqueCode = async () => {
+  let code;
+  let isUnique = false;
+  
+  while (!isUnique) {
+    code = generateCode();
+    const existing = await AccessCode.findOne({ code });
+    if (!existing) isUnique = true;
   }
+  
   return code;
 };
 
-module.exports = generateCode;
+module.exports = generateUniqueCode;

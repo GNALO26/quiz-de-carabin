@@ -11,8 +11,21 @@ const transactionSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  kkiapayTransactionId: {
+    type: String,
+    sparse: true
+  },
   amount: {
     type: Number,
+    required: true
+  },
+  durationInMonths: {
+    type: Number,
+    required: true,
+    default: 1
+  },
+  planId: {
+    type: String,
     required: true
   },
   status: {
@@ -20,66 +33,35 @@ const transactionSchema = new mongoose.Schema({
     enum: ['pending', 'completed', 'failed', 'cancelled'],
     default: 'pending'
   },
-  // ✅ CHAMPS KKiaPay
-  kkiapayTransactionId: {
-    type: String,
-    default: null
-  },
-  kkiapayPaymentUrl: {
-    type: String,
-    default: null
-  },
   paymentGateway: {
     type: String,
     enum: ['kkiapay_widget', 'kkiapay_direct'],
-    default: 'kkiapay_direct'
+    required: true
   },
-  // ✅ CORRECTION: Changer l'enum pour matcher avec le frontend
-  planId: {
-    type: String,
-    required: true,
-    enum: ['1-month', '3-months', '10-months']
+  description: {
+    type: String
   },
   accessCode: {
-    type: String,
-    default: null
+    type: String
   },
   accessCodeUsed: {
     type: Boolean,
     default: false
   },
-  durationInMonths: {
-    type: Number,
-    required: true
-  },
   subscriptionStart: {
-    type: Date,
-    default: null
+    type: Date
   },
   subscriptionEnd: {
-    type: Date,
-    default: null
+    type: Date
   },
-  description: {
-    type: String,
-    default: ''
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  kkiapayPaymentUrl: {
+    type: String
   }
+}, {
+  timestamps: true
 });
 
-transactionSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
-});
-
-// Index pour les recherches courantes
+// Index pour les recherches rapides
 transactionSchema.index({ userId: 1, status: 1 });
 transactionSchema.index({ transactionId: 1 });
 transactionSchema.index({ kkiapayTransactionId: 1 });

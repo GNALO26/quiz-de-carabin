@@ -116,7 +116,6 @@
         try {
             const urlParams = new URLSearchParams(window.location.search);
             
-            // ✅ CORRECTION: KkiaPay envoie 'transaction_id' et non 'transactionId'
             const transactionId = urlParams.get('transaction_id') || 
                                  urlParams.get('transactionId') || 
                                  localStorage.getItem('pendingTransaction');
@@ -139,49 +138,62 @@
             const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
             
             console.log('📤 Envoi requête vérification statut...');
-            const response = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
-                method: 'POST',
+            const response = await fetch(`${API_BASE_URL}/api/payment/transaction/${transactionId}/status`, {
+                method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ transactionId })
+                }
             });
 
             console.log('📨 Statut réponse:', response.status);
             
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ Détail erreur:', errorText);
-                throw new Error(`Erreur serveur (${response.status})`);
-            }
-
-            const data = await response.json();
-            console.log('✅ Réponse statut PRODUCTION:', data);
-
-            if (data.success) {
-                if (data.status === 'completed') {
-                    // Succès
-                    showSuccess(data.accessCode, data.user, data.subscriptionEnd);
-                    
-                    // Mettre à jour l'utilisateur localement
-                    if (data.user) {
-                        localStorage.setItem('quizUser', JSON.stringify(data.user));
-                    }
-                    
-                    // ✅ NETTOYAGE: Supprimer la transaction en attente
-                    localStorage.removeItem('pendingTransaction');
-                } else {
-                    // En attente
-                    showPending();
+                console.log('🔄 Tentative avec ancienne route...');
+                const response2 = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ transactionId })
+                });
+                
+                if (!response2.ok) {
+                    const errorText = await response2.text();
+                    console.error('❌ Détail erreur:', errorText);
+                    throw new Error(`Erreur serveur (${response2.status})`);
                 }
+
+                const data = await response2.json();
+                processPaymentResponse(data);
             } else {
-                throw new Error(data.message || 'Erreur lors de la vérification du paiement');
+                const data = await response.json();
+                processPaymentResponse(data);
             }
 
         } catch (error) {
             console.error('❌ Erreur vérification PRODUCTION:', error);
             showError(error.message);
+        }
+    }
+
+    function processPaymentResponse(data) {
+        console.log('✅ Réponse statut PRODUCTION:', data);
+
+        if (data.success) {
+            if (data.transactionStatus === 'completed' || data.status === 'completed') {
+                showSuccess(data.accessCode, data.user, data.subscriptionEnd);
+                
+                if (data.user) {
+                    localStorage.setItem('quizUser', JSON.stringify(data.user));
+                }
+                
+                localStorage.removeItem('pendingTransaction');
+            } else {
+                showPending();
+            }
+        } else {
+            throw new Error(data.message || 'Erreur lors de la vérification du paiement');
         }
     }
 
@@ -193,15 +205,13 @@
             document.getElementById('accessCode').textContent = accessCode;
         }
         
-        // Afficher la date d'expiration si disponible
         if (subscriptionEnd) {
             const expiryDate = new Date(subscriptionEnd).toLocaleDateString('fr-FR');
             const expiryElement = document.createElement('p');
             expiryElement.innerHTML = `<strong>Date d'expiration : ${expiryDate}</strong>`;
-            document.querySelector('#success .alert-success').insertBefore(expiryElement, document.querySelector('.access-code'));
+            document.querySelector('#success .card-body').insertBefore(expiryElement, document.querySelector('.mt-4'));
         }
         
-        // Mettre à jour l'interface utilisateur si nécessaire
         if (user && user.isPremium) {
             console.log('✅ Utilisateur premium mis à jour');
         }
@@ -217,7 +227,6 @@
         document.getElementById('error').classList.remove('d-none');
         document.getElementById('errorMessage').textContent = message;
         
-        // ✅ AJOUT: Bouton pour réessayer manuellement
         const retryButton = document.createElement('button');
         retryButton.className = 'btn btn-primary mt-2';
         retryButton.textContent = 'Réessayer la vérification';
@@ -234,9 +243,8 @@
         console.log('🔍 Début vérification paiement PRODUCTION...');
         checkPaymentStatus();
         
-        // Vérifier à nouveau toutes les 10 secondes pendant 2 minutes (plus long)
         let attempts = 0;
-        const maxAttempts = 12; // 2 minutes
+        const maxAttempts = 12;
         const interval = setInterval(() => {
             attempts++;
             console.log(`🔄 Tentative de vérification ${attempts}/${maxAttempts}`);
@@ -245,16 +253,15 @@
                 clearInterval(interval);
                 console.log('⏱ Timeout de vérification');
                 
-                // Si toujours en chargement, montrer un message
                 if (!document.getElementById('loading').classList.contains('d-none')) {
                     showError('Le temps de vérification a expiré. Vérifiez votre email ou contactez le support.');
                 }
             } else {
                 checkPaymentStatus();
             }
-        }, 10000); // 10 secondes
+        }, 10000);
     });
-</script>
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

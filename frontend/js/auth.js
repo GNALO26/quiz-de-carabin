@@ -16,19 +16,14 @@ export class Auth {
     }
 
     setupEventListeners() {
-        // Login
         document.getElementById('login-btn')?.addEventListener('click', () => this.login());
-        
-        // Register
         document.getElementById('register-btn')?.addEventListener('click', () => this.register());
         
-        // Logout
         document.getElementById('logout-btn')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.logout();
         });
         
-        // Gestion simplifiée du dropdown utilisateur
         const userDropdown = document.getElementById('userDropdown');
         if (userDropdown) {
             userDropdown.addEventListener('click', (e) => {
@@ -38,7 +33,6 @@ export class Auth {
             });
         }
         
-        // Fermer le dropdown en cliquant ailleurs
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.dropdown')) {
                 document.querySelectorAll('.dropdown-menu').forEach(menu => {
@@ -48,7 +42,6 @@ export class Auth {
         });
     }
 
-    // Méthode pour nettoyer les tokens invalides
     cleanInvalidToken() {
         localStorage.removeItem('quizToken');
         localStorage.removeItem('quizUser');
@@ -59,7 +52,6 @@ export class Auth {
         this.updateUI();
     }
 
-    // Nettoyer les tokens corrompus
     cleanCorruptedTokens() {
         const token = localStorage.getItem('quizToken');
         if (token) {
@@ -223,76 +215,6 @@ export class Auth {
         }
     }
 
-    // Mot de passe oublié
-    async forgotPassword(email) {
-        try {
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email }),
-            });
-
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Erreur demande de réinitialisation:', error);
-            return {
-                success: false,
-                message: 'Erreur de connexion. Veuillez réessayer.',
-            };
-        }
-    }
-
-    // Vérification du code de réinitialisation
-    async verifyResetCode(email, code) {
-        try {
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            const response = await fetch(`${API_BASE_URL}/api/auth/verify-reset-code`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, code }),
-            });
-
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Erreur vérification du code:', error);
-            return {
-                success: false,
-                message: 'Erreur de connexion. Veuillez réessayer.',
-            };
-        }
-    }
-
-    // Réinitialisation du mot de passe
-    async resetPassword(email, code, newPassword) {
-        try {
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, code, newPassword }),
-            });
-
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Erreur réinitialisation mot de passe:', error);
-            return {
-                success: false,
-                message: 'Erreur de connexion. Veuillez réessayer.',
-            };
-        }
-    }
-
-    // ✅ CORRECTION: Fonction getActiveAPIUrl ajoutée
     async getActiveAPIUrl() {
         try {
             const controller = new AbortController();
@@ -316,7 +238,6 @@ export class Auth {
         return CONFIG.API_BACKUP_URL;
     }
 
-    // Vérification périodique de la session
     startSessionChecker() {
         this.sessionCheckInterval = setInterval(async () => {
             if (this.isAuthenticated()) {
@@ -441,7 +362,6 @@ export class Auth {
         return this.getToken() !== null;
     }
 
-    // ✅ CORRECTION COMPLÈTE: Fonction isPremium réparée
     isPremium() {
         const user = this.getUser();
         
@@ -483,7 +403,6 @@ export class Auth {
         }
     }
     
-    // Méthode pour les requêtes API avec gestion automatique du token
     async apiRequest(url, options = {}) {
         const token = this.getToken();
         const API_BASE_URL = await this.getActiveAPIUrl();
