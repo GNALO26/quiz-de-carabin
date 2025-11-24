@@ -3,15 +3,24 @@ const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const mongoose = require('mongoose');
 
-// Logique pour valider un code d'accès
+// ✅ FONCTION UTILITAIRE POUR AJOUTER DES MOIS
+const addMonths = (date, months) => {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+};
+
+// ✅ VALIDATION CODE D'ACCÈS
 exports.validateAccessCode = async (req, res) => {
   try {
     const { code } = req.body;
     const userId = req.user._id;
 
-    console.log('Validation du code d\'accès:', { code, userId });
+    console.log('\n=== 🔑 VALIDATION CODE D\'ACCÈS ===');
+    console.log('Code:', code);
+    console.log('User ID:', userId);
 
-    // Vérifier d'abord dans les transactions
+    // STRATÉGIE 1: Vérifier dans les transactions
     const transaction = await Transaction.findOne({
       userId: new mongoose.Types.ObjectId(userId), 
       accessCode: code,
@@ -20,14 +29,29 @@ exports.validateAccessCode = async (req, res) => {
     });
 
     if (transaction) {
+      console.log('✅ Code trouvé dans Transaction');
+      
+      // Marquer comme utilisé
       transaction.accessCodeUsed = true;
       await transaction.save();
 
-      // ✅ CORRECTION : CALCUL DE LA DATE D'EXPIRATION EN UTILISANT durationInMonths
-      const expirationDate = new Date();
-      expirationDate.setMonth(expirationDate.getMonth() + transaction.durationInMonths);
+      // ✅ CALCUL CORRECT DE LA DATE D'EXPIRATION
+      let expirationDate;
+      
+      const user = await User.findById(userId);
+      
+      // Si l'utilisateur a déjà un abonnement actif, on étend
+      if (user.premiumExpiresAt && new Date(user.premiumExpiresAt) > new Date()) {
+        expirationDate = addMonths(new Date(user.premiumExpiresAt), transaction.durationInMonths);
+        console.log(`📅 Extension d'abonnement existant: +${transaction.durationInMonths} mois`);
+      } else {
+        // Nouvel abonnement
+        expirationDate = addMonths(new Date(), transaction.durationInMonths);
+        console.log(`🆕 Nouvel abonnement: ${transaction.durationInMonths} mois`);
+      }
 
-      const user = await User.findByIdAndUpdate(
+      // Mettre à jour l'utilisateur
+      const updatedUser = await User.findByIdAndUpdate(
         userId,
         {
           isPremium: true,
@@ -36,22 +60,23 @@ exports.validateAccessCode = async (req, res) => {
         { new: true }
       ).select('-password');
 
-      console.log('Accès premium activé via transaction pour l\'utilisateur:', user.email);
+      console.log('✅ Abonnement activé via Transaction');
+      console.log(`📅 Expire le: ${expirationDate.toLocaleDateString('fr-FR')}`);
 
       return res.status(200).json({
         success: true,
-        message: 'Code validé avec succès. Vous avez maintenant accès aux QCM premium.',
+        message: `Code validé! Vous avez maintenant accès aux quiz premium pour ${transaction.durationInMonths} mois.`,
         user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          isPremium: user.isPremium,
-          premiumExpiresAt: user.premiumExpiresAt
+          id: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          isPremium: updatedUser.isPremium,
+          premiumExpiresAt: updatedUser.premiumExpiresAt
         }
       });
     }
 
-    // Si pas trouvé dans les transactions, vérifier dans AccessCode
+    // STRATÉGIE 2: Vérifier dans AccessCode
     const accessCode = await AccessCode.findOne({
       code,
       userId: new mongoose.Types.ObjectId(userId), 
@@ -60,44 +85,61 @@ exports.validateAccessCode = async (req, res) => {
     });
 
     if (!accessCode) {
-      console.log('Code invalide ou expiré');
+      console.log('❌ Code invalide ou expiré');
       return res.status(400).json({
         success: false,
-        message: 'Code invalide ou expiré'
+        message: 'Code invalide, déjà utilisé ou expiré'
       });
     }
 
+    console.log('✅ Code trouvé dans AccessCode');
+
+    // Marquer comme utilisé
     accessCode.used = true;
     await accessCode.save();
 
-    // Définition d'une expiration par défaut (1 mois) pour les AccessCode non liés aux transactions
-    const defaultExpiration = new Date();
-    defaultExpiration.setMonth(defaultExpiration.getMonth() + 1);
+    // ✅ EXPIRATION PAR DÉFAUT POUR ACCESSCODE: 1 mois
+    const defaultDuration = 1;
+    
+    const user = await User.findById(userId);
+    let expirationDate;
+    
+    // Si abonnement actif, on étend
+    if (user.premiumExpiresAt && new Date(user.premiumExpiresAt) > new Date()) {
+      expirationDate = addMonths(new Date(user.premiumExpiresAt), defaultDuration);
+      console.log(`📅 Extension d'abonnement existant: +${defaultDuration} mois`);
+    } else {
+      expirationDate = addMonths(new Date(), defaultDuration);
+      console.log(`🆕 Nouvel abonnement: ${defaultDuration} mois`);
+    }
 
-    const user = await User.findByIdAndUpdate(
+    // Mettre à jour l'utilisateur
+    const updatedUser = await User.findByIdAndUpdate(
       userId,
       {
         isPremium: true,
-        premiumExpiresAt: defaultExpiration
+        premiumExpiresAt: expirationDate
       },
       { new: true }
     ).select('-password');
 
-    console.log('Accès premium activé via AccessCode pour l\'utilisateur:', user.email);
+    console.log('✅ Abonnement activé via AccessCode');
+    console.log(`📅 Expire le: ${expirationDate.toLocaleDateString('fr-FR')}`);
 
     res.status(200).json({
       success: true,
-      message: 'Code validé avec succès. Vous avez maintenant accès aux QCM premium.',
+      message: `Code validé! Vous avez maintenant accès aux quiz premium pour ${defaultDuration} mois.`,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        isPremium: user.isPremium,
-        premiumExpiresAt: user.premiumExpiresAt
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        isPremium: updatedUser.isPremium,
+        premiumExpiresAt: updatedUser.premiumExpiresAt
       }
     });
+    
   } catch (error) {
-    console.error('Erreur lors de la validation du code:', error);
+    console.error('❌ Erreur validation code:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la validation du code'
@@ -105,7 +147,7 @@ exports.validateAccessCode = async (req, res) => {
   }
 };
 
-// Fonction pour renvoyer un code d'accès
+// ✅ RENVOYER UN CODE D'ACCÈS
 exports.resendAccessCode = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -118,14 +160,26 @@ exports.resendAccessCode = async (req, res) => {
       });
     }
 
+    console.log('\n=== 📧 RENVOI CODE D\'ACCÈS ===');
+    console.log('User:', user.email);
+
+    // STRATÉGIE 1: Chercher dans les transactions récentes
     const transaction = await Transaction.findOne({
       userId: new mongoose.Types.ObjectId(userId),
-      status: 'completed'
+      status: 'completed',
+      accessCode: { $exists: true, $ne: null }
     }).sort({ createdAt: -1 });
 
     if (transaction && transaction.accessCode) {
-      const { sendAccessCodeEmail } = require('./emailController');
-      await sendAccessCodeEmail(user.email, transaction.accessCode, user.name, transaction.durationInMonths);
+      console.log('✅ Code trouvé dans Transaction');
+      
+      const { sendAccessCodeEmail } = require('./paymentController');
+      await sendAccessCodeEmail(
+        user.email, 
+        transaction.accessCode, 
+        user.name, 
+        transaction.durationInMonths
+      );
 
       return res.status(200).json({
         success: true,
@@ -133,6 +187,7 @@ exports.resendAccessCode = async (req, res) => {
       });
     }
 
+    // STRATÉGIE 2: Chercher dans AccessCode
     const existingCode = await AccessCode.findOne({
       userId: new mongoose.Types.ObjectId(userId),
       used: false,
@@ -140,8 +195,28 @@ exports.resendAccessCode = async (req, res) => {
     });
 
     if (existingCode) {
-      const { sendAccessCodeEmail } = require('./emailController');
-      await sendAccessCodeEmail(user.email, existingCode.code, user.name, 1);
+      console.log('✅ Code trouvé dans AccessCode');
+      
+      const transporter = require('../config/email');
+      await transporter.sendMail({
+        from: `"Quiz de Carabin" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: 'Votre code d\'accès Quiz de Carabin',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #13a718;">Code d'accès Quiz de Carabin</h2>
+            <p>Bonjour ${user.name},</p>
+            <p>Votre code d\'accès est :</p>
+            <div style="text-align: center; margin: 20px 0;">
+              <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #13a718; background: #f8f9fa; padding: 15px 30px; border-radius: 8px; display: inline-block; border: 2px dashed #13a718;">
+                ${existingCode.code}
+              </span>
+            </div>
+            <p>Ce code expire le ${new Date(existingCode.expiresAt).toLocaleDateString('fr-FR')}.</p>
+            <p>L'équipe Quiz de Carabin</p>
+          </div>
+        `
+      });
 
       return res.status(200).json({
         success: true,
@@ -149,16 +224,51 @@ exports.resendAccessCode = async (req, res) => {
       });
     }
 
-    return res.status(404).json({
-      success: false,
-      message: 'Aucun code d\'accès valide trouvé'
+    // STRATÉGIE 3: Créer un nouveau code (cas rare)
+    console.log('ℹ Aucun code existant, création d\'un nouveau');
+    
+    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    const accessCode = new AccessCode({
+      code: newCode,
+      email: user.email,
+      userId: user._id,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 jours
     });
 
+    await accessCode.save();
+
+    const transporter = require('../config/email');
+    await transporter.sendMail({
+      from: `"Quiz de Carabin" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: 'Votre nouveau code d\'accès Quiz de Carabin',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #13a718;">Code d'accès Quiz de Carabin</h2>
+          <p>Bonjour ${user.name},</p>
+          <p>Votre nouveau code d\'accès est :</p>
+          <div style="text-align: center; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #13a718; background: #f8f9fa; padding: 15px 30px; border-radius: 8px; display: inline-block; border: 2px dashed #13a718;">
+              ${newCode}
+            </span>
+          </div>
+          <p>Ce code expire dans 30 jours.</p>
+          <p>L'équipe Quiz de Carabin</p>
+        </div>
+      `
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Nouveau code envoyé par email'
+    });
+    
   } catch (error) {
-    console.error('Erreur lors du renvoi du code:', error);
+    console.error('❌ Erreur renvoi code:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur lors du renvoi du code'
+      message: 'Erreur lors du renvoi du code'
     });
   }
 };

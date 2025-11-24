@@ -170,7 +170,7 @@ setTimeout(() => {
       // Test d'envoi d'un email de test
       const testMailOptions = {
         from: process.env.EMAIL_USER,
-        to: 'test@example.com', // Email fictif pour le test
+        to: 'olympeguidolokossou@.com', // Email fictif pour le test
         subject: 'Test Configuration Email - Quiz de Carabin',
         text: 'Ceci est un test de configuration email. Si vous recevez ceci, tout fonctionne!',
         html: '<h1>Test Réussi!</h1><p>Configuration email opérationnelle.</p>'
