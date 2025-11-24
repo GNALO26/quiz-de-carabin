@@ -424,10 +424,12 @@ exports.resendAccessCode = async (req, res) => {
   }
 };
 
-// ✅ Handler pour les webhooks KkiaPay - VERSION CORRIGÉE
+const webhookQueue = require('../services/webhookQueue');
+
+// ✅ WEBHOOK HANDLER ULTRA-ROBUSTE
 exports.handleKkiapayWebhook = async (req, res) => {
     try {
-        console.log('=== DÉBUT WEBHOOK KKiaPay ===');
+        console.log('=== DÉBUT WEBHOOK KKiaPay ULTRA-ROBUSTE ===');
         console.log('📦 Body complet:', JSON.stringify(req.body, null, 2));
         
         const { transactionId, status, metadata } = req.body;
@@ -439,67 +441,21 @@ exports.handleKkiapayWebhook = async (req, res) => {
 
         console.log(`🔍 Webhook reçu - Transaction: ${transactionId}, Statut: ${status}`);
 
-        // ✅ CORRECTION: On cherche d'abord par kkiapayTransactionId
-        let transaction = await Transaction.findOne({ 
-            kkiapayTransactionId: transactionId 
+        // ✅ IMMÉDIATEMENT - Répondre à KkiaPay pour éviter les retries
+        res.status(200).send('Webhook reçu - traitement en cours');
+
+        // ✅ TRAITEMENT ASYNCHRONE - Ajouter à la file d'attente
+        await webhookQueue.addToQueue(transactionId, {
+            status,
+            metadata,
+            receivedAt: new Date()
         });
 
-        // Si pas trouvé, chercher par metadata
-        if (!transaction && metadata) {
-            console.log('🔍 Recherche par metadata...');
-            if (metadata.transaction_id) {
-                transaction = await Transaction.findOne({ 
-                    transactionId: metadata.transaction_id 
-                });
-            }
-        }
-
-        // Si toujours pas trouvé, chercher par transactionId direct
-        if (!transaction) {
-            console.log('🔍 Recherche par transactionId direct...');
-            transaction = await Transaction.findOne({ 
-                transactionId: transactionId 
-            });
-        }
-
-        if (!transaction) {
-            console.error(`❌ Webhook: Transaction non trouvée: ${transactionId}`);
-            console.log('📋 Transactions disponibles:', await Transaction.find({}).select('transactionId kkiapayTransactionId status').limit(5));
-            return res.status(404).send('Transaction non trouvée');
-        }
-
-        console.log(`📦 Webhook: Transaction trouvée - ${transaction.transactionId}, Statut actuel: ${transaction.status}`);
-
-        if (status === 'SUCCESS' && transaction.status !== 'completed') {
-            console.log('🎉 Webhook: Paiement réussi, activation de l\'abonnement...');
-            
-            // Sauvegarder l'ID de transaction KkiaPay
-            transaction.kkiapayTransactionId = transactionId;
-            await transaction.save();
-            
-            // Activer l'abonnement premium
-            const activationSuccess = await exports.activatePremiumSubscription(transaction);
-            
-            if (activationSuccess) {
-                console.log(`✅ Webhook: Abonnement activé pour ${transaction.userId}`);
-                return res.status(200).send('Webhook traité avec succès - Abonnement activé');
-            } else {
-                console.error(`❌ Webhook: Échec activation abonnement pour ${transaction.userId}`);
-                return res.status(500).send('Erreur activation abonnement');
-            }
-            
-        } else if (status === 'FAILED') {
-            transaction.status = 'failed';
-            await transaction.save();
-            console.log(`❌ Webhook: Paiement échoué pour ${transaction.transactionId}`);
-            return res.status(200).send('Webhook traité - paiement échoué');
-        } else {
-            console.log(`ℹ Webhook: Statut ${status} ignoré pour ${transaction.transactionId} (déjà: ${transaction.status})`);
-            return res.status(200).send('Webhook traité - statut ignoré');
-        }
+        console.log(`✅ Webhook ajouté à la file: ${transactionId}`);
 
     } catch (error) {
-        console.error('❌ ERREUR WEBHOOK:', error);
+        console.error('❌ ERREUR WEBHOOK (non bloquante):', error);
+        // ✅ TOUJOURS RÉPONDRE 200 MÊME EN CAS D'ERREUR
         res.status(200).send('Webhook reçu - traitement en cours');
     }
 };
@@ -626,6 +582,122 @@ exports.checkDirectPaymentStatus = async (req, res) => {
       message: 'Erreur serveur' 
     });
   }
+};
+// ✅ NOUVELLE FONCTION : Vérification hybride intelligente
+exports.hybridPaymentVerification = async (req, res) => {
+    try {
+        const { transactionId } = req.body;
+        
+        console.log(`[${new Date().toISOString()}] [HYBRID] Début vérification hybride: ${transactionId}`);
+        
+        // 1. Recherche dans notre base de données
+        let transaction = await Transaction.findOne({
+            $or: [
+                { transactionId: transactionId },
+                { kkiapayTransactionId: transactionId }
+            ]
+        });
+
+        // 2. Si transaction trouvée et complétée
+        if (transaction && transaction.status === 'completed') {
+            console.log(`[HYBRID] ✅ Transaction déjà complétée: ${transaction.transactionId}`);
+            
+            const user = await User.findById(transaction.userId);
+            return res.status(200).json({
+                success: true,
+                status: 'completed',
+                transactionFound: true,
+                source: 'database',
+                accessCode: transaction.accessCode,
+                user: user,
+                subscriptionEnd: user.premiumExpiresAt,
+                message: "Paiement confirmé - Code d'accès disponible"
+            });
+        }
+
+        // 3. Si transaction trouvée mais en attente - Vérifier avec KkiaPay
+        if (transaction && transaction.status === 'pending') {
+            console.log(`[HYBRID] 🔄 Transaction en attente, vérification KkiaPay...`);
+            
+            try {
+                // Utiliser l'ID KkiaPay si disponible, sinon l'ID local
+                const kkiapayId = transaction.kkiapayTransactionId || transactionId;
+                const kkiapayStatus = await kkiapay.verifyTransaction(kkiapayId);
+                
+                console.log(`[HYBRID] 📊 Statut KkiaPay:`, kkiapayStatus);
+                
+                if (kkiapayStatus.status === 'SUCCESS') {
+                    console.log(`[HYBRID] 🎉 Paiement confirmé par KkiaPay, activation...`);
+                    
+                    const activationSuccess = await exports.activatePremiumSubscription(transaction);
+                    
+                    if (activationSuccess) {
+                        const user = await User.findById(transaction.userId);
+                        return res.status(200).json({
+                            success: true,
+                            status: 'completed',
+                            transactionFound: true,
+                            source: 'kkiapay_api',
+                            accessCode: transaction.accessCode,
+                            user: user,
+                            subscriptionEnd: user.premiumExpiresAt,
+                            message: "Paiement confirmé via vérification directe"
+                        });
+                    }
+                }
+            } catch (kkiapayError) {
+                console.log(`[HYBRID] ⚠ Impossible de vérifier avec KkiaPay:`, kkiapayError.message);
+            }
+        }
+
+        // 4. Si aucune transaction trouvée - Mode attente intelligent
+        if (!transaction) {
+            console.log(`[HYBRID] 🔍 Aucune transaction trouvée, mode attente intelligent...`);
+            
+            // Vérifier si c'est un ID KkiaPay (long numérique)
+            const isKkiapayId = /^\d+$/.test(transactionId);
+            
+            if (isKkiapayId) {
+                console.log(`[HYBRID] 📞 ID KkiaPay détecté, vérification directe...`);
+                
+                try {
+                    const kkiapayStatus = await kkiapay.verifyTransaction(transactionId);
+                    console.log(`[HYBRID] 📊 Statut KkiaPay direct:`, kkiapayStatus);
+                    
+                    if (kkiapayStatus.status === 'SUCCESS') {
+                        return res.status(200).json({
+                            success: true,
+                            status: 'pending',
+                            transactionFound: false,
+                            source: 'kkiapay_direct',
+                            message: "Paiement confirmé chez KkiaPay mais pas encore traité par notre système. Le webhook devrait arriver bientôt."
+                        });
+                    }
+                } catch (error) {
+                    console.log(`[HYBRID] ❌ Erreur vérification KkiaPay direct:`, error.message);
+                }
+            }
+        }
+
+        // 5. Statut final - En attente
+        console.log(`[HYBRID] ⏳ Paiement en attente de traitement...`);
+        
+        res.status(200).json({
+            success: true,
+            status: 'pending',
+            transactionFound: !!transaction,
+            source: 'pending',
+            message: "Paiement en cours de traitement. Vous recevrez un email de confirmation sous peu."
+        });
+
+    } catch (error) {
+        console.error(`[HYBRID] ❌ Erreur vérification hybride:`, error);
+        res.status(500).json({
+            success: false,
+            message: "Erreur lors de la vérification du paiement",
+            error: error.message
+        });
+    }
 };
 
 // Obtenir les informations d'abonnement de l'utilisateur

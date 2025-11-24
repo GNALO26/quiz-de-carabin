@@ -111,71 +111,135 @@
     </div>
 
     <script>
-    // Vérifier le statut du paiement - MODE PRODUCTION CORRIGÉ
-    async function checkPaymentStatus() {
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            const transactionId = urlParams.get('transaction_id') || 
-                                 urlParams.get('transactionId') || 
-                                 localStorage.getItem('pendingTransaction');
-            
-            console.log('🔍 Paramètres URL:', Object.fromEntries(urlParams.entries()));
-            console.log('🔄 Transaction ID trouvé:', transactionId);
-            
-            if (!transactionId) {
-                throw new Error('Aucun ID de transaction trouvé dans l\'URL. Paramètres disponibles: ' + 
-                              Array.from(urlParams.entries()).map(([k,v]) => `${k}=${v}`).join(', '));
-            }
+    // ✅ VÉRIFICATION INTELLIGENTE HYBRIDE
+async function checkPaymentStatus() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Récupérer TOUS les IDs possibles
+        const kkiapayTransactionId = urlParams.get('transaction_id'); // ID KkiaPay
+        const ourTransactionId = urlParams.get('transactionId'); // Notre ID
+        const pendingTransaction = localStorage.getItem('pendingTransaction'); // ID en attente
+        
+        console.log('🔍 Paramètres URL:', Object.fromEntries(urlParams.entries()));
+        console.log('📞 ID KkiaPay:', kkiapayTransactionId);
+        console.log('🏷 Notre ID:', ourTransactionId);
+        console.log('💾 ID en attente:', pendingTransaction);
 
-            console.log('🔄 Vérification statut transaction PRODUCTION:', transactionId);
-
-            const token = localStorage.getItem('quizToken');
-            if (!token) {
-                throw new Error('Session expirée. Veuillez vous reconnecter.');
-            }
-
-            const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
-            
-            console.log('📤 Envoi requête vérification statut...');
-            const response = await fetch(`${API_BASE_URL}/api/payment/transaction/${transactionId}/status`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            console.log('📨 Statut réponse:', response.status);
-            
-            if (!response.ok) {
-                console.log('🔄 Tentative avec ancienne route...');
-                const response2 = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ transactionId })
-                });
-                
-                if (!response2.ok) {
-                    const errorText = await response2.text();
-                    console.error('❌ Détail erreur:', errorText);
-                    throw new Error(`Erreur serveur (${response2.status})`);
-                }
-
-                const data = await response2.json();
-                processPaymentResponse(data);
-            } else {
-                const data = await response.json();
-                processPaymentResponse(data);
-            }
-
-        } catch (error) {
-            console.error('❌ Erreur vérification PRODUCTION:', error);
-            showError(error.message);
+        // Priorité : Notre ID > ID KkiaPay > ID en attente
+        const transactionId = ourTransactionId || kkiapayTransactionId || pendingTransaction;
+        
+        if (!transactionId) {
+            throw new Error('Aucun ID de transaction trouvé. Paramètres: ' + 
+                          Array.from(urlParams.entries()).map(([k,v]) => `${k}=${v}`).join(', '));
         }
+
+        console.log('🔄 Vérification intelligente pour:', transactionId);
+        console.log('🔍 Type ID:', /^\d+$/.test(transactionId) ? 'ID KkiaPay (numérique)' : 'Notre ID (alphanumérique)');
+
+        const token = localStorage.getItem('quizToken');
+        if (!token) {
+            throw new Error('Session expirée. Veuillez vous reconnecter.');
+        }
+
+        const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
+        
+        console.log('📤 Envoi requête vérification hybride...');
+        const response = await fetch(`${API_BASE_URL}/api/payment/hybrid-verification`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ transactionId })
+        });
+
+        console.log('📨 Statut réponse:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Détail erreur:', errorText);
+            throw new Error(`Erreur serveur (${response.status})`);
+        }
+
+        const data = await response.json();
+        console.log('✅ Réponse vérification hybride:', data);
+
+        // Traiter la réponse intelligente
+        processHybridResponse(data, transactionId);
+
+    } catch (error) {
+        console.error('❌ Erreur vérification hybride:', error);
+        showError(error.message);
     }
+}
+
+function processHybridResponse(data, transactionId) {
+    console.log('🔧 Traitement réponse hybride:', {
+        success: data.success,
+        status: data.status,
+        transactionFound: data.transactionFound,
+        source: data.source
+    });
+
+    if (data.success) {
+        if (data.status === 'completed') {
+            // SUCCÈS COMPLET
+            console.log('🎉 Paiement confirmé - Affichage succès');
+            showSuccess(data.accessCode, data.user, data.subscriptionEnd);
+            localStorage.removeItem('pendingTransaction');
+            
+            if (data.user) {
+                localStorage.setItem('quizUser', JSON.stringify(data.user));
+            }
+        } else {
+            // EN ATTENTE - Afficher message intelligent
+            console.log('⏳ Paiement en attente - Source:', data.source);
+            
+            let message = "Paiement en cours de traitement...";
+            let details = "Vous recevrez un email de confirmation sous peu.";
+            
+            if (data.source === 'kkiapay_direct') {
+                message = "✅ Paiement confirmé chez KkiaPay !";
+                details = "Notre système finalise l'activation de votre abonnement. Patientez quelques instants...";
+            } else if (!data.transactionFound) {
+                message = "⏳ Transaction en cours de synchronisation";
+                details = "Votre paiement est enregistré chez KkiaPay. Notre système met à jour vos informations...";
+            }
+            
+            showPendingIntelligent(message, details, data.source);
+        }
+    } else {
+        throw new Error(data.message || 'Erreur lors de la vérification du paiement');
+    }
+}
+
+function showPendingIntelligent(message, details, source) {
+    document.getElementById('loading').classList.add('d-none');
+    document.getElementById('pending').classList.remove('d-none');
+    
+    const pendingElement = document.getElementById('pending');
+    pendingElement.innerHTML = `
+        <i class="fas fa-clock text-warning" style="font-size: 4rem;"></i>
+        <h3 class="mt-3">${message}</h3>
+        <p>${details}</p>
+        <p class="text-muted small">Source: ${source} - ID: ${localStorage.getItem('pendingTransaction')}</p>
+        <div class="mt-4">
+            <button onclick="location.reload()" class="btn btn-primary me-2">
+                <i class="fas fa-sync me-1"></i>Actualiser
+            </button>
+            <a href="index.html" class="btn btn-outline-secondary">
+                <i class="fas fa-home me-1"></i>Retour à l'accueil
+            </a>
+        </div>
+        <div class="mt-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="text-muted small mt-2">Vérification automatique en cours...</p>
+        </div>
+    `;
+}
 
     function processPaymentResponse(data) {
         console.log('✅ Réponse statut PRODUCTION:', data);

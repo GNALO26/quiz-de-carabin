@@ -26,6 +26,12 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 .then(() => {
   console.log('✅ Connected to MongoDB - PRODUCTION MODE');
   console.log('📊 Database:', mongoose.connection.name);
+
+  // Après la connexion MongoDB
+const webhookQueue = require('./services/webhookQueue');
+const paymentMonitor = require('./services/paymentMonitor');
+
+console.log('🔄 Services background initialisés');
   
   // Import des routes
   const authRoutes = require('./routes/auth');

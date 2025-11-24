@@ -21,4 +21,6 @@ router.post('/webhook/kkiapay', verifyWebhook, paymentController.handleKkiapayWe
 // Route pour les informations d'abonnement
 router.get('/subscription/info', auth, paymentController.getUserSubscriptionInfo);
 
+// Route de vérification hybride intelligente
+router.post('/hybrid-verification', auth, paymentController.hybridPaymentVerification);
 module.exports = router;
