@@ -336,7 +336,7 @@ exports.processPaymentReturn = async (req, res) => {
         transaction.kkiapayTransactionId || transactionId
       );
       
-      console.log(`📨 [RETOUR] Réponse KkiaPay:, kkiapayStatus`);
+      console.log(`📨 [RETOUR] Réponse KkiaPay:`, kkiapayStatus);
       
       if (kkiapayStatus.status === 'SUCCESS') {
         console.log(`✅ [RETOUR] Paiement confirmé, activation manuelle...`);
