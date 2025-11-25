@@ -16,23 +16,31 @@ export class Auth {
     }
 
     setupEventListeners() {
+        // Login
         document.getElementById('login-btn')?.addEventListener('click', () => this.login());
+        
+        // Register
         document.getElementById('register-btn')?.addEventListener('click', () => this.register());
         
+        // Logout
         document.getElementById('logout-btn')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.logout();
         });
         
+        // Dropdown utilisateur
         const userDropdown = document.getElementById('userDropdown');
         if (userDropdown) {
             userDropdown.addEventListener('click', (e) => {
                 e.preventDefault();
                 const dropdownMenu = userDropdown.nextElementSibling;
-                dropdownMenu.classList.toggle('show');
+                if (dropdownMenu) {
+                    dropdownMenu.classList.toggle('show');
+                }
             });
         }
         
+        // Fermer dropdown en cliquant ailleurs
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.dropdown')) {
                 document.querySelectorAll('.dropdown-menu').forEach(menu => {
@@ -40,6 +48,26 @@ export class Auth {
                 });
             }
         });
+    }
+
+    // ✅ NETTOYER LES TOKENS CORROMPUS
+    cleanCorruptedTokens() {
+        const token = localStorage.getItem('quizToken');
+        if (token) {
+            try {
+                if (typeof token !== 'string' || token === 'null' || token === 'undefined') {
+                    this.cleanInvalidToken();
+                    return;
+                }
+                
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    this.cleanInvalidToken();
+                }
+            } catch (error) {
+                this.cleanInvalidToken();
+            }
+        }
     }
 
     cleanInvalidToken() {
@@ -52,28 +80,7 @@ export class Auth {
         this.updateUI();
     }
 
-    cleanCorruptedTokens() {
-        const token = localStorage.getItem('quizToken');
-        if (token) {
-            try {
-                if (typeof token !== 'string' || token === 'null' || token === 'undefined') {
-                    localStorage.removeItem('quizToken');
-                    localStorage.removeItem('quizUser');
-                    return;
-                }
-                
-                const parts = token.split('.');
-                if (parts.length !== 3) {
-                    localStorage.removeItem('quizToken');
-                    localStorage.removeItem('quizUser');
-                }
-            } catch (error) {
-                localStorage.removeItem('quizToken');
-                localStorage.removeItem('quizUser');
-            }
-        }
-    }
-
+    // ✅ OBTENIR LE TOKEN
     getToken() {
         let token = localStorage.getItem('quizToken');
         if (!token || token === 'null' || token === 'undefined' || token === 'Bearer null') {
@@ -103,15 +110,16 @@ export class Auth {
             }
             return token;
         } catch (error) {
-            console.error('Token validation error:', error);
+            console.error('Erreur validation token:', error);
             this.cleanInvalidToken();
             return null;
         }
     }
 
+    // ✅ CONNEXION
     async login() {
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
+        const email = document.getElementById('loginEmail')?.value;
+        const password = document.getElementById('loginPassword')?.value;
 
         if (!email || !password) {
             this.showAlert('Veuillez remplir tous les champs', 'danger');
@@ -149,25 +157,27 @@ export class Auth {
                 
                 this.updateUI();
                 this.hideModals();
-                this.showAlert('Connexion réussie!', 'success');
+                this.showAlert('Connexion réussie! Bienvenue ' + data.user.name, 'success');
                 
-                if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                // Recharger les quiz si on est sur la page quiz
+                if (window.location.pathname.includes('quiz.html') && window.quiz) {
                     window.quiz.loadQuizzes();
                 }
             } else {
-                this.showAlert(data.message, 'danger');
+                this.showAlert(data.message || 'Erreur de connexion', 'danger');
             }
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('Erreur login:', error);
             this.showAlert('Erreur de connexion. Veuillez réessayer.', 'danger');
         }
     }
 
+    // ✅ INSCRIPTION
     async register() {
-        const name = document.getElementById('registerName').value;
-        const email = document.getElementById('registerEmail').value;
-        const password = document.getElementById('registerPassword').value;
-        const confirmPassword = document.getElementById('registerConfirmPassword').value;
+        const name = document.getElementById('registerName')?.value;
+        const email = document.getElementById('registerEmail')?.value;
+        const password = document.getElementById('registerPassword')?.value;
+        const confirmPassword = document.getElementById('registerConfirmPassword')?.value;
 
         if (!name || !email || !password || !confirmPassword) {
             this.showAlert('Veuillez remplir tous les champs', 'danger');
@@ -176,6 +186,11 @@ export class Auth {
 
         if (password !== confirmPassword) {
             this.showAlert('Les mots de passe ne correspondent pas', 'danger');
+            return;
+        }
+
+        if (password.length < 6) {
+            this.showAlert('Le mot de passe doit contenir au moins 6 caractères', 'warning');
             return;
         }
 
@@ -201,62 +216,21 @@ export class Auth {
                 
                 this.updateUI();
                 this.hideModals();
-                this.showAlert('Compte créé avec succès! Vous êtes maintenant connecté.', 'success');
+                this.showAlert('Compte créé avec succès! Bienvenue ' + data.user.name, 'success');
                 
-                if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+                if (window.location.pathname.includes('quiz.html') && window.quiz) {
                     window.quiz.loadQuizzes();
                 }
             } else {
                 this.showAlert(data.message || 'Erreur lors de la création du compte', 'danger');
             }
         } catch (error) {
-            console.error('Register error:', error);
+            console.error('Erreur register:', error);
             this.showAlert('Erreur lors de la création du compte. Veuillez réessayer.', 'danger');
         }
     }
 
-    async getActiveAPIUrl() {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
-                method: 'GET',
-                cache: 'no-cache',
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-                return CONFIG.API_BASE_URL;
-            }
-        } catch (error) {
-            console.warn('URL principale inaccessible:', error.message);
-        }
-        
-        return CONFIG.API_BACKUP_URL;
-    }
-
-    startSessionChecker() {
-        this.sessionCheckInterval = setInterval(async () => {
-            if (this.isAuthenticated()) {
-                try {
-                    const response = await this.apiRequest('/api/auth/check-session');
-                    if (!response.ok) {
-                        const data = await response.json();
-                        if (data.code === 'SESSION_EXPIRED' || data.code === 'SESSION_INVALIDATED') {
-                            this.logout();
-                            this.showAlert('Votre session a expiré ou a été utilisée sur un autre appareil. Veuillez vous reconnecter.', 'warning');
-                        }
-                    }
-                } catch (error) {
-                    console.error('Erreur vérification session:', error);
-                }
-            }
-        }, 60000);
-    }
-
+    // ✅ DÉCONNEXION
     logout() {
         try {
             if (this.sessionCheckInterval) {
@@ -267,6 +241,7 @@ export class Auth {
             localStorage.removeItem('quizUser');
             localStorage.removeItem('userIsPremium');
             localStorage.removeItem('premiumExpiresAt');
+            localStorage.removeItem('pendingTransaction');
             
             this.token = null;
             this.user = null;
@@ -274,7 +249,7 @@ export class Auth {
             this.updateUI();
             this.showAlert('Déconnexion réussie', 'success');
             
-            if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
+            if (window.location.pathname.includes('quiz.html') && window.quiz) {
                 window.quiz.loadQuizzes();
             }
             
@@ -283,11 +258,12 @@ export class Auth {
             }, 1000);
             
         } catch (error) {
-            console.error('Logout error:', error);
+            console.error('Erreur logout:', error);
             this.showAlert('Erreur lors de la déconnexion', 'danger');
         }
     }
 
+    // ✅ MISE À JOUR DE L'INTERFACE
     updateUI() {
         const authButtons = document.getElementById('auth-buttons');
         const userMenu = document.getElementById('user-menu');
@@ -295,7 +271,6 @@ export class Auth {
         const premiumBadge = document.getElementById('premium-badge');
 
         if (!authButtons || !userMenu) {
-            console.warn('Éléments UI non trouvés');
             return;
         }
 
@@ -306,12 +281,20 @@ export class Auth {
             authButtons.style.display = 'none';
             userMenu.style.display = 'block';
             
-            if (userName) userName.textContent = user.name;
+            if (userName) {
+                userName.textContent = user.name;
+            }
             
             if (premiumBadge) {
                 if (this.isPremium()) {
-                    premiumBadge.style.display = 'inline';
-                    premiumBadge.textContent = 'Premium';
+                    premiumBadge.style.display = 'inline-block';
+                    premiumBadge.textContent = '👑 Premium';
+                    premiumBadge.classList.add('badge', 'bg-warning', 'text-dark', 'ms-2');
+                    
+                    if (user.premiumExpiresAt) {
+                        const expiryDate = new Date(user.premiumExpiresAt).toLocaleDateString('fr-FR');
+                        premiumBadge.title = `Expire le ${expiryDate}`;
+                    }
                 } else {
                     premiumBadge.style.display = 'none';
                 }
@@ -326,6 +309,7 @@ export class Auth {
         }
     }
 
+    // ✅ MASQUER LES MODALS
     hideModals() {
         const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
         if (loginModal) loginModal.hide();
@@ -334,34 +318,7 @@ export class Auth {
         if (registerModal) registerModal.hide();
     }
 
-    showAlert(message, type) {
-        document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
-        
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show global-alert`;
-        alertDiv.style.position = 'fixed';
-        alertDiv.style.top = '20px';
-        alertDiv.style.right = '20px';
-        alertDiv.style.zIndex = '9999';
-        alertDiv.style.minWidth = '300px';
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(alertDiv);
-        
-        setTimeout(() => {
-            if (alertDiv.parentNode) {
-                alertDiv.parentNode.removeChild(alertDiv);
-            }
-        }, 5000);
-    }
-
-    isAuthenticated() {
-        return this.getToken() !== null;
-    }
-
+    // ✅ VÉRIFICATION PREMIUM
     isPremium() {
         const user = this.getUser();
         
@@ -378,8 +335,11 @@ export class Auth {
                     return true;
                 } else {
                     console.log(`Abonnement expiré pour ${user.email}`);
-                    this.user.isPremium = false;
-                    this.updateUI();
+                    // Mettre à jour localement
+                    if (this.user) {
+                        this.user.isPremium = false;
+                        localStorage.setItem('quizUser', JSON.stringify(this.user));
+                    }
                     return false;
                 }
             } catch (e) {
@@ -391,10 +351,17 @@ export class Auth {
         return user.isPremium === true;
     }
 
+    // ✅ OBTENIR L'UTILISATEUR
     getUser() {
         return this.user;
     }
+
+    // ✅ VÉRIFIER SI AUTHENTIFIÉ
+    isAuthenticated() {
+        return this.getToken() !== null && this.user !== null;
+    }
     
+    // ✅ AFFICHER LE MODAL DE CONNEXION
     showLoginModal() {
         const loginModalElement = document.getElementById('loginModal');
         if (loginModalElement) {
@@ -402,7 +369,28 @@ export class Auth {
             loginModal.show();
         }
     }
+
+    // ✅ VÉRIFICATION DE SESSION PÉRIODIQUE
+    startSessionChecker() {
+        this.sessionCheckInterval = setInterval(async () => {
+            if (this.isAuthenticated()) {
+                try {
+                    const response = await this.apiRequest('/api/auth/check-session');
+                    if (!response.ok) {
+                        const data = await response.json();
+                        if (data.code === 'SESSION_EXPIRED' || data.code === 'SESSION_INVALIDATED') {
+                            this.logout();
+                            this.showAlert('Votre session a expiré. Veuillez vous reconnecter.', 'warning');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erreur vérification session:', error);
+                }
+            }
+        }, 60000); // Toutes les minutes
+    }
     
+    // ✅ REQUÊTE API AVEC AUTH
     async apiRequest(url, options = {}) {
         const token = this.getToken();
         const API_BASE_URL = await this.getActiveAPIUrl();
@@ -426,24 +414,89 @@ export class Auth {
             if (response.status === 401) {
                 this.cleanInvalidToken();
                 this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
-                window.location.reload();
+                setTimeout(() => window.location.reload(), 2000);
                 throw new Error('Session expirée');
             }
             
             return response;
         } catch (error) {
-            console.error('API Request error:', error);
+            console.error('Erreur API:', error);
             throw error;
         }
     }
+
+    // ✅ OBTENIR L'URL API ACTIVE
+    async getActiveAPIUrl() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
+                method: 'GET',
+                cache: 'no-cache',
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                return CONFIG.API_BASE_URL;
+            }
+        } catch (error) {
+            console.warn('URL principale inaccessible:', error.message);
+        }
+        
+        return CONFIG.API_BACKUP_URL;
+    }
+
+    // ✅ AFFICHER UNE ALERTE
+    showAlert(message, type) {
+        document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
+        
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show global-alert`;
+        alertDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            max-width: 500px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        
+        let icon = '';
+        switch(type) {
+            case 'success': icon = '<i class="fas fa-check-circle me-2"></i>'; break;
+            case 'danger': icon = '<i class="fas fa-times-circle me-2"></i>'; break;
+            case 'warning': icon = '<i class="fas fa-exclamation-triangle me-2"></i>'; break;
+            case 'info': icon = '<i class="fas fa-info-circle me-2"></i>'; break;
+        }
+        
+        alertDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    ${icon}${message}
+                </div>
+                <button type="button" class="btn-close ms-2" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.classList.remove('show');
+                setTimeout(() => alertDiv.remove(), 150);
+            }
+        }, 5000);
+    }
 }
 
-// Exposer la classe Auth globalement
-window.Auth = Auth;
-
-// Initialisation automatique
+// ✅ INITIALISATION AUTOMATIQUE
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('auth-buttons') || document.getElementById('user-menu')) {
         window.auth = new Auth();
+        console.log('✅ Module Auth initialisé');
     }
 });

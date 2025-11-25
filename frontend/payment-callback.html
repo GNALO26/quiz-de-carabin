@@ -3,403 +3,807 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirmation Paiement - Quiz de Carabin</title>
+    <meta name="robots" content="noindex, nofollow">
+    <title>Confirmation de Paiement - Quiz de Carabin</title>
+    
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        :root {
-            --primary: #13a718;
-            --secondary: #1e53a2;
-            --success: #28a745;
-            --warning: #ffc107;
-            --danger: #dc3545;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        
+
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            justify-content: center;
+            padding: 20px;
         }
-        
+
+        .callback-container {
+            width: 100%;
+            max-width: 700px;
+        }
+
         .status-card {
-            border: none;
+            background: white;
             border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             overflow: hidden;
+            animation: slideUp 0.5s ease-out;
         }
-        
-        .card-header {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header-custom {
+            background: linear-gradient(135deg, #13a718 0%, #0f8613 100%);
             color: white;
-            border: none;
-            padding: 2rem;
+            padding: 30px;
+            text-align: center;
         }
-        
-        .status-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
+
+        .card-header-custom h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
         }
-        
-        .code-display {
-            font-size: 2.5rem;
-            font-weight: 800;
-            letter-spacing: 8px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            padding: 1rem;
-            border-radius: 15px;
-            border: 3px dashed #e9ecef;
+
+        .card-body-custom {
+            padding: 40px;
         }
-        
-        .loading-spinner {
-            width: 80px;
-            height: 80px;
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid var(--primary);
+
+        /* Loader */
+        .loader-wrapper {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .loader {
+            width: 70px;
+            height: 70px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #13a718;
             border-radius: 50%;
-            animation: spin 1.5s linear infinite;
-            margin: 0 auto;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border: none;
-            padding: 12px 30px;
-            font-weight: 600;
-            border-radius: 50px;
+
+        .loader-text {
+            font-size: 18px;
+            color: #555;
+            margin-top: 15px;
         }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #28a745, #20c997);
-            border: none;
-            padding: 12px 30px;
-            font-weight: 600;
-            border-radius: 50px;
+
+        .loader-subtext {
+            font-size: 14px;
+            color: #888;
+            margin-top: 10px;
         }
-        
-        .progress-bar {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+
+        /* Success State */
+        .success-icon {
+            font-size: 80px;
+            color: #28a745;
+            animation: scaleIn 0.5s ease-out, pulse 2s infinite;
+            display: inline-block;
+        }
+
+        @keyframes scaleIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .success-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #28a745;
+            margin: 20px 0 10px;
+        }
+
+        .success-message {
+            font-size: 18px;
+            color: #555;
+            margin-bottom: 30px;
+        }
+
+        /* Code Display */
+        .code-section {
+            background: linear-gradient(135deg, #13a718 0%, #0f8613 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(19, 167, 24, 0.3);
+        }
+
+        .code-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .code-display {
+            background: white;
+            color: #13a718;
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: 15px;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .code-info {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .code-info i {
+            margin-right: 8px;
+        }
+
+        /* Expiry Info */
+        .expiry-info {
+            background: linear-gradient(135deg, #e7f5ff 0%, #d0ebff 100%);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #0066cc;
+            margin: 20px 0;
+        }
+
+        .expiry-label {
+            font-size: 14px;
+            color: #0066cc;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .expiry-date {
+            font-size: 20px;
+            color: #0066cc;
+            font-weight: 700;
+        }
+
+        /* Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn-custom {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #13a718 0%, #0f8613 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(19, 167, 24, 0.3);
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(19, 167, 24, 0.4);
+            color: white;
+        }
+
+        .btn-secondary-custom {
+            background: white;
+            color: #555;
+            border: 2px solid #ddd;
+        }
+
+        .btn-secondary-custom:hover {
+            background: #f8f9fa;
+            border-color: #ccc;
+            transform: translateY(-2px);
+            color: #555;
+        }
+
+        .btn-custom i {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+
+        /* Pending State */
+        .pending-icon {
+            font-size: 80px;
+            color: #ffc107;
+            animation: pulse 2s infinite;
+        }
+
+        .pending-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #ffc107;
+            margin: 20px 0 10px;
+        }
+
+        /* Error State */
+        .error-icon {
+            font-size: 80px;
+            color: #dc3545;
+            animation: shake 0.5s ease-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .error-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #dc3545;
+            margin: 20px 0 10px;
+        }
+
+        .error-message {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .error-details {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .error-details h6 {
+            color: #721c24;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .error-details ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #721c24;
+        }
+
+        .error-details li {
+            margin-bottom: 8px;
+        }
+
+        /* Support Info */
+        .support-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .support-info p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .support-info strong {
+            color: #13a718;
+        }
+
+        /* Alert Info */
+        .alert-custom {
+            background: #e7f5ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            display: flex;
+            align-items: start;
+        }
+
+        .alert-custom i {
+            font-size: 20px;
+            color: #0066cc;
+            margin-right: 15px;
+            margin-top: 2px;
+        }
+
+        .alert-custom p {
+            margin: 0;
+            color: #0066cc;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Progress Dots */
+        .progress-dots {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .progress-dot {
+            width: 12px;
+            height: 12px;
+            background: #ddd;
+            border-radius: 50%;
+            animation: blink 1.4s infinite both;
+        }
+
+        .progress-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .progress-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+            0%, 80%, 100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+            40% {
+                opacity: 1;
+                transform: scale(1.3);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .card-body-custom {
+                padding: 30px 20px;
+            }
+
+            .code-display {
+                font-size: 36px;
+                letter-spacing: 10px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn-custom {
+                width: 100%;
+                min-width: unset;
+            }
+
+            .success-title, .pending-title, .error-title {
+                font-size: 22px;
+            }
+        }
+
+        /* Hidden by default */
+        .d-none {
+            display: none !important;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-10 col-lg-8">
-                <div class="card status-card">
-                    <div class="card-header text-center">
-                        <h1 class="h3 mb-0">
-                            <i class="fas fa-receipt me-2"></i>
-                            Confirmation de Paiement
-                        </h1>
-                        <p class="mb-0 opacity-75">Quiz de Carabin 🩺</p>
+    <div class="callback-container">
+        <div class="status-card">
+            <!-- Header -->
+            <div class="card-header-custom">
+                <h1>
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Quiz de Carabin
+                </h1>
+            </div>
+
+            <div class="card-body-custom">
+                <!-- LOADING STATE -->
+                <div id="loading" class="loader-wrapper">
+                    <div class="loader"></div>
+                    <div class="loader-text">
+                        <strong>Vérification de votre paiement...</strong>
                     </div>
-                    
-                    <div class="card-body p-5">
-                        <div id="status-container">
-                            <!-- Contenu dynamique -->
+                    <div class="loader-subtext">
+                        Veuillez patienter pendant que nous confirmons votre transaction
+                    </div>
+                    <div class="progress-dots">
+                        <div class="progress-dot"></div>
+                        <div class="progress-dot"></div>
+                        <div class="progress-dot"></div>
+                    </div>
+                    <div class="alert-custom mt-4">
+                        <i class="fas fa-info-circle"></i>
+                        <p>Cette opération peut prendre quelques instants. Ne fermez pas cette page.</p>
+                    </div>
+                </div>
+
+                <!-- SUCCESS STATE -->
+                <div id="success" class="d-none text-center">
+                    <i class="fas fa-check-circle success-icon"></i>
+                    <h2 class="success-title">Paiement Réussi !</h2>
+                    <p class="success-message">
+                        Félicitations ! Votre abonnement premium a été activé avec succès.
+                    </p>
+
+                    <!-- Code d'accès -->
+                    <div class="code-section">
+                        <div class="code-label">
+                            <i class="fas fa-key"></i> Votre Code d'Accès
                         </div>
+                        <div id="accessCode" class="code-display">
+                            ••••••
+                        </div>
+                        <div class="code-info">
+                            <i class="fas fa-envelope"></i>
+                            Ce code a également été envoyé à votre adresse email
+                        </div>
+                    </div>
+
+                    <!-- Date d'expiration -->
+                    <div class="expiry-info">
+                        <div class="expiry-label">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Votre abonnement expire le
+                        </div>
+                        <div id="expiryDate" class="expiry-date">
+                            Chargement...
+                        </div>
+                    </div>
+
+                    <!-- Boutons d'action -->
+                    <div class="action-buttons">
+                        <a href="quiz.html" class="btn-custom btn-primary-custom">
+                            <i class="fas fa-play-circle"></i>
+                            Commencer les Quiz
+                        </a>
+                        <a href="index.html" class="btn-custom btn-secondary-custom">
+                            <i class="fas fa-home"></i>
+                            Retour à l'Accueil
+                        </a>
+                    </div>
+
+                    <!-- Support info -->
+                    <div class="support-info">
+                        <p>
+                            <i class="fas fa-headset me-2"></i>
+                            Besoin d'aide ? Contactez notre support
+                        </p>
+                        <p>
+                            <strong>📧 support@quizdecarabin.bj</strong>
+                            <span class="mx-2">|</span>
+                            <strong>📱 +229 53 91 46 48</strong>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- PENDING STATE -->
+                <div id="pending" class="d-none text-center">
+                    <i class="fas fa-hourglass-half pending-icon"></i>
+                    <h2 class="pending-title">Paiement en Cours de Traitement</h2>
+                    <p class="success-message">
+                        Votre paiement est en cours de vérification par notre système.
+                    </p>
+
+                    <div class="alert-custom">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <p>
+                                <strong>Que se passe-t-il maintenant ?</strong><br>
+                                Votre paiement est en cours de validation. Cela peut prendre quelques minutes.
+                                Vous recevrez un email avec votre code d'accès dès que le paiement sera confirmé.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="alert-custom" style="background: #fff3cd; border-color: #ffc107;">
+                        <i class="fas fa-clock" style="color: #856404;"></i>
+                        <div>
+                            <p style="color: #856404;">
+                                Vous pouvez fermer cette page en toute sécurité. 
+                                Nous vous préviendrons par email dès que votre abonnement sera activé.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <a href="index.html" class="btn-custom btn-primary-custom">
+                            <i class="fas fa-home"></i>
+                            Retour à l'Accueil
+                        </a>
+                        <button onclick="location.reload()" class="btn-custom btn-secondary-custom">
+                            <i class="fas fa-sync"></i>
+                            Actualiser le Statut
+                        </button>
+                    </div>
+
+                    <div class="support-info">
+                        <p class="mb-2">
+                            <i class="fas fa-question-circle me-2"></i>
+                            Le paiement prend trop de temps ?
+                        </p>
+                        <p>
+                            Contactez notre support : 
+                            <strong>📧 support@quizdecarabin.bj</strong>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ERROR STATE -->
+                <div id="error" class="d-none text-center">
+                    <i class="fas fa-times-circle error-icon"></i>
+                    <h2 class="error-title">Erreur de Paiement</h2>
+                    <p id="errorMessage" class="error-message">
+                        Une erreur s'est produite lors du traitement de votre paiement.
+                    </p>
+
+                    <div class="error-details">
+                        <h6>
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Que faire maintenant ?
+                        </h6>
+                        <ul class="text-start">
+                            <li>Vérifiez que vos informations de paiement sont correctes</li>
+                            <li>Assurez-vous d'avoir suffisamment de fonds sur votre compte</li>
+                            <li>Réessayez dans quelques instants</li>
+                            <li>Si le problème persiste, contactez notre support</li>
+                        </ul>
+                    </div>
+
+                    <div class="action-buttons">
+                        <a href="index.html#pricing" class="btn-custom btn-primary-custom">
+                            <i class="fas fa-redo"></i>
+                            Réessayer le Paiement
+                        </a>
+                        <a href="index.html" class="btn-custom btn-secondary-custom">
+                            <i class="fas fa-home"></i>
+                            Retour à l'Accueil
+                        </a>
+                    </div>
+
+                    <div class="support-info">
+                        <p class="mb-2">
+                            <i class="fas fa-headset me-2"></i>
+                            <strong>Support disponible 7j/7</strong>
+                        </p>
+                        <p>
+                            📧 <strong>support@quizdecarabin.bj</strong>
+                            <span class="mx-2">|</span>
+                            📱 <strong>+229 53 91 46 48</strong>
+                        </p>
+                        <p class="mt-2" style="font-size: 12px; color: #999;">
+                            Référence de transaction : <span id="errorTransactionId">N/A</span>
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Script de vérification du paiement -->
     <script>
-        class PaymentStatus {
-            constructor() {
-                this.checkInterval = null;
-                this.attempts = 0;
-                this.maxAttempts = 20; // 10 minutes maximum
-                this.init();
+    // ✅ CONFIGURATION
+    const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
+    const MAX_ATTEMPTS = 12; // 2 minutes (12 x 10 secondes)
+    const CHECK_INTERVAL = 10000; // 10 secondes
+
+    let attempts = 0;
+    let checkInterval = null;
+
+    // ✅ FONCTION PRINCIPALE DE VÉRIFICATION
+    async function checkPaymentStatus() {
+        try {
+            console.log(`\n🔍 [${new Date().toLocaleTimeString()}] Vérification paiement (Tentative ${attempts + 1}/${MAX_ATTEMPTS})`);
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // KkiaPay envoie 'transaction_id'
+            const transactionId = urlParams.get('transaction_id') || 
+                                 urlParams.get('transactionId') || 
+                                 localStorage.getItem('pendingTransaction');
+            
+            console.log('📦 Paramètres URL:', Object.fromEntries(urlParams.entries()));
+            console.log('🔑 Transaction ID:', transactionId);
+            
+            if (!transactionId) {
+                throw new Error('Aucun ID de transaction trouvé. Veuillez réessayer le paiement.');
             }
 
-            init() {
-                console.log('🔍 Initialisation vérification statut paiement...');
-                this.checkPaymentStatus();
-                
-                // Vérifier toutes les 30 secondes
-                this.checkInterval = setInterval(() => {
-                    this.attempts++;
-                    if (this.attempts >= this.maxAttempts) {
-                        this.showTimeout();
-                        clearInterval(this.checkInterval);
-                    } else {
-                        this.checkPaymentStatus();
-                    }
-                }, 30000);
+            // Stocker pour référence
+            document.getElementById('errorTransactionId').textContent = transactionId;
+
+            const token = localStorage.getItem('quizToken');
+            if (!token) {
+                throw new Error('Session expirée. Veuillez vous reconnecter et réessayer.');
             }
 
-            async checkPaymentStatus() {
-                try {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const transactionId = urlParams.get('transactionId') || localStorage.getItem('pendingTransaction');
+            console.log('📤 Envoi requête à:', `${API_BASE_URL}/api/payment/process-return`);
+            
+            const response = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ transactionId })
+            });
+
+            console.log('📨 Statut HTTP:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Erreur HTTP:', errorText);
+                throw new Error(`Erreur serveur (${response.status}). ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('✅ Réponse serveur:', data);
+
+            if (data.success) {
+                if (data.status === 'completed') {
+                    // ✅ PAIEMENT CONFIRMÉ
+                    console.log('🎉 Paiement confirmé !');
+                    clearInterval(checkInterval);
+                    showSuccess(data.accessCode, data.user, data.subscriptionEnd);
                     
-                    console.log('📞 Transaction ID:', transactionId);
-
-                    if (!transactionId) {
-                        throw new Error('Aucune transaction trouvée');
+                    // Mettre à jour le localStorage
+                    if (data.user) {
+                        localStorage.setItem('quizUser', JSON.stringify(data.user));
                     }
-
-                    const token = localStorage.getItem('quizToken');
-                    if (!token) {
-                        throw new Error('Session expirée');
-                    }
-
-                    const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
+                    localStorage.removeItem('pendingTransaction');
                     
-                    console.log('📤 Vérification statut...');
-                    const response = await fetch(`${API_BASE_URL}/api/payment/check-status`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ transactionId })
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Erreur serveur: ${response.status}`);
+                } else if (data.status === 'pending') {
+                    // ⏳ TOUJOURS EN ATTENTE
+                    console.log('⏳ Paiement toujours en attente...');
+                    
+                    // Si on a atteint le max de tentatives, afficher pending
+                    if (attempts >= MAX_ATTEMPTS - 1) {
+                        clearInterval(checkInterval);
+                        showPending();
                     }
-
-                    const data = await response.json();
-                    console.log('📨 Réponse:', data);
-
-                    this.handleResponse(data, transactionId);
-
-                } catch (error) {
-                    console.error('❌ Erreur vérification:', error);
-                    this.showError(error.message);
                 }
+            } else {
+                throw new Error(data.message || 'Erreur de vérification du paiement');
             }
 
-            handleResponse(data, transactionId) {
-                const statusContainer = document.getElementById('status-container');
-                
-                if (data.success) {
-                    if (data.status === 'completed') {
-                        this.showSuccess(data, transactionId);
-                        clearInterval(this.checkInterval);
-                    } else if (data.status === 'pending') {
-                        this.showPending(data.message, this.attempts, this.maxAttempts);
-                    } else if (data.status === 'failed') {
-                        this.showError(data.message);
-                        clearInterval(this.checkInterval);
-                    }
-                } else {
-                    this.showError(data.message);
-                    clearInterval(this.checkInterval);
-                }
-            }
-
-            showSuccess(data, transactionId) {
-                const expiryDate = data.subscriptionEnd ? 
-                    new Date(data.subscriptionEnd).toLocaleDateString('fr-FR', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    }) : 'date inconnue';
-
-                document.getElementById('status-container').innerHTML = `
-                    <div class="text-center">
-                        <div class="status-icon text-success">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        
-                        <h2 class="text-success mb-3">Paiement Confirmé !</h2>
-                        
-                        <div class="alert alert-success border-0 mb-4">
-                            <div class="row align-items-center">
-                                <div class="col-md-8 text-start">
-                                    <h5 class="mb-2">🎉 Félicitations !</h5>
-                                    <p class="mb-1">Votre abonnement premium a été activé avec succès.</p>
-                                    <p class="mb-0"><strong>Expire le : ${expiryDate}</strong></p>
-                                </div>
-                                <div class="col-md-4 text-end">
-                                    <small class="text-muted">Ref: ${transactionId}</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card border-0 bg-light mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title text-primary mb-3">
-                                    <i class="fas fa-key me-2"></i>Votre Code d'Accès
-                                </h5>
-                                <div class="code-display mb-3">${data.accessCode}</div>
-                                <p class="text-muted mb-0">
-                                    <i class="fas fa-envelope me-1"></i>
-                                    Ce code a été envoyé à votre adresse email
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-center">
-                            <button onclick="window.location.href='/quiz.html'" class="btn btn-success btn-lg">
-                                <i class="fas fa-play me-2"></i>Commencer les Quiz
-                            </button>
-                            <button onclick="window.location.href='/index.html'" class="btn btn-outline-primary btn-lg">
-                                <i class="fas fa-home me-2"></i>Retour à l'Accueil
-                            </button>
-                        </div>
-
-                        <div class="mt-4 text-center">
-                            <small class="text-muted">
-                                📧 Un problème ? Contactez le support : support@quizdecarabin.bj
-                            </small>
-                        </div>
-                    </div>
-                `;
-
-                // Nettoyer le localStorage
-                localStorage.removeItem('pendingTransaction');
-                
-                // Mettre à jour l'utilisateur
-                if (data.user) {
-                    localStorage.setItem('quizUser', JSON.stringify(data.user));
-                }
-            }
-
-            showPending(message, currentAttempt, maxAttempts) {
-                const progress = Math.min((currentAttempt / maxAttempts) * 100, 100);
-                
-                document.getElementById('status-container').innerHTML = `
-                    <div class="text-center">
-                        <div class="loading-spinner mb-4"></div>
-                        
-                        <h3 class="text-primary mb-3">Traitement en Cours</h3>
-                        
-                        <div class="alert alert-info border-0 mb-4">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-info-circle fa-2x me-3"></i>
-                                <div class="text-start">
-                                    <p class="mb-1">${message}</p>
-                                    <p class="mb-0 small">Le traitement peut prendre quelques minutes.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <div class="progress" style="height: 10px; border-radius: 5px;">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                     style="width: ${progress}%"></div>
-                            </div>
-                            <small class="text-muted">Vérification automatique (${currentAttempt}/${maxAttempts})</small>
-                        </div>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-center">
-                            <button onclick="location.reload()" class="btn btn-primary">
-                                <i class="fas fa-sync me-2"></i>Actualiser
-                            </button>
-                            <button onclick="window.location.href='/index.html'" class="btn btn-outline-secondary">
-                                <i class="fas fa-home me-2"></i>Accueil
-                            </button>
-                        </div>
-
-                        <div class="mt-4">
-                            <div class="card border-0 bg-light">
-                                <div class="card-body py-3">
-                                    <small class="text-muted">
-                                        <i class="fas fa-clock me-1"></i>
-                                        Si vous ne recevez pas d'email dans les 10 minutes, vérifiez vos spams ou contactez le support.
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            showError(message) {
-                document.getElementById('status-container').innerHTML = `
-                    <div class="text-center">
-                        <div class="status-icon text-danger">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        
-                        <h2 class="text-danger mb-3">Erreur de Paiement</h2>
-                        
-                        <div class="alert alert-danger border-0 mb-4">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-times-circle fa-2x me-3"></i>
-                                <div class="text-start">
-                                    <p class="mb-0">${message}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-center mb-4">
-                            <button onclick="window.location.href='/quiz.html'" class="btn btn-primary btn-lg">
-                                <i class="fas fa-credit-card me-2"></i>Réessayer le Paiement
-                            </button>
-                            <button onclick="window.location.href='/index.html'" class="btn btn-outline-secondary btn-lg">
-                                <i class="fas fa-home me-2"></i>Retour à l'Accueil
-                            </button>
-                        </div>
-
-                        <div class="card border-0 bg-light">
-                            <div class="card-body">
-                                <h6 class="card-title text-center mb-3">📞 Support Technique</h6>
-                                <div class="row text-center">
-                                    <div class="col-md-6 mb-2">
-                                        <i class="fas fa-envelope me-2"></i>
-                                        <strong>Email:</strong><br>
-                                        support@quizdecarabin.bj
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <i class="fas fa-phone me-2"></i>
-                                        <strong>Téléphone:</strong><br>
-                                        +229 53 91 46 48
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            showTimeout() {
-                document.getElementById('status-container').innerHTML = `
-                    <div class="text-center">
-                        <div class="status-icon text-warning">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        
-                        <h2 class="text-warning mb-3">Temps de Vérification Dépassé</h2>
-                        
-                        <div class="alert alert-warning border-0 mb-4">
-                            <p class="mb-0">
-                                Le temps de vérification automatique est écoulé. 
-                                Vérifiez votre boîte email ou contactez le support.
-                            </p>
-                        </div>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-center">
-                            <button onclick="window.location.href='/index.html'" class="btn btn-primary">
-                                <i class="fas fa-home me-2"></i>Retour à l'Accueil
-                            </button>
-                        </div>
-                    </div>
-                `;
+        } catch (error) {
+            console.error('❌ Erreur:', error.message);
+            
+            // Si on a atteint le max de tentatives, afficher l'erreur
+            if (attempts >= MAX_ATTEMPTS - 1) {
+                clearInterval(checkInterval);
+                showError(error.message);
             }
         }
+    }
 
-        // Démarrer au chargement
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Démarrage vérification statut paiement...');
-            new PaymentStatus();
-        });
+    // ✅ AFFICHER LE SUCCÈS
+    function showSuccess(accessCode, user, subscriptionEnd) {
+        console.log('✅ Affichage succès');
+        
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('success').classList.remove('d-none');
+        
+        // Afficher le code avec animation
+        if (accessCode) {
+            setTimeout(() => {
+                document.getElementById('accessCode').textContent = accessCode;
+            }, 300);
+        }
+        
+        // Afficher la date d'expiration
+        if (subscriptionEnd) {
+            const expiryDate = new Date(subscriptionEnd).toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+            document.getElementById('expiryDate').textContent = expiryDate;
+        } else {
+            document.getElementById('expiryDate').textContent = 'Non disponible';
+        }
+    }
+
+    // ✅ AFFICHER L'ATTENTE
+    function showPending() {
+        console.log('⏳ Affichage pending');
+        
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('pending').classList.remove('d-none');
+    }
+
+    // ✅ AFFICHER L'ERREUR
+    function showError(message) {
+        console.log('❌ Affichage erreur');
+        
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('error').classList.remove('d-none');
+        document.getElementById('errorMessage').textContent = message;
+    }
+
+    // ✅ DÉMARRER LA VÉRIFICATION
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Démarrage vérification paiement...');
+        console.log('⏰ Heure:', new Date().toLocaleString('fr-FR'));
+        
+        // Première vérification immédiate
+        checkPaymentStatus();
+        
+        // Vérifications périodiques
+        checkInterval = setInterval(() => {
+            attempts++;
+            
+            if (attempts < MAX_ATTEMPTS) {
+                checkPaymentStatus();
+            } else {
+                console.log('⏱ Timeout atteint');
+                clearInterval(checkInterval);
+                
+                // Si toujours en loading, afficher pending
+                if (!document.getElementById('loading').classList.contains('d-none')) {
+                    showPending();
+                }
+            }
+        }, CHECK_INTERVAL);
+    });
+
+    // ✅ NETTOYAGE AU DÉCHARGEMENT
+    window.addEventListener('beforeunload', function() {
+        if (checkInterval) {
+            clearInterval(checkInterval);
+        }
+    });
     </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

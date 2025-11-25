@@ -11,33 +11,55 @@ export class Payment {
 
     async getActiveAPIUrl() {
         try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`);
-            if (response.ok) return CONFIG.API_BASE_URL;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`, {
+                method: 'GET',
+                cache: 'no-cache',
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                return CONFIG.API_BASE_URL;
+            }
         } catch (error) {
             console.warn('URL principale inaccessible:', error.message);
         }
+        
         return CONFIG.API_BACKUP_URL;
     }
 
     setupEventListeners() {
-        console.log('🎯 Initialisation écouteurs paiement PRODUCTION');
+        console.log('🎯 Initialisation des écouteurs de paiement');
         
-        // Boutons d'abonnement
+        // ✅ Boutons de paiement direct (nouveaux)
+        document.querySelectorAll('.subscribe-btn-direct').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const planKey = e.currentTarget.getAttribute('data-plan-key');
+                console.log(`🖱 Clic paiement direct: ${planKey}`);
+                this.initiateDirectPayment(planKey);
+            });
+        });
+        
+        // ✅ Boutons de paiement widget (anciens)
         document.querySelectorAll('.subscribe-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 const planId = e.currentTarget.getAttribute('data-plan-id');
                 const amount = e.currentTarget.getAttribute('data-plan-price');
-                console.log(`🖱 Clic bouton: ${planId} - ${amount}F`);
+                console.log(`🖱 Clic paiement widget: ${planId} - ${amount} FCFA`);
                 this.initiatePayment(planId, amount);
             });
         });
-
-        // Validation code d'accès
+        
+        // ✅ Validation de code d'accès
         document.getElementById('validate-code')?.addEventListener('click', () => {
             this.validateAccessCode();
         });
-
-        // Renvoi code d'accès
+        
+        // ✅ Renvoyer le code d'accès
         document.getElementById('resend-code')?.addEventListener('click', () => {
             this.resendAccessCode();
         });
@@ -45,20 +67,87 @@ export class Payment {
 
     checkPaymentReturn() {
         const urlParams = new URLSearchParams(window.location.search);
-        const transactionId = urlParams.get('transactionId');
+        const transactionId = urlParams.get('transaction_id') || urlParams.get('transactionId');
         
         if (transactionId && window.location.pathname.includes('payment-callback.html')) {
-            console.log('🔄 Détection retour paiement:', transactionId);
-            this.processPaymentReturn(transactionId);
+            console.log('🔄 Détection retour paiement. Transaction:', transactionId);
+            // Le traitement est géré directement dans payment-callback.html
         }
     }
 
-    // 🎯 FONCTION : INITIER UN PAIEMENT
+    // ✅ PAIEMENT DIRECT KKIAPAY
+    async initiateDirectPayment(planKey) {
+        try {
+            console.log(`💰 Initialisation paiement direct: ${planKey}`);
+            
+            if (!this.auth.isAuthenticated()) {
+                this.auth.showLoginModal();
+                this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
+                return;
+            }
+
+            const token = this.auth.getToken();
+            const API_BASE_URL = await this.getActiveAPIUrl();
+            
+            console.log('📤 Requête paiement direct:', `${API_BASE_URL}/api/payment/direct/initiate`);
+
+            // Afficher le loader
+            this.showAlert('Préparation du paiement...', 'info');
+            
+            const response = await fetch(`${API_BASE_URL}/api/payment/direct/initiate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ planKey })
+            });
+
+            console.log('📨 Statut réponse:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Erreur:', errorText);
+                
+                let errorMessage = `Erreur HTTP ${response.status}`;
+                try {
+                    const errorData = JSON.parse(errorText);
+                    errorMessage = errorData.message || errorMessage;
+                } catch (e) {
+                    errorMessage = errorText || errorMessage;
+                }
+                
+                throw new Error(errorMessage);
+            }
+
+            const data = await response.json();
+            console.log('✅ Réponse paiement direct:', data);
+
+            if (data.success && data.paymentUrl) {
+                // Stocker l'ID de transaction
+                localStorage.setItem('pendingTransaction', data.transactionId);
+                
+                // Redirection vers KkiaPay
+                this.showAlert('Redirection vers la page de paiement sécurisée...', 'success');
+                setTimeout(() => {
+                    console.log('🚀 Redirection vers:', data.paymentUrl);
+                    window.location.href = data.paymentUrl;
+                }, 1500);
+            } else {
+                throw new Error(data.message || 'Erreur génération lien de paiement');
+            }
+
+        } catch (error) {
+            console.error('💥 Erreur paiement direct:', error);
+            this.showAlert(`Erreur: ${error.message}`, 'danger');
+        }
+    }
+
+    // ✅ PAIEMENT WIDGET KKIAPAY
     async initiatePayment(planId, amount) {
         try {
-            console.log(`💰 Initialisation paiement: ${planId} - ${amount}F`);
+            console.log(`💰 Initialisation paiement widget: ${planId} - ${amount} FCFA`);
             
-            // Vérifier authentification
             if (!this.auth.isAuthenticated()) {
                 this.auth.showLoginModal();
                 this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
@@ -67,14 +156,16 @@ export class Payment {
 
             const user = this.auth.getUser();
             const token = this.auth.getToken();
+            
             const API_BASE_URL = await this.getActiveAPIUrl();
+            
+            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
+            if (subscribeBtn) {
+                subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Préparation...';
+                subscribeBtn.disabled = true;
+            }
 
-            // Mettre le bouton en état de chargement
-            const button = document.querySelector(`[data-plan-id="${planId}"]`);
-            this.setButtonLoading(button, true);
-
-            console.log('📤 Envoi requête création paiement...');
-            const response = await fetch(`${API_BASE_URL}/api/payment/create`, {
+            const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -87,214 +178,67 @@ export class Payment {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Erreur ${response.status}: ${errorText}`);
+                throw new Error(`Erreur HTTP ${response.status}`);
             }
 
             const data = await response.json();
-            console.log('✅ Réponse création paiement:', data);
+            console.log('📨 Réponse serveur:', data);
 
-            if (data.success && data.paymentUrl) {
-                // Sauvegarder l'ID de transaction
+            if (data.success && data.transactionId) {
                 localStorage.setItem('pendingTransaction', data.transactionId);
-                console.log('💾 Transaction sauvegardée:', data.transactionId);
                 
-                // Redirection vers KkiaPay
-                this.showAlert('Redirection vers la page de paiement sécurisée...', 'success');
-                
-                setTimeout(() => {
-                    console.log('🚀 Redirection vers KkiaPay...');
-                    window.location.href = data.paymentUrl;
-                }, 1500);
-                
+                // Ouvrir le widget KkiaPay
+                this.openKkiapayWidget(data.widgetConfig);
             } else {
-                throw new Error(data.message || 'Erreur lors de la création du paiement');
+                throw new Error(data.message || 'Erreur création transaction');
             }
-
-        } catch (error) {
-            console.error('💥 Erreur initiation paiement:', error);
-            this.showAlert(`Erreur: ${error.message}`, 'danger');
             
-            // Restaurer le bouton
-            const button = document.querySelector(`[data-plan-id="${planId}"]`);
-            this.setButtonLoading(button, false);
-        }
-    }
-
-    // 🎯 FONCTION : TRAITER LE RETOUR DE PAIEMENT
-    async processPaymentReturn(transactionId) {
-        try {
-            console.log('🔄 Traitement retour paiement:', transactionId);
-
-            if (!this.auth.isAuthenticated()) {
-                throw new Error('Session expirée. Veuillez vous reconnecter.');
-            }
-
-            const token = this.auth.getToken();
-            const API_BASE_URL = await this.getActiveAPIUrl();
-
-            const response = await fetch(`${API_BASE_URL}/api/payment/check-status`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ transactionId })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Erreur serveur (${response.status})`);
-            }
-
-            const data = await response.json();
-            console.log('📨 Réponse statut:', data);
-
-            if (data.success) {
-                if (data.status === 'completed') {
-                    this.showPaymentSuccess(data);
-                    localStorage.removeItem('pendingTransaction');
-                } else {
-                    this.showPaymentPending(data.message);
-                }
-            } else {
-                throw new Error(data.message || 'Erreur lors de la vérification');
-            }
-
         } catch (error) {
-            console.error('❌ Erreur traitement retour:', error);
-            this.showPaymentError(error.message);
+            console.error('💥 Erreur paiement widget:', error);
+            this.showAlert(error.message || 'Erreur de connexion', 'danger');
+        } finally {
+            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
+            if (subscribeBtn) {
+                subscribeBtn.innerHTML = 'S\'abonner';
+                subscribeBtn.disabled = false;
+            }
         }
     }
 
-    // 🎯 FONCTION : AFFICHER SUCCÈS PAIEMENT
-    showPaymentSuccess(data) {
-        const statusElement = document.getElementById('payment-status');
-        if (!statusElement) return;
+    // ✅ OUVRIR LE WIDGET KKIAPAY
+    openKkiapayWidget(config) {
+        try {
+            console.log('🎯 Ouverture widget KkiaPay');
+            
+            if (typeof openKkiapayWidget === 'undefined') {
+                console.error('❌ Widget KkiaPay non chargé');
+                this.showAlert('Erreur: Widget de paiement non disponible', 'danger');
+                return;
+            }
 
-        const expiryDate = data.subscriptionEnd ? 
-            new Date(data.subscriptionEnd).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            }) : 'date inconnue';
-
-        statusElement.innerHTML = `
-            <div class="alert alert-success border-0">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-check-circle fa-3x text-success me-3"></i>
-                    <div>
-                        <h4 class="alert-heading mb-2">✅ Paiement Réussi !</h4>
-                        <p class="mb-1">Votre abonnement premium a été activé avec succès.</p>
-                        <p class="mb-2"><strong>Date d'expiration : ${expiryDate}</strong></p>
-                    </div>
-                </div>
-                
-                <div class="mt-4 p-3 bg-light rounded">
-                    <h5 class="text-center mb-3">🔐 Votre Code d'Accès</h5>
-                    <div class="text-center">
-                        <div class="display-4 fw-bold text-primary font-monospace">${data.accessCode}</div>
-                        <p class="text-muted mt-2">Ce code a été envoyé à votre adresse email</p>
-                    </div>
-                </div>
-
-                <div class="mt-4 text-center">
-                    <button onclick="window.location.href='/quiz.html'" class="btn btn-success btn-lg me-3">
-                        <i class="fas fa-play me-2"></i>Commencer les Quiz
-                    </button>
-                    <button onclick="window.location.href='/index.html'" class="btn btn-outline-secondary">
-                        <i class="fas fa-home me-2"></i>Retour à l'Accueil
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Mettre à jour l'interface utilisateur
-        if (data.user) {
-            localStorage.setItem('quizUser', JSON.stringify(data.user));
-            this.auth.user = data.user;
-            this.auth.updateUI();
-            this.displaySubscriptionInfo();
+            openKkiapayWidget({
+                amount: config.amount,
+                api_key: config.key,
+                sandbox: config.sandbox || false,
+                callback: config.callback,
+                theme: "#13a718",
+                name: "Quiz de Carabin"
+            });
+            
+        } catch (error) {
+            console.error('❌ Erreur ouverture widget:', error);
+            this.showAlert('Erreur lors de l\'ouverture du widget de paiement', 'danger');
         }
     }
 
-    // 🎯 FONCTION : AFFICHER EN ATTENTE
-    showPaymentPending(message) {
-        const statusElement = document.getElementById('payment-status');
-        if (!statusElement) return;
-
-        statusElement.innerHTML = `
-            <div class="alert alert-warning border-0">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-clock fa-3x text-warning me-3"></i>
-                    <div>
-                        <h4 class="alert-heading mb-2">⏳ Paiement en Cours</h4>
-                        <p class="mb-0">${message}</p>
-                    </div>
-                </div>
-                
-                <div class="mt-4">
-                    <div class="progress mb-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
-                    </div>
-                    <p class="text-muted text-center">Vérification automatique en cours...</p>
-                </div>
-
-                <div class="mt-3 text-center">
-                    <button onclick="location.reload()" class="btn btn-primary me-2">
-                        <i class="fas fa-sync me-1"></i>Actualiser
-                    </button>
-                    <button onclick="window.location.href='/index.html'" class="btn btn-outline-secondary">
-                        <i class="fas fa-home me-1"></i>Accueil
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    // 🎯 FONCTION : AFFICHER ERREUR
-    showPaymentError(message) {
-        const statusElement = document.getElementById('payment-status');
-        if (!statusElement) return;
-
-        statusElement.innerHTML = `
-            <div class="alert alert-danger border-0">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-exclamation-triangle fa-3x text-danger me-3"></i>
-                    <div>
-                        <h4 class="alert-heading mb-2">❌ Erreur de Paiement</h4>
-                        <p class="mb-0">${message}</p>
-                    </div>
-                </div>
-
-                <div class="mt-4 text-center">
-                    <button onclick="window.location.href='/quiz.html'" class="btn btn-primary me-2">
-                        <i class="fas fa-credit-card me-1"></i>Réessayer le Paiement
-                    </button>
-                    <button onclick="window.location.href='/index.html'" class="btn btn-outline-secondary">
-                        <i class="fas fa-home me-1"></i>Retour à l'Accueil
-                    </button>
-                </div>
-
-                <div class="mt-4 p-3 bg-light rounded">
-                    <h6 class="text-center mb-2">📞 Support Technique</h6>
-                    <div class="text-center text-muted small">
-                        <div>📧 support@quizdecarabin.bj</div>
-                        <div>📱 +229 53 91 46 48</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    // 🎯 FONCTION : VALIDER CODE D'ACCÈS
+    // ✅ VALIDATION CODE D'ACCÈS
     async validateAccessCode() {
         try {
             const codeInput = document.getElementById('accessCode');
             const code = codeInput.value.trim();
             
-            if (!code || code.length !== 6) {
-                this.showAlert('Veuillez entrer un code valide à 6 chiffres', 'warning');
+            if (!code || code.length < 5) {
+                this.showAlert('Veuillez entrer un code valide', 'warning');
                 return;
             }
 
@@ -308,7 +252,9 @@ export class Payment {
             }
             
             const validateButton = document.getElementById('validate-code');
-            this.setButtonLoading(validateButton, true);
+            const originalText = validateButton.innerHTML;
+            validateButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Validation...';
+            validateButton.disabled = true;
 
             const response = await fetch(`${API_BASE_URL}/api/access-code/validate`, {
                 method: 'POST',
@@ -319,7 +265,8 @@ export class Payment {
                 body: JSON.stringify({ code })
             });
 
-            this.setButtonLoading(validateButton, false);
+            validateButton.innerHTML = originalText;
+            validateButton.disabled = false;
 
             if (response.status === 401) {
                 this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
@@ -329,13 +276,13 @@ export class Payment {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(`errorData.message || Erreur ${response.status}`);
+                throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
             }
 
             const data = await response.json();
 
             if (data.success) {
-                this.showAlert('✅ Code validé avec succès ! Accès premium activé.', 'success');
+                this.showAlert(data.message, 'success');
                 
                 if (data.user) {
                     localStorage.setItem('quizUser', JSON.stringify(data.user));
@@ -344,11 +291,11 @@ export class Payment {
                     this.displaySubscriptionInfo();
                 }
                 
-                // Fermer le modal après succès
                 setTimeout(() => {
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('codeModal'));
-                    if (modal) modal.hide();
-                    
+                    const codeModal = bootstrap.Modal.getInstance(document.getElementById('codeModal'));
+                    if (codeModal) {
+                        codeModal.hide();
+                    }
                     if (window.location.pathname.includes('index.html')) {
                         window.location.reload();
                     }
@@ -358,65 +305,73 @@ export class Payment {
             }
         } catch (error) {
             console.error('💥 Erreur validation code:', error);
-            this.showAlert(`Erreur: ${error.message}`, 'danger');
+            this.showAlert('Erreur lors de la validation du code: ' + error.message, 'danger');
         }
     }
 
-    // 🎯 FONCTION : RENVOYER CODE D'ACCÈS
+    // ✅ RENVOYER LE CODE D'ACCÈS
     async resendAccessCode() {
         try {
+            console.log('🔄 Renvoi du code d\'accès...');
+            
             const API_BASE_URL = await this.getActiveAPIUrl();
             const token = this.auth.getToken();
             
             if (!token) {
                 this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
+                this.auth.logout();
                 return;
             }
-
+            
             const resendButton = document.getElementById('resend-code');
-            this.setButtonLoading(resendButton, true);
+            const originalText = resendButton.innerHTML;
+            resendButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Envoi...';
+            resendButton.disabled = true;
 
             const response = await fetch(`${API_BASE_URL}/api/payment/resend-code`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
             });
 
-            this.setButtonLoading(resendButton, false);
+            resendButton.innerHTML = originalText;
+            resendButton.disabled = false;
 
-            if (!response.ok) {
-                throw new Error(`Erreur ${response.status}`);
+            if (response.status === 401) {
+                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
+                this.auth.logout();
+                return;
             }
 
             const data = await response.json();
 
             if (data.success) {
-                this.showAlert('✅ Code d\'accès renvoyé avec succès à votre email', 'success');
+                this.showAlert(data.message || 'Code renvoyé par email', 'success');
             } else {
-                this.showAlert(data.message, 'danger');
+                this.showAlert(data.message || 'Erreur lors du renvoi du code', 'danger');
             }
         } catch (error) {
             console.error('💥 Erreur renvoi code:', error);
-            this.showAlert(`Erreur: ${error.message}`, 'danger');
+            this.showAlert('Erreur lors du renvoi du code', 'danger');
         }
     }
 
-    // 🎯 FONCTION : AFFICHER INFORMATIONS ABONNEMENT
+    // ✅ AFFICHER LES INFORMATIONS D'ABONNEMENT
     async displaySubscriptionInfo() {
         try {
             if (!this.auth.isAuthenticated()) return;
             
-            const subscription = await this.getUserSubscription();
+            const subscription = await this.checkUserSubscription();
             const premiumBadge = document.getElementById('premium-badge');
             const subscriptionInfo = document.getElementById('subscription-info');
             
             if (subscription && subscription.hasActiveSubscription) {
-                // Utilisateur premium
+                // Utilisateur premium actif
                 if (premiumBadge) {
-                    premiumBadge.style.display = 'inline';
-                    premiumBadge.textContent = 'Premium Actif';
+                    premiumBadge.style.display = 'inline-block';
+                    premiumBadge.textContent = '👑 Premium';
+                    premiumBadge.classList.add('badge', 'bg-warning', 'text-dark');
                     
                     if (subscription.premiumExpiresAt) {
                         const expiryDate = new Date(subscription.premiumExpiresAt).toLocaleDateString('fr-FR');
@@ -425,26 +380,41 @@ export class Payment {
                 }
                 
                 // Masquer les boutons d'abonnement
-                document.querySelectorAll('.subscribe-btn').forEach(btn => {
-                    btn.style.display = 'none';
+                document.querySelectorAll('.subscribe-btn-direct, .subscribe-btn').forEach(btn => {
+                    const card = btn.closest('.card');
+                    if (card) {
+                        btn.style.display = 'none';
+                        
+                        // Ajouter un badge "Actif"
+                        let activebadge = card.querySelector('.active-subscription-badge');
+                        if (!activeBadge) {
+                            activebadge = document.createElement('div');
+                            activebadge.className = 'active-subscription-badge alert alert-success mt-2';
+                            activeBadge.innerHTML = '<i class="fas fa-check-circle me-2"></i>Abonnement actif';
+                            btn.parentNode.appendChild(activebadge);
+                        }
+                    }
                 });
                 
-                // Afficher les informations d'abonnement
+                // Afficher info abonnement
                 if (subscriptionInfo) {
                     const expiryDate = subscription.premiumExpiresAt ? 
-                        new Date(subscription.premiumExpiresAt).toLocaleDateString('fr-FR') : 'date inconnue';
-                    const daysLeft = subscription.daysRemaining > 0 ? subscription.daysRemaining : 0;
+                        new Date(subscription.premiumExpiresAt).toLocaleDateString('fr-FR', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        }) : 'date inconnue';
+                    
+                    const daysLeft = subscription.daysLeft || 0;
                     
                     subscriptionInfo.innerHTML = `
                         <div class="alert alert-success">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-crown fa-2x me-3"></i>
-                                <div>
-                                    <h5 class="mb-1">Abonnement Premium Actif</h5>
-                                    <p class="mb-0">Valide jusqu'au <strong>${expiryDate}</strong></p>
-                                    <small class="text-muted">${daysLeft} jours restants</small>
-                                </div>
-                            </div>
+                            <h5><i class="fas fa-crown me-2"></i>Abonnement Premium Actif</h5>
+                            <p class="mb-1">Expire le <strong>${expiryDate}</strong></p>
+                            <p class="mb-0 text-muted small">
+                                <i class="fas fa-clock me-1"></i>${daysLeft} jour(s) restant(s)
+                            </p>
                         </div>
                     `;
                     subscriptionInfo.style.display = 'block';
@@ -456,20 +426,24 @@ export class Payment {
                 }
                 
                 // Afficher les boutons d'abonnement
-                document.querySelectorAll('.subscribe-btn').forEach(btn => {
+                document.querySelectorAll('.subscribe-btn-direct, .subscribe-btn').forEach(btn => {
                     btn.style.display = 'inline-block';
+                    
+                    // Supprimer les badges "Actif"
+                    const card = btn.closest('.card');
+                    if (card) {
+                        const activeBadge = card.querySelector('.active-subscription-badge');
+                        if (activeBadge) {
+                            activebadge.remove();
+                        }
+                    }
                 });
                 
                 if (subscriptionInfo) {
                     subscriptionInfo.innerHTML = `
                         <div class="alert alert-info">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-graduation-cap fa-2x me-3"></i>
-                                <div>
-                                    <h5 class="mb-1">Accédez à tous les Quiz Premium</h5>
-                                    <p class="mb-0">Choisissez une formule d'abonnement pour débloquer l'accès complet</p>
-                                </div>
-                            </div>
+                            <h5><i class="fas fa-graduation-cap me-2"></i>Accédez à tous les quiz Premium</h5>
+                            <p class="mb-0">Choisissez une formule d'abonnement pour débloquer l'accès complet</p>
                         </div>
                     `;
                     subscriptionInfo.style.display = 'block';
@@ -480,15 +454,15 @@ export class Payment {
         }
     }
     
-    // 🎯 FONCTION : OBtenir informations abonnement
-    async getUserSubscription() {
+    // ✅ VÉRIFIER L'ABONNEMENT UTILISATEUR
+    async checkUserSubscription() {
         try {
             if (!this.auth.isAuthenticated()) return null;
             
             const token = this.auth.getToken();
             const API_BASE_URL = await this.getActiveAPIUrl();
             
-            const response = await fetch(`${API_BASE_URL}/api/payment/subscription-info`, {
+            const response = await fetch(`${API_BASE_URL}/api/payment/subscription/info`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -501,32 +475,14 @@ export class Payment {
             }
             return null;
         } catch (error) {
-            console.error('Erreur récupération abonnement:', error);
+            console.error('Erreur vérification abonnement:', error);
             return null;
         }
     }
-
-    // 🛠 UTILITAIRES
-    setButtonLoading(button, isLoading) {
-        if (!button) return;
-        
-        if (isLoading) {
-            button.disabled = true;
-            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traitement...';
-        } else {
-            button.disabled = false;
-            if (button.id === 'validate-code') {
-                button.innerHTML = 'Valider le Code';
-            } else if (button.id === 'resend-code') {
-                button.innerHTML = 'Renvoyer le Code';
-            } else {
-                button.innerHTML = button.getAttribute('data-original-text') || 'S\'abonner';
-            }
-        }
-    }
-
+    
+    // ✅ AFFICHER UNE ALERTE
     showAlert(message, type) {
-        // Supprimer les alertes existantes
+        // Supprimer les anciennes alertes
         document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
         
         const alertDiv = document.createElement('div');
@@ -541,29 +497,41 @@ export class Payment {
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         `;
         
+        // Icône selon le type
+        let icon = '';
+        switch(type) {
+            case 'success': icon = '<i class="fas fa-check-circle me-2"></i>'; break;
+            case 'danger': icon = '<i class="fas fa-times-circle me-2"></i>'; break;
+            case 'warning': icon = '<i class="fas fa-exclamation-triangle me-2"></i>'; break;
+            case 'info': icon = '<i class="fas fa-info-circle me-2"></i>'; break;
+        }
+        
         alertDiv.innerHTML = `
             <div class="d-flex align-items-center">
-                <div class="flex-grow-1">${message}</div>
+                <div class="flex-grow-1">
+                    ${icon}${message}
+                </div>
                 <button type="button" class="btn-close ms-2" data-bs-dismiss="alert"></button>
             </div>
         `;
         
         document.body.appendChild(alertDiv);
         
-        // Auto-suppression après 5 secondes pour les succès/info
+        // Auto-suppression après 5 secondes pour succès/info
         if (type === 'success' || type === 'info') {
             setTimeout(() => {
                 if (alertDiv.parentNode) {
-                    alertDiv.parentNode.removeChild(alertDiv);
+                    alertDiv.classList.remove('show');
+                    setTimeout(() => alertDiv.remove(), 150);
                 }
             }, 5000);
         }
     }
 }
 
-// Initialisation PRODUCTION
+// ✅ INITIALISATION AUTOMATIQUE
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('💰 Initialisation module Payment PRODUCTION...');
+    console.log('💰 Initialisation du module Payment');
     try {
         window.payment = new Payment();
         console.log('✅ Module Payment initialisé avec succès');
