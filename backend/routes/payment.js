@@ -15,6 +15,6 @@ router.post('/process-return', paymentController.processPaymentReturn);
 router.get('/subscription/info', paymentController.getUserSubscriptionInfo);
 
 // ✅ Renvoyer code
-router.post('/resend-code', paymentController.resendAccessCode);
+//router.post('/resend-code', paymentController.resendAccessCode);
 
 module.exports = router;
