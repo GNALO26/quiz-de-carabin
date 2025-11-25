@@ -2,22 +2,19 @@ const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 
-// ✅ Paiement direct KkiaPay
+// ✅ Paiement direct
 router.post('/direct/initiate', paymentController.initiateDirectPayment);
 
-// ✅ Paiement widget KkiaPay  
+// ✅ Paiement widget
 router.post('/initiate', paymentController.initiatePayment);
 
-// ✅ Traitement retour de paiement
+// ✅ Traitement retour
 router.post('/process-return', paymentController.processPaymentReturn);
 
-// ✅ Vérification statut transaction
-router.get('/check-status/:transactionId', paymentController.checkTransactionStatus);
-
-// ✅ Informations abonnement utilisateur
+// ✅ Info abonnement
 router.get('/subscription/info', paymentController.getUserSubscriptionInfo);
 
-// ✅ Renvoyer le code d'accès
+// ✅ Renvoyer code
 router.post('/resend-code', paymentController.resendAccessCode);
 
 module.exports = router;
