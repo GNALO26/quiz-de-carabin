@@ -4,9 +4,44 @@ import { Auth } from './auth.js';
 export class Payment {
     constructor() {
         this.auth = new Auth();
+        this.kkiapayLoaded = false;
+        this.loadKkiapayScript();
         this.setupEventListeners();
         this.checkPaymentReturn();
         this.displaySubscriptionInfo();
+    }
+
+    // ✅ NOUVELLE FONCTION: Charger le script KkiaPay dynamiquement
+    loadKkiapayScript() {
+        return new Promise((resolve, reject) => {
+            // Vérifier si déjà chargé
+            if (typeof openKkiapayWidget !== 'undefined') {
+                console.log('✅ KkiaPay déjà chargé');
+                this.kkiapayLoaded = true;
+                resolve();
+                return;
+            }
+
+            // Charger le script
+            console.log('📥 Chargement du script KkiaPay...');
+            const script = document.createElement('script');
+            script.src = 'https://cdn.kkiapay.me/k.js';
+            script.async = true;
+            
+            script.onload = () => {
+                console.log('✅ Script KkiaPay chargé avec succès');
+                this.kkiapayLoaded = true;
+                resolve();
+            };
+            
+            script.onerror = () => {
+                console.error('❌ Erreur chargement script KkiaPay');
+                this.kkiapayLoaded = false;
+                reject(new Error('Impossible de charger KkiaPay'));
+            };
+            
+            document.head.appendChild(script);
+        });
     }
 
     async getActiveAPIUrl() {
@@ -35,7 +70,6 @@ export class Payment {
     setupEventListeners() {
         console.log('🎯 Initialisation des écouteurs de paiement');
         
-        // ✅ UNIQUEMENT LES BOUTONS WIDGET (méthode qui fonctionne)
         document.querySelectorAll('.subscribe-btn, .subscribe-btn-direct').forEach(button => {
             button.addEventListener('click', (e) => {
                 const planId = e.currentTarget.getAttribute('data-plan-id') || 
@@ -47,12 +81,10 @@ export class Payment {
             });
         });
         
-        // ✅ Validation de code d'accès
         document.getElementById('validate-code')?.addEventListener('click', () => {
             this.validateAccessCode();
         });
         
-        // ✅ Renvoyer le code d'accès
         document.getElementById('resend-code')?.addEventListener('click', () => {
             this.resendAccessCode();
         });
@@ -64,11 +96,10 @@ export class Payment {
         
         if (transactionId && window.location.pathname.includes('payment-callback.html')) {
             console.log('🔄 Détection retour paiement. Transaction:', transactionId);
-            // Le traitement est géré directement dans payment-callback.html
         }
     }
 
-    // ✅ PAIEMENT AVEC WIDGET KKIAPAY (MÉTHODE PRINCIPALE)
+    // ✅ PAIEMENT AVEC WIDGET KKIAPAY - VERSION AMÉLIORÉE
     async initiatePayment(planId, amount) {
         try {
             console.log(`💰 Initialisation paiement: ${planId} - ${amount} FCFA`);
@@ -88,6 +119,21 @@ export class Payment {
             if (subscribeBtn) {
                 subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Préparation...';
                 subscribeBtn.disabled = true;
+            }
+
+            // ✅ ATTENDRE LE CHARGEMENT DE KKIAPAY
+            if (!this.kkiapayLoaded) {
+                console.log('⏳ Attente chargement KkiaPay...');
+                try {
+                    await this.loadKkiapayScript();
+                } catch (error) {
+                    throw new Error('Impossible de charger le système de paiement. Veuillez rafraîchir la page.');
+                }
+            }
+
+            // ✅ VÉRIFICATION FINALE
+            if (typeof openKkiapayWidget === 'undefined') {
+                throw new Error('Le système de paiement n\'est pas disponible. Veuillez rafraîchir la page et réessayer.');
             }
 
             console.log('📤 Création transaction...');
@@ -115,12 +161,7 @@ export class Payment {
                 
                 console.log('🎯 Ouverture widget KkiaPay...');
                 
-                // Vérifier que le widget est chargé
-                if (typeof openKkiapayWidget === 'undefined') {
-                    throw new Error('Widget KkiaPay non chargé');
-                }
-                
-                // Ouvrir le widget avec les bonnes données
+                // ✅ OUVRIR LE WIDGET
                 openKkiapayWidget({
                     amount: data.amount,
                     api_key: data.publicKey,
@@ -131,12 +172,15 @@ export class Payment {
                     theme: "#13a718",
                     name: "Quiz de Carabin",
                     callback: data.callback,
-                    // Succès
+                    
+                    // Callback succès
                     successCallback: (response) => {
                         console.log('✅ Paiement réussi:', response);
-                        window.location.href = `${data.callback}?transaction_id=${response.transactionId}`;
+                        // Rediriger avec le transactionId retourné par KkiaPay
+                        window.location.href = `${data.callback}?transactionId=${response.transactionId}`;
                     },
-                    // Échec
+                    
+                    // Callback échec
                     failCallback: (error) => {
                         console.error('❌ Paiement échoué:', error);
                         this.showAlert('Le paiement a échoué. Veuillez réessayer.', 'danger');
@@ -298,7 +342,6 @@ export class Payment {
             const subscriptionInfo = document.getElementById('subscription-info');
             
             if (subscription && subscription.hasActiveSubscription) {
-                // Utilisateur premium actif
                 if (premiumBadge) {
                     premiumBadge.style.display = 'inline-block';
                     premiumBadge.textContent = '👑 Premium';
@@ -310,13 +353,11 @@ export class Payment {
                     }
                 }
                 
-                // Masquer les boutons d'abonnement
                 document.querySelectorAll('.subscribe-btn-direct, .subscribe-btn').forEach(btn => {
                     const card = btn.closest('.card');
                     if (card) {
                         btn.style.display = 'none';
                         
-                        // Ajouter un badge "Actif"
                         let activeBadge = card.querySelector('.active-subscription-badge');
                         if (!activeBadge) {
                             activeBadge = document.createElement('div');
@@ -327,7 +368,6 @@ export class Payment {
                     }
                 });
                 
-                // Afficher info abonnement
                 if (subscriptionInfo) {
                     const expiryDate = subscription.premiumExpiresAt ? 
                         new Date(subscription.premiumExpiresAt).toLocaleDateString('fr-FR', {
@@ -351,16 +391,13 @@ export class Payment {
                     subscriptionInfo.style.display = 'block';
                 }
             } else {
-                // Utilisateur non premium
                 if (premiumBadge) {
                     premiumBadge.style.display = 'none';
                 }
                 
-                // Afficher les boutons d'abonnement
                 document.querySelectorAll('.subscribe-btn-direct, .subscribe-btn').forEach(btn => {
                     btn.style.display = 'inline-block';
                     
-                    // Supprimer les badges "Actif"
                     const card = btn.closest('.card');
                     if (card) {
                         const activeBadge = card.querySelector('.active-subscription-badge');
@@ -413,7 +450,6 @@ export class Payment {
     
     // ✅ AFFICHER UNE ALERTE
     showAlert(message, type) {
-        // Supprimer les anciennes alertes
         document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
         
         const alertDiv = document.createElement('div');
@@ -428,7 +464,6 @@ export class Payment {
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         `;
         
-        // Icône selon le type
         let icon = '';
         switch(type) {
             case 'success': icon = '<i class="fas fa-check-circle me-2"></i>'; break;
@@ -448,7 +483,6 @@ export class Payment {
         
         document.body.appendChild(alertDiv);
         
-        // Auto-suppression après 5 secondes pour succès/info
         if (type === 'success' || type === 'info') {
             setTimeout(() => {
                 if (alertDiv.parentNode) {
