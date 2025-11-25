@@ -4,11 +4,17 @@ const paymentController = require('../controllers/paymentController');
 const verifyWebhook = require('../middleware/verifyWebhook');
 const webhookLogger = require('../middleware/webhookLogger');
 
-// Appliquer le logger pour tous les webhooks
-router.use(webhookLogger);
+// ✅ Webhook KkiaPay (PUBLIC - sans auth)
+router.post('/kkiapay', webhookLogger, verifyWebhook, paymentController.handleKkiapayWebhook);
 
-// Webhook KkiaPay PRODUCTION
-router.post('/kkiapay', verifyWebhook, paymentController.handleKkiapayWebhook);
+// ✅ Route test webhook
+router.get('/test', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Webhook routes working',
+    timestamp: new Date().toISOString()
+  });
+});
 
 module.exports = router;
 /*const express = require('express');

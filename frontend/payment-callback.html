@@ -631,179 +631,188 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Script de vérification du paiement -->
-    <script>
-    // ✅ CONFIGURATION
-    const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
-    const MAX_ATTEMPTS = 12; // 2 minutes (12 x 10 secondes)
-    const CHECK_INTERVAL = 10000; // 10 secondes
+   <!-- REMPLACER TOUT LE SCRIPT EXISTANT PAR CECI -->
+<script>
+// ✅ CONFIGURATION PRODUCTION
+const API_BASE_URL = 'https://quiz-de-carabin-backend.onrender.com';
+const MAX_ATTEMPTS = 18; // 3 minutes (18 x 10 secondes)
+const CHECK_INTERVAL = 10000; // 10 secondes
 
-    let attempts = 0;
-    let checkInterval = null;
+let attempts = 0;
+let checkInterval = null;
 
-    // ✅ FONCTION PRINCIPALE DE VÉRIFICATION
-    async function checkPaymentStatus() {
-        try {
-            console.log(`\n🔍 [${new Date().toLocaleTimeString()}] Vérification paiement (Tentative ${attempts + 1}/${MAX_ATTEMPTS})`);
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            // KkiaPay envoie 'transaction_id'
-            const transactionId = urlParams.get('transaction_id') || 
-                                 urlParams.get('transactionId') || 
-                                 localStorage.getItem('pendingTransaction');
-            
-            console.log('📦 Paramètres URL:', Object.fromEntries(urlParams.entries()));
-            console.log('🔑 Transaction ID:', transactionId);
-            
-            if (!transactionId) {
-                throw new Error('Aucun ID de transaction trouvé. Veuillez réessayer le paiement.');
+// ✅ FONCTION PRINCIPALE DE VÉRIFICATION
+async function checkPaymentStatus() {
+    try {
+        console.log(`\n🔍 [${new Date().toLocaleTimeString()}] Vérification paiement (Tentative ${attempts + 1}/${MAX_ATTEMPTS})`);
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Récupérer l'ID de transaction (KkiaPay envoie 'transaction_id')
+        const transactionId = urlParams.get('transaction_id') || 
+                             urlParams.get('transactionId') || 
+                             localStorage.getItem('pendingTransaction');
+        
+        console.log('📦 Transaction ID:', transactionId);
+        
+        if (!transactionId) {
+            throw new Error('Aucun ID de transaction trouvé. Veuillez réessayer le paiement.');
+        }
+
+        const token = localStorage.getItem('quizToken');
+        if (!token) {
+            throw new Error('Session expirée. Veuillez vous reconnecter.');
+        }
+
+        console.log('📤 Envoi requête vérification...');
+        const response = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ transactionId })
+        });
+
+        console.log('📨 Statut HTTP:', response.status);
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                // Transaction non trouvée - peut-être pas encore synchronisée
+                console.log('⏳ Transaction non trouvée, peut-être pas encore synchronisée...');
+                return; // On continue à vérifier
             }
+            throw new Error(`Erreur serveur (${response.status})`);
+        }
 
-            // Stocker pour référence
-            document.getElementById('errorTransactionId').textContent = transactionId;
+        const data = await response.json();
+        console.log('✅ Réponse serveur:', data);
 
-            const token = localStorage.getItem('quizToken');
-            if (!token) {
-                throw new Error('Session expirée. Veuillez vous reconnecter et réessayer.');
-            }
-
-            console.log('📤 Envoi requête à:', `${API_BASE_URL}/api/payment/process-return`);
-            
-            const response = await fetch(`${API_BASE_URL}/api/payment/process-return`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ transactionId })
-            });
-
-            console.log('📨 Statut HTTP:', response.status);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ Erreur HTTP:', errorText);
-                throw new Error(`Erreur serveur (${response.status}). ${errorText}`);
-            }
-
-            const data = await response.json();
-            console.log('✅ Réponse serveur:', data);
-
-            if (data.success) {
-                if (data.status === 'completed') {
-                    // ✅ PAIEMENT CONFIRMÉ
-                    console.log('🎉 Paiement confirmé !');
-                    clearInterval(checkInterval);
-                    showSuccess(data.accessCode, data.user, data.subscriptionEnd);
-                    
-                    // Mettre à jour le localStorage
-                    if (data.user) {
-                        localStorage.setItem('quizUser', JSON.stringify(data.user));
-                    }
-                    localStorage.removeItem('pendingTransaction');
-                    
-                } else if (data.status === 'pending') {
-                    // ⏳ TOUJOURS EN ATTENTE
-                    console.log('⏳ Paiement toujours en attente...');
-                    
-                    // Si on a atteint le max de tentatives, afficher pending
-                    if (attempts >= MAX_ATTEMPTS - 1) {
-                        clearInterval(checkInterval);
-                        showPending();
-                    }
-                }
-            } else {
-                throw new Error(data.message || 'Erreur de vérification du paiement');
-            }
-
-        } catch (error) {
-            console.error('❌ Erreur:', error.message);
-            
-            // Si on a atteint le max de tentatives, afficher l'erreur
-            if (attempts >= MAX_ATTEMPTS - 1) {
+        if (data.success) {
+            if (data.status === 'completed') {
+                // ✅ PAIEMENT CONFIRMÉ
+                console.log('🎉 Paiement confirmé !');
                 clearInterval(checkInterval);
-                showError(error.message);
-            }
-        }
-    }
-
-    // ✅ AFFICHER LE SUCCÈS
-    function showSuccess(accessCode, user, subscriptionEnd) {
-        console.log('✅ Affichage succès');
-        
-        document.getElementById('loading').classList.add('d-none');
-        document.getElementById('success').classList.remove('d-none');
-        
-        // Afficher le code avec animation
-        if (accessCode) {
-            setTimeout(() => {
-                document.getElementById('accessCode').textContent = accessCode;
-            }, 300);
-        }
-        
-        // Afficher la date d'expiration
-        if (subscriptionEnd) {
-            const expiryDate = new Date(subscriptionEnd).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            });
-            document.getElementById('expiryDate').textContent = expiryDate;
-        } else {
-            document.getElementById('expiryDate').textContent = 'Non disponible';
-        }
-    }
-
-    // ✅ AFFICHER L'ATTENTE
-    function showPending() {
-        console.log('⏳ Affichage pending');
-        
-        document.getElementById('loading').classList.add('d-none');
-        document.getElementById('pending').classList.remove('d-none');
-    }
-
-    // ✅ AFFICHER L'ERREUR
-    function showError(message) {
-        console.log('❌ Affichage erreur');
-        
-        document.getElementById('loading').classList.add('d-none');
-        document.getElementById('error').classList.remove('d-none');
-        document.getElementById('errorMessage').textContent = message;
-    }
-
-    // ✅ DÉMARRER LA VÉRIFICATION
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 Démarrage vérification paiement...');
-        console.log('⏰ Heure:', new Date().toLocaleString('fr-FR'));
-        
-        // Première vérification immédiate
-        checkPaymentStatus();
-        
-        // Vérifications périodiques
-        checkInterval = setInterval(() => {
-            attempts++;
-            
-            if (attempts < MAX_ATTEMPTS) {
-                checkPaymentStatus();
-            } else {
-                console.log('⏱ Timeout atteint');
-                clearInterval(checkInterval);
+                showSuccess(data.accessCode, data.user, data.subscriptionEnd);
                 
-                // Si toujours en loading, afficher pending
-                if (!document.getElementById('loading').classList.contains('d-none')) {
+                // Mettre à jour le localStorage
+                if (data.user) {
+                    localStorage.setItem('quizUser', JSON.stringify(data.user));
+                }
+                localStorage.removeItem('pendingTransaction');
+                
+            } else if (data.status === 'pending') {
+                // ⏳ TOUJOURS EN ATTENTE
+                console.log('⏳ Paiement toujours en attente...');
+                
+                // Si on a atteint le max de tentatives, afficher pending
+                if (attempts >= MAX_ATTEMPTS - 1) {
+                    clearInterval(checkInterval);
                     showPending();
                 }
             }
-        }, CHECK_INTERVAL);
-    });
-
-    // ✅ NETTOYAGE AU DÉCHARGEMENT
-    window.addEventListener('beforeunload', function() {
-        if (checkInterval) {
-            clearInterval(checkInterval);
+        } else {
+            throw new Error(data.message || 'Erreur de vérification du paiement');
         }
-    });
-    </script>
+
+    } catch (error) {
+        console.error('❌ Erreur:', error.message);
+        
+        // Si on a atteint le max de tentatives, afficher l'erreur
+        if (attempts >= MAX_ATTEMPTS - 1) {
+            clearInterval(checkInterval);
+            showError(error.message);
+        }
+    }
+}
+
+// ✅ AFFICHER LE SUCCÈS
+function showSuccess(accessCode, user, subscriptionEnd) {
+    console.log('✅ Affichage succès');
+    
+    document.getElementById('loading').classList.add('d-none');
+    document.getElementById('success').classList.remove('d-none');
+    
+    // Afficher le code avec animation
+    if (accessCode) {
+        const codeElement = document.getElementById('accessCode');
+        codeElement.textContent = accessCode;
+        codeElement.style.animation = 'scaleIn 0.5s ease-out';
+    }
+    
+    // Afficher la date d'expiration
+    if (subscriptionEnd) {
+        const expiryDate = new Date(subscriptionEnd).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        document.getElementById('expiryDate').textContent = expiryDate;
+    }
+}
+
+// ✅ AFFICHER L'ATTENTE
+function showPending() {
+    console.log('⏳ Affichage pending');
+    
+    document.getElementById('loading').classList.add('d-none');
+    document.getElementById('pending').classList.remove('d-none');
+}
+
+// ✅ AFFICHER L'ERREUR
+function showError(message) {
+    console.log('❌ Affichage erreur');
+    
+    document.getElementById('loading').classList.add('d-none');
+    document.getElementById('error').classList.remove('d-none');
+    document.getElementById('errorMessage').textContent = message;
+    
+    // Ajouter un bouton de réessai
+    const retryButton = document.createElement('button');
+    retryButton.className = 'btn btn-warning mt-3';
+    retryButton.innerHTML = '<i class="fas fa-redo me-2"></i>Réessayer la vérification';
+    retryButton.onclick = () => {
+        document.getElementById('error').classList.add('d-none');
+        document.getElementById('loading').classList.remove('d-none');
+        attempts = 0;
+        checkPaymentStatus();
+        checkInterval = setInterval(checkPaymentStatus, CHECK_INTERVAL);
+    };
+    document.querySelector('#error .action-buttons').appendChild(retryButton);
+}
+
+// ✅ DÉMARRER LA VÉRIFICATION
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Démarrage vérification paiement PRODUCTION...');
+    
+    // Première vérification immédiate
+    checkPaymentStatus();
+    
+    // Vérifications périodiques
+    checkInterval = setInterval(() => {
+        attempts++;
+        
+        if (attempts < MAX_ATTEMPTS) {
+            checkPaymentStatus();
+        } else {
+            console.log('⏱ Timeout atteint');
+            clearInterval(checkInterval);
+            
+            // Si toujours en loading, afficher pending
+            if (!document.getElementById('loading').classList.contains('d-none')) {
+                showPending();
+            }
+        }
+    }, CHECK_INTERVAL);
+});
+
+// ✅ NETTOYAGE
+window.addEventListener('beforeunload', function() {
+    if (checkInterval) {
+        clearInterval(checkInterval);
+    }
+});
+</script>
 </body>
 </html>
