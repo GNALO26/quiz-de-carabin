@@ -35,21 +35,14 @@ export class Payment {
     setupEventListeners() {
         console.log('🎯 Initialisation des écouteurs de paiement');
         
-        // ✅ Boutons de paiement direct (nouveaux)
-        document.querySelectorAll('.subscribe-btn-direct').forEach(button => {
+        // ✅ UNIQUEMENT LES BOUTONS WIDGET (méthode qui fonctionne)
+        document.querySelectorAll('.subscribe-btn, .subscribe-btn-direct').forEach(button => {
             button.addEventListener('click', (e) => {
-                const planKey = e.currentTarget.getAttribute('data-plan-key');
-                console.log(`🖱 Clic paiement direct: ${planKey}`);
-                this.initiateDirectPayment(planKey);
-            });
-        });
-        
-        // ✅ Boutons de paiement widget (anciens)
-        document.querySelectorAll('.subscribe-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const planId = e.currentTarget.getAttribute('data-plan-id');
+                const planId = e.currentTarget.getAttribute('data-plan-id') || 
+                             e.currentTarget.getAttribute('data-plan-key');
                 const amount = e.currentTarget.getAttribute('data-plan-price');
-                console.log(`🖱 Clic paiement widget: ${planId} - ${amount} FCFA`);
+                
+                console.log(`🖱 Clic paiement: ${planId} - ${amount} FCFA`);
                 this.initiatePayment(planId, amount);
             });
         });
@@ -75,78 +68,10 @@ export class Payment {
         }
     }
 
-    // ✅ PAIEMENT DIRECT KKIAPAY
-    async initiateDirectPayment(planKey) {
-        try {
-            console.log(`💰 Initialisation paiement direct: ${planKey}`);
-            
-            if (!this.auth.isAuthenticated()) {
-                this.auth.showLoginModal();
-                this.showAlert('Veuillez vous connecter pour vous abonner', 'warning');
-                return;
-            }
-
-            const token = this.auth.getToken();
-            const API_BASE_URL = await this.getActiveAPIUrl();
-            
-            console.log('📤 Requête paiement direct:', `${API_BASE_URL}/api/payment/direct/initiate`);
-
-            // Afficher le loader
-            this.showAlert('Préparation du paiement...', 'info');
-            
-            const response = await fetch(`${API_BASE_URL}/api/payment/direct/initiate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ planKey })
-            });
-
-            console.log('📨 Statut réponse:', response.status);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ Erreur:', errorText);
-                
-                let errorMessage = `Erreur HTTP ${response.status}`;
-                try {
-                    const errorData = JSON.parse(errorText);
-                    errorMessage = errorData.message || errorMessage;
-                } catch (e) {
-                    errorMessage = errorText || errorMessage;
-                }
-                
-                throw new Error(errorMessage);
-            }
-
-            const data = await response.json();
-            console.log('✅ Réponse paiement direct:', data);
-
-            if (data.success && data.paymentUrl) {
-                // Stocker l'ID de transaction
-                localStorage.setItem('pendingTransaction', data.transactionId);
-                
-                // Redirection vers KkiaPay
-                this.showAlert('Redirection vers la page de paiement sécurisée...', 'success');
-                setTimeout(() => {
-                    console.log('🚀 Redirection vers:', data.paymentUrl);
-                    window.location.href = data.paymentUrl;
-                }, 1500);
-            } else {
-                throw new Error(data.message || 'Erreur génération lien de paiement');
-            }
-
-        } catch (error) {
-            console.error('💥 Erreur paiement direct:', error);
-            this.showAlert(`Erreur: ${error.message}`, 'danger');
-        }
-    }
-
-    // ✅ PAIEMENT WIDGET KKIAPAY
+    // ✅ PAIEMENT AVEC WIDGET KKIAPAY (MÉTHODE PRINCIPALE)
     async initiatePayment(planId, amount) {
         try {
-            console.log(`💰 Initialisation paiement widget: ${planId} - ${amount} FCFA`);
+            console.log(`💰 Initialisation paiement: ${planId} - ${amount} FCFA`);
             
             if (!this.auth.isAuthenticated()) {
                 this.auth.showLoginModal();
@@ -159,12 +84,13 @@ export class Payment {
             
             const API_BASE_URL = await this.getActiveAPIUrl();
             
-            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
+            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"], [data-plan-key="${planId}"]`);
             if (subscribeBtn) {
                 subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Préparation...';
                 subscribeBtn.disabled = true;
             }
 
+            console.log('📤 Création transaction...');
             const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
                 method: 'POST',
                 headers: {
@@ -187,47 +113,52 @@ export class Payment {
             if (data.success && data.transactionId) {
                 localStorage.setItem('pendingTransaction', data.transactionId);
                 
-                // Ouvrir le widget KkiaPay
-                this.openKkiapayWidget(data.widgetConfig);
+                console.log('🎯 Ouverture widget KkiaPay...');
+                
+                // Vérifier que le widget est chargé
+                if (typeof openKkiapayWidget === 'undefined') {
+                    throw new Error('Widget KkiaPay non chargé');
+                }
+                
+                // Ouvrir le widget avec les bonnes données
+                openKkiapayWidget({
+                    amount: data.amount,
+                    api_key: data.publicKey,
+                    sandbox: false,
+                    phone: data.phone || '',
+                    email: data.email,
+                    data: JSON.stringify(data.metadata),
+                    theme: "#13a718",
+                    name: "Quiz de Carabin",
+                    callback: data.callback,
+                    // Succès
+                    successCallback: (response) => {
+                        console.log('✅ Paiement réussi:', response);
+                        window.location.href = `${data.callback}?transaction_id=${response.transactionId}`;
+                    },
+                    // Échec
+                    failCallback: (error) => {
+                        console.error('❌ Paiement échoué:', error);
+                        this.showAlert('Le paiement a échoué. Veuillez réessayer.', 'danger');
+                        if (subscribeBtn) {
+                            subscribeBtn.innerHTML = 'S\'abonner';
+                            subscribeBtn.disabled = false;
+                        }
+                    }
+                });
             } else {
                 throw new Error(data.message || 'Erreur création transaction');
             }
             
         } catch (error) {
-            console.error('💥 Erreur paiement widget:', error);
+            console.error('💥 Erreur paiement:', error);
             this.showAlert(error.message || 'Erreur de connexion', 'danger');
-        } finally {
-            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"]`);
+            
+            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"], [data-plan-key="${planId}"]`);
             if (subscribeBtn) {
                 subscribeBtn.innerHTML = 'S\'abonner';
                 subscribeBtn.disabled = false;
             }
-        }
-    }
-
-    // ✅ OUVRIR LE WIDGET KKIAPAY
-    openKkiapayWidget(config) {
-        try {
-            console.log('🎯 Ouverture widget KkiaPay');
-            
-            if (typeof openKkiapayWidget === 'undefined') {
-                console.error('❌ Widget KkiaPay non chargé');
-                this.showAlert('Erreur: Widget de paiement non disponible', 'danger');
-                return;
-            }
-
-            openKkiapayWidget({
-                amount: config.amount,
-                api_key: config.key,
-                sandbox: config.sandbox || false,
-                callback: config.callback,
-                theme: "#13a718",
-                name: "Quiz de Carabin"
-            });
-            
-        } catch (error) {
-            console.error('❌ Erreur ouverture widget:', error);
-            this.showAlert('Erreur lors de l\'ouverture du widget de paiement', 'danger');
         }
     }
 
@@ -386,12 +317,12 @@ export class Payment {
                         btn.style.display = 'none';
                         
                         // Ajouter un badge "Actif"
-                        let activebadge = card.querySelector('.active-subscription-badge');
+                        let activeBadge = card.querySelector('.active-subscription-badge');
                         if (!activeBadge) {
-                            activebadge = document.createElement('div');
-                            activebadge.className = 'active-subscription-badge alert alert-success mt-2';
+                            activeBadge = document.createElement('div');
+                            activeBadge.className = 'active-subscription-badge alert alert-success mt-2';
                             activeBadge.innerHTML = '<i class="fas fa-check-circle me-2"></i>Abonnement actif';
-                            btn.parentNode.appendChild(activebadge);
+                            btn.parentNode.appendChild(activeBadge);
                         }
                     }
                 });
@@ -434,7 +365,7 @@ export class Payment {
                     if (card) {
                         const activeBadge = card.querySelector('.active-subscription-badge');
                         if (activeBadge) {
-                            activebadge.remove();
+                            activeBadge.remove();
                         }
                     }
                 });

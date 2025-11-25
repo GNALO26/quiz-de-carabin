@@ -197,18 +197,26 @@ exports.handleKkiapayWebhook = async (req, res) => {
     }
 
     console.log(`🔍 [WEBHOOK] Transaction: ${transactionId}, Statut: ${status}`);
+    
+    // ✅ Extraire les metadata si disponibles
+    const transactionIdFromMetadata = metadata?.transaction_id || 
+                                     (typeof metadata === 'string' ? JSON.parse(metadata).transaction_id : null);
 
-    // ✅ RECHERCHE MULTI-STRATÉGIE
+    console.log(`📦 [WEBHOOK] Metadata transaction_id: ${transactionIdFromMetadata}`);
+
+    // ✅ RECHERCHE MULTI-STRATÉGIE AMÉLIORÉE
     let transaction = null;
     
-    // Stratégie 1: Par kkiapayTransactionId
-    transaction = await Transaction.findOne({ kkiapayTransactionId: transactionId });
-    if (transaction) console.log('✅ [WEBHOOK] Trouvé par kkiapayTransactionId');
-    
-    // Stratégie 2: Par metadata.transaction_id
-    if (!transaction && metadata?.transaction_id) {
-      transaction = await Transaction.findOne({ transactionId: metadata.transaction_id });
+    // Stratégie 1: Par metadata.transaction_id (PRIORITAIRE pour widget)
+    if (transactionIdFromMetadata) {
+      transaction = await Transaction.findOne({ transactionId: transactionIdFromMetadata });
       if (transaction) console.log('✅ [WEBHOOK] Trouvé par metadata.transaction_id');
+    }
+    
+    // Stratégie 2: Par kkiapayTransactionId
+    if (!transaction) {
+      transaction = await Transaction.findOne({ kkiapayTransactionId: transactionId });
+      if (transaction) console.log('✅ [WEBHOOK] Trouvé par kkiapayTransactionId');
     }
     
     // Stratégie 3: Par transactionId direct
@@ -529,7 +537,7 @@ exports.initiateDirectPayment = async (req, res) => {
   }
 };
 
-// ✅ INITIATION PAIEMENT WIDGET
+// ✅ INITIATION PAIEMENT WIDGET (MÉTHODE PRINCIPALE)
 exports.initiatePayment = async (req, res) => {
   try {
     console.log('\n=== 💳 PAIEMENT WIDGET ===');
@@ -543,67 +551,6 @@ exports.initiatePayment = async (req, res) => {
         message: 'Plan ou montant invalide' 
       });
     }
-
-    const user = req.user;
-    const transactionID = generateUniqueTransactionID();
-
-    console.log('🎯 Préparation transaction widget:', {
-      user: user.email,
-      plan: planId,
-      amount: plan.amount,
-      transactionId: transactionID
-    });
-
-    // Créer la transaction
-    const transaction = new Transaction({
-      userId: req.user._id,
-      transactionId: transactionID,
-      amount: plan.amount,
-      durationInMonths: plan.duration,
-      planId: planKey,
-      status: 'pending',
-      paymentGateway: 'kkiapay_direct',
-      description: plan.description,
-      kkiapayPaymentUrl: DIRECT_PAYMENT_LINKS[planKey]
-    });
-
-    await transaction.save();
-    console.log('✅ Transaction créée:', transactionID);
-
-    return res.status(200).json({
-      success: true,
-      message: "Lien de paiement direct généré",
-      paymentUrl: DIRECT_PAYMENT_LINKS[planKey],
-      transactionId: transactionID,
-      amount: plan.amount,
-      duration: plan.duration,
-      description: plan.description
-    });
-
-  } catch (error) {
-    console.error('❌ Erreur paiement direct:', error.message);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Erreur génération lien de paiement' 
-    });
-  }
-};
-
-// ✅ INITIATION PAIEMENT WIDGET
-exports.initiatePayment = async (req, res) => {
-  try {
-    console.log('\n=== 💳 PAIEMENT WIDGET ===');
-    
-    const { planId, amount } = req.body;
-    const plan = SUBSCRIPTION_PLANS[planId];
-    
-    if (!plan || plan.amount !== parseInt(amount)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Plan ou montant invalide' 
-      });
-    }
-
     const user = req.user;
     const transactionID = generateUniqueTransactionID();
 
@@ -633,11 +580,16 @@ exports.initiatePayment = async (req, res) => {
       success: true,
       message: "Transaction créée. Ouvrez le widget de paiement.",
       transactionId: transactionID,
-      widgetConfig: {
-        amount: plan.amount,
-        key: process.env.KKIAPAY_PUBLIC_KEY,
-        callback: `${process.env.FRONTEND_URL}/payment-callback.html?transactionId=${transactionID}`,
-        sandbox: false
+      amount: plan.amount,
+      publicKey: process.env.KKIAPAY_PUBLIC_KEY,
+      phone: user.phone || '',
+      email: user.email,
+      callback: `${process.env.FRONTEND_URL}/payment-callback.html`,
+      metadata: {
+        transaction_id: transactionID,
+        user_id: user._id.toString(),
+        user_email: user.email,
+        plan: planId
       }
     });
 

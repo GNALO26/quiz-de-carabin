@@ -647,9 +647,9 @@
             
             const urlParams = new URLSearchParams(window.location.search);
             
-            // KkiaPay envoie 'transaction_id'
-            const transactionId = urlParams.get('transaction_id') || 
-                                 urlParams.get('transactionId') || 
+            // ✅ KkiaPay envoie 'transactionId' dans le callback du widget
+            const transactionId = urlParams.get('transactionId') || 
+                                 urlParams.get('transaction_id') || 
                                  localStorage.getItem('pendingTransaction');
             
             console.log('📦 Paramètres URL:', Object.fromEntries(urlParams.entries()));
