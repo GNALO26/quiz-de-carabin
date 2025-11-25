@@ -1,16 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
-const auth = require('../middleware/auth');
-const verifyWebhook = require('../middleware/verifyWebhook');
 
-// Routes protégées
-router.post('/create', auth, paymentController.createPayment);
-router.post('/check-status', auth, paymentController.checkPaymentStatus);
-router.post('/resend-code', auth, paymentController.resendAccessCode);
-router.get('/subscription-info', auth, paymentController.getSubscriptionInfo);
+// ✅ Paiement direct
+router.post('/direct/initiate', paymentController.initiateDirectPayment);
 
-// Webhook KkiaPay (public)
-router.post('/webhook/kkiapay', verifyWebhook, paymentController.handleKkiapayWebhook);
+// ✅ Paiement widget
+router.post('/initiate', paymentController.initiatePayment);
+
+// ✅ Traitement retour
+router.post('/process-return', paymentController.processPaymentReturn);
+
+// ✅ Info abonnement
+router.get('/subscription/info', paymentController.getUserSubscriptionInfo);
+
+// ✅ Renvoyer code
+router.post('/resend-code', paymentController.resendAccessCode);
 
 module.exports = router;

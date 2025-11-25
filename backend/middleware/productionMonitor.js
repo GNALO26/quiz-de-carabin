@@ -1,21 +1,34 @@
-// Middleware de monitoring pour la production
+// ✅ MIDDLEWARE DE MONITORING PRODUCTION
+
 const productionMonitor = (req, res, next) => {
-    const start = Date.now();
+    const startTime = Date.now();
     
-    // Log des requêtes importantes
-    res.on('finish', () => {
-        const duration = Date.now() - start;
-        const logLevel = res.statusCode >= 400 ? 'WARN' : 'INFO';
+    // Log de la requête entrante
+    console.log(`\n📥 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    
+    if (req.method !== 'GET') {
+        console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+    }
+    
+    // Capturer la fin de la réponse
+    const originalSend = res.send;
+    res.send = function(data) {
+        const duration = Date.now() - startTime;
         
-        if (req.path.includes('/api/') && !req.path.includes('/health')) {
-            console.log(`[${logLevel}] ${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms - IP: ${req.ip}`);
+        console.log(`📤 [${new Date().toISOString()}] ${res.statusCode} ${req.method} ${req.originalUrl} - ${duration}ms`);
+        
+        // Alertes pour requêtes lentes
+        if (duration > 5000) {
+            console.warn(`⚠  ALERTE: Requête lente détectée (${duration}ms) - ${req.method} ${req.originalUrl}`);
         }
         
-        // Alertes pour les erreurs serveur
+        // Alertes pour erreurs 5xx
         if (res.statusCode >= 500) {
-            console.error(`🚨 ERREUR SERVEUR: ${req.method} ${req.originalUrl} - ${res.statusCode}`);
+            console.error(`🚨 ERREUR SERVEUR: ${res.statusCode} - ${req.method} ${req.originalUrl}`);
         }
-    });
+        
+        originalSend.call(this, data);
+    };
     
     next();
 };

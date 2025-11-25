@@ -2,15 +2,11 @@ const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const verifyWebhook = require('../middleware/verifyWebhook');
-const webhookLogger = require('../middleware/webhookLogger');
 
-// Appliquer le logger pour tous les webhooks
-router.use(webhookLogger);
-
-// Webhook KkiaPay PRODUCTION
+// ✅ Webhook KkiaPay (PUBLIC - sans auth)
 router.post('/kkiapay', verifyWebhook, paymentController.handleKkiapayWebhook);
 
-module.exports = router;
+module.exports = router$
 /*const express = require('express');
 const kkiapay = require('../config/kkiapay');
 const Transaction = require('../models/Transaction');

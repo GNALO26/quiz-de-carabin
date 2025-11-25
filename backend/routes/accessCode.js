@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const accessCodeController = require('../controllers/accessCodeController');
-const auth = require('../middleware/auth');
 
-// Routes pour la gestion des codes d'accès
-router.post('/validate', auth, accessCodeController.validateAccessCode);
-router.post('/resend', auth, accessCodeController.resendAccessCode);
+// ✅ Valider un code
+router.post('/validate', accessCodeController.validateAccessCode);
+
+// ✅ Renvoyer un code
+router.post('/resend', accessCodeController.resendAccessCode);
 
 module.exports = router;
