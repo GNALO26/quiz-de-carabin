@@ -179,6 +179,10 @@ console.log('🔄 Services background initialisés');
   
   app.use(sessionCheck);
 
+  // Routes d'administration (APRÈS l'authentification)
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
+
   // ✅ ROUTES PROTÉGÉES - PRODUCTION
   app.use('/api/payment', paymentRoutes);
   app.use('/api/quiz', quizRoutes);

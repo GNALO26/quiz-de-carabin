@@ -223,19 +223,42 @@ exports.handleKkiapayWebhook = async (req, res) => {
       
       // Essayer de trouver un utilisateur par email dans metadata
       let userId = null;
+      let userEmail = null;
       
+      // Essayer plusieurs sources pour l'email
       if (metadata?.user_email) {
-        const user = await User.findOne({ email: metadata.user_email });
+        userEmail = metadata.user_email;
+      } else if (req.body.email) {
+        userEmail = req.body.email;
+      } else if (req.body.customer?.email) {
+        userEmail = req.body.customer.email;
+      }
+      
+      if (userEmail) {
+        const user = await User.findOne({ email: userEmail });
         if (user) {
           userId = user._id;
           console.log(`✅ [WEBHOOK] Utilisateur trouvé: ${user.email}`);
+        } else {
+          console.warn(`⚠ [WEBHOOK] Email ${userEmail} non trouvé en base`);
+        }
+      }
+      
+      // Si toujours pas d'utilisateur, chercher le dernier utilisateur créé (dernier recours)
+      if (!userId) {
+        console.warn('⚠ [WEBHOOK] Tentative de récupération du dernier utilisateur créé...');
+        const lastUser = await User.findOne().sort({ createdAt: -1 });
+        if (lastUser) {
+          userId = lastUser._id;
+          console.log(`✅ [WEBHOOK] Utilisation du dernier utilisateur: ${lastUser.email}`);
         }
       }
       
       if (!userId) {
-        console.error('❌ [WEBHOOK] Impossible de créer la transaction: utilisateur introuvable');
+        console.error('❌ [WEBHOOK] Impossible de créer la transaction: aucun utilisateur trouvé');
         return res.status(404).json({ 
-          error: 'Transaction non trouvée et impossible de créer automatiquement' 
+          error: 'Transaction non trouvée et impossible de créer automatiquement',
+          help: 'Veuillez créer la transaction depuis votre site web avant de payer'
         });
       }
       
@@ -249,7 +272,12 @@ exports.handleKkiapayWebhook = async (req, res) => {
       } else if (amount >= 12000) {
         planId = '3-months';
         durationInMonths = 3;
+      } else if (amount >= 5000) {
+        planId = '1-month';
+        durationInMonths = 1;
       }
+      
+      console.log(`📊 [WEBHOOK] Plan détecté: ${planId} (${durationInMonths} mois) pour ${amount} FCFA`);
       
       // Créer la transaction
       transaction = new Transaction({
@@ -265,7 +293,7 @@ exports.handleKkiapayWebhook = async (req, res) => {
       });
       
       await transaction.save();
-      console.log('✅ [WEBHOOK] Transaction créée automatiquement');
+      console.log(`✅ [WEBHOOK] Transaction créée automatiquement: ${transaction.transactionId}`);
     }
 
     if (!transaction) {
@@ -469,6 +497,66 @@ exports.initiateDirectPayment = async (req, res) => {
     // Créer la transaction
     const transaction = new Transaction({
       userId: user._id,
+      transactionId: transactionID,
+      amount: plan.amount,
+      durationInMonths: plan.duration,
+      planId: planKey,
+      status: 'pending',
+      paymentGateway: 'kkiapay_direct',
+      description: plan.description,
+      kkiapayPaymentUrl: DIRECT_PAYMENT_LINKS[planKey]
+    });
+
+    await transaction.save();
+    console.log('✅ Transaction créée:', transactionID);
+
+    return res.status(200).json({
+      success: true,
+      message: "Lien de paiement direct généré",
+      paymentUrl: DIRECT_PAYMENT_LINKS[planKey],
+      transactionId: transactionID,
+      amount: plan.amount,
+      duration: plan.duration,
+      description: plan.description
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur paiement direct:', error.message);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Erreur génération lien de paiement' 
+    });
+  }
+};
+
+// ✅ INITIATION PAIEMENT WIDGET
+exports.initiatePayment = async (req, res) => {
+  try {
+    console.log('\n=== 💳 PAIEMENT WIDGET ===');
+    
+    const { planId, amount } = req.body;
+    const plan = SUBSCRIPTION_PLANS[planId];
+    
+    if (!plan || plan.amount !== parseInt(amount)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Plan ou montant invalide' 
+      });
+    }
+
+    const user = req.user;
+    const transactionID = generateUniqueTransactionID();
+
+    console.log('🎯 Préparation transaction widget:', {
+      user: user.email,
+      plan: planId,
+      amount: plan.amount,
+      transactionId: transactionID
+    });
+
+    // Créer la transaction
+    const transaction = new Transaction({
+      userId: req.user._id,
       transactionId: transactionID,
       amount: plan.amount,
       durationInMonths: plan.duration,
