@@ -727,33 +727,54 @@
         }
     }
 
-    // ✅ AFFICHER LE SUCCÈS
-    function showSuccess(accessCode, user, subscriptionEnd) {
-        console.log('✅ Affichage succès');
+    // Dans payment-callback.html, modifier la fonction showSuccess()
+
+function showSuccess(accessCode, user, subscriptionEnd) {
+    console.log('✅ Affichage succès');
+    
+    document.getElementById('loading').classList.add('d-none');
+    document.getElementById('success').classList.remove('d-none');
+    
+    // Stocker le code dans localStorage pour la page de validation
+    localStorage.setItem('tempAccessCode', accessCode);
+    
+    // Message personnalisé
+    const successMessage = document.querySelector('.success-message');
+    successMessage.innerHTML = `
+        Votre paiement a été confirmé ! Un code d'accès vous a été envoyé par email.
+        <br><strong>Vous allez être redirigé vers la page de validation...</strong>
+    `;
+    
+    // Afficher uniquement un bouton de redirection
+    const actionButtons = document.querySelector('.action-buttons');
+    actionButtons.innerHTML = `
+        <a href="index.html#codeModal" class="btn-custom btn-primary-custom">
+            <i class="fas fa-key"></i>
+            Valider mon code d'accès
+        </a>
+    `;
+    
+    // Redirection automatique après 3 secondes
+    setTimeout(() => {
+        window.location.href = 'index.html#validateCode';
+    }, 3000);
+}
+
+// Dans index.html, ajouter ce script pour ouvrir automatiquement le modal
+document.addEventListener('DOMContentLoaded', function() {
+    // Si l'URL contient #validateCode, ouvrir le modal
+    if (window.location.hash === '#validateCode') {
+        const codeModal = new bootstrap.Modal(document.getElementById('codeModal'));
+        codeModal.show();
         
-        document.getElementById('loading').classList.add('d-none');
-        document.getElementById('success').classList.remove('d-none');
-        
-        // Afficher le code avec animation
-        if (accessCode) {
-            setTimeout(() => {
-                document.getElementById('accessCode').textContent = accessCode;
-            }, 300);
-        }
-        
-        // Afficher la date d'expiration
-        if (subscriptionEnd) {
-            const expiryDate = new Date(subscriptionEnd).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            });
-            document.getElementById('expiryDate').textContent = expiryDate;
-        } else {
-            document.getElementById('expiryDate').textContent = 'Non disponible';
+        // Pré-remplir le code si disponible (optionnel)
+        const tempCode = localStorage.getItem('tempAccessCode');
+        if (tempCode) {
+            document.getElementById('accessCode').value = tempCode;
+            localStorage.removeItem('tempAccessCode');
         }
     }
+});
 
     // ✅ AFFICHER L'ATTENTE
     function showPending() {

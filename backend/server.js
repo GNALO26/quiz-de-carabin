@@ -43,6 +43,8 @@ console.log('🔄 Services background initialisés');
   const webhookRoutes = require('./routes/webhook');
 
   const app = express();
+  const { setupSubscriptionCrons } = require('./utils/subscriptionChecker');
+setupSubscriptionCrons();
 
   // ✅ MIDDLEWARE DE MONITORING PRODUCTION
   app.use(productionMonitor);

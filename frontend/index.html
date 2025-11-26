@@ -670,194 +670,229 @@
     </section>
 
     <!-- Pricing Section -->
- <section class="pricing-section" id="pricing-section">
-        <div class="container">
-            <div class="row text-center mb-5">
-                <div class="col">
-                    <h2 class="section-title">Abonnement Premium</h2>
-                    <p class="section-subtitle">Accédez à tous les quiz avec une de nos formules</p>
-                </div>
+ <!-- Section PRICING avec prix de TEST -->
+<section id="pricing" class="pricing-section py-5">
+    <div class="container">
+        <div class="section-title text-center mb-5">
+            <h2 class="display-4 fw-bold">
+                <i class="fas fa-crown text-warning me-3"></i>
+                Formules d'Abonnement
+            </h2>
+            <p class="lead text-muted">
+                Choisissez la formule qui vous convient
+            </p>
+            <div class="alert alert-warning d-inline-block mt-3">
+                <i class="fas fa-flask me-2"></i>
+                <strong>MODE TEST ACTIVÉ</strong> - Prix réduits pour vérification
             </div>
-            <div class="row justify-content-center">
-                <!-- Carte 1 Mois - Bleu -->
-                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp">
-                    <div class="pricing-card card-1">
-                        <div class="pricing-card-header card-1">
-                            <h3>Accès 1 Mois</h3>
-                        </div>
-                        <div class="pricing-card-body">
-                            <div class="price">
-                                <span class="price-amount">5.000</span>
-                                <span class="price-currency">XOF</span>
-                                <span class="price-period d-block">/ mois</span>
-                            </div>
-                            <p class="text-center text-muted" style="font-size: 0.9rem;">La formule la plus flexible pour commencer.</p>
-                            <div class="pricing-features">
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Accès à tous les quiz premium</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Tableau de bord de suivi</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Support technique</span>
-                                </div>
-                            </div>
-                            <button class="btn subscribe-btn-direct" 
-                                data-plan-id="1-month"
-                                data-plan-price="5000">
-                            <i class="fas fa-credit-card me-2"></i>
-                            S'abonner
-                        </button>
-                        </div>
-                    </div>
-                </div>
+        </div>
 
-                <!-- Carte 3 Mois (Populaire) - Vert -->
-                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-100">
-                    <div class="pricing-card card-2 popular">
-                        <div class="popular-badge">Le plus populaire</div>
-                        <div class="pricing-card-header card-2">
-                            <h3>Accès 3 Mois</h3>
+        <div class="row g-4">
+            <!-- Plan 1 Mois - 200 FCFA -->
+            <div class="col-lg-4 col-md-6">
+                <div class="card pricing-card h-100 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="plan-icon mb-3">
+                            <i class="fas fa-calendar-day fa-3x text-primary"></i>
                         </div>
-                        <div class="pricing-card-body">
-                            <div class="price">
-                                <span class="price-amount">12.000</span>
-                                <span class="price-currency">XOF</span>
-                                <span class="price-period d-block">/ 3 mois</span>
-                                <span class="savings-badge">Économisez 3.000 XOF</span>
+                        <h3 class="card-title fw-bold">1 Mois</h3>
+                        <div class="price-tag my-4">
+                            <span class="price-amount display-4 fw-bold text-primary">200</span>
+                            <span class="price-currency fs-4"> FCFA</span>
+                            <div class="price-period text-muted mt-2">
+                                <s class="text-danger">5000 FCFA</s> - Prix test
                             </div>
-                            <p class="text-center text-muted" style="font-size: 0.9rem;">Idéal pour une préparation intensive.</p>
-                            <div class="pricing-features">
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Accès à tous les quiz premium</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Tableau de bord de suivi</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Support technique</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Historique des performances</span>
-                                </div>
-                            </div>
-                            <button class="btn subscribe-btn-direct" 
-                                data-plan-id="3-months"
-                                data-plan-price="12000">
-                            <i class="fas fa-crown me-2"></i>
-                            S'abonner
+                        </div>
+                        <ul class="list-unstyled features-list mb-4">
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Accès à tous les quiz
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Correction détaillée
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Statistiques de progression
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Valable 30 jours
+                            </li>
+                        </ul>
+                        <button 
+                            class="btn btn-primary btn-lg w-100 subscribe-btn"
+                            data-plan-id="1-month"
+                            data-plan-price="200">
+                            <i class="fas fa-shopping-cart me-2"></i>
+                            S'abonner - 200 FCFA
                         </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Carte 10 Mois - Rose -->
-                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-200">
-                    <div class="pricing-card card-3">
-                        <div class="pricing-card-header card-3">
-                            <h3>Accès VIP</h3>
-                            <small>(9 mois + 1 mois offert)</small>
-                        </div>
-                        <div class="pricing-card-body">
-                            <div class="price">
-                                <span class="price-amount">25.000</span>
-                                <span class="price-currency">XOF</span>
-                                <span class="price-period d-block">/ 10 mois</span>
-                                <span class="savings-badge">Économisez 20.000 XOF</span>
-                            </div>
-                            <p class="text-center text-muted" style="font-size: 0.9rem;">La solution complète pour votre année.</p>
-                            <div class="pricing-features">
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Accès à tous les quiz premium</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Tableau de bord de suivi</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Support technique prioritaire</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Historique complet des quiz</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Accès aux nouvelles fonctionnalités</span>
-                                </div>
-                            </div>
-                            <button class="btn subscribe-btn-direct" 
-                                data-plan-id="10-months"
-                                data-plan-price="25000">
-                            <i class="fas fa-star me-2"></i>
-                            S'abonner
-                        </button>
-                        </div>
                     </div>
                 </div>
             </div>
-    </section>
-    
-    <!-- Enter Code Modal -->
-    <div class="modal fade" id="codeModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Entrer le code d'accès</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Veuillez saisir le code à 6 chiffres reçu par email après votre paiement.</p>
-                    <div class="mb-3">
-                        <label for="accessCode" class="form-label">Code d'accès</label>
-                        <input type="text" class="form-control" id="accessCode" placeholder="XXXXXX" maxlength="6">
+
+            <!-- Plan 3 Mois - 300 FCFA -->
+            <div class="col-lg-4 col-md-6">
+                <div class="card pricing-card h-100 shadow-lg border-success position-relative">
+                    <div class="position-absolute top-0 start-50 translate-middle">
+                        <span class="badge bg-success px-4 py-2 rounded-pill">
+                            <i class="fas fa-star me-1"></i> POPULAIRE
+                        </span>
                     </div>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>Ce code est valable pendant 30 minutes et à usage unique.
+                    <div class="card-body text-center p-4 mt-3">
+                        <div class="plan-icon mb-3">
+                            <i class="fas fa-calendar-alt fa-3x text-success"></i>
+                        </div>
+                        <h3 class="card-title fw-bold">3 Mois</h3>
+                        <div class="price-tag my-4">
+                            <span class="price-amount display-4 fw-bold text-success">300</span>
+                            <span class="price-currency fs-4"> FCFA</span>
+                            <div class="price-period text-muted mt-2">
+                                <s class="text-danger">12000 FCFA</s> - Prix test
+                            </div>
+                            <div class="badge bg-success mt-2">
+                                Économisez 97% en TEST
+                            </div>
+                        </div>
+                        <ul class="list-unstyled features-list mb-4">
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Tous les avantages du plan 1 mois
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Accès prioritaire aux nouveautés
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Support par email
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Valable 90 jours
+                            </li>
+                        </ul>
+                        <button 
+                            class="btn btn-success btn-lg w-100 subscribe-btn"
+                            data-plan-id="3-months"
+                            data-plan-price="300">
+                            <i class="fas fa-shopping-cart me-2"></i>
+                            S'abonner - 300 FCFA
+                        </button>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                    <button type="button" class="btn btn-primary" id="validate-code">Valider le code</button>
+            </div>
+
+            <!-- Plan 10 Mois - 500 FCFA -->
+            <div class="col-lg-4 col-md-6">
+                <div class="card pricing-card h-100 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="plan-icon mb-3">
+                            <i class="fas fa-calendar-check fa-3x text-warning"></i>
+                        </div>
+                        <h3 class="card-title fw-bold">10 Mois</h3>
+                        <div class="price-tag my-4">
+                            <span class="price-amount display-4 fw-bold text-warning">500</span>
+                            <span class="price-currency fs-4"> FCFA</span>
+                            <div class="price-period text-muted mt-2">
+                                <s class="text-danger">25000 FCFA</s> - Prix test
+                            </div>
+                            <div class="badge bg-warning text-dark mt-2">
+                                Meilleure valeur en TEST
+                            </div>
+                        </div>
+                        <ul class="list-unstyled features-list mb-4">
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Tous les avantages du plan 3 mois
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Support prioritaire
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Accès anticipé aux fonctionnalités
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Valable 300 jours
+                            </li>
+                        </ul>
+                        <button 
+                            class="btn btn-warning btn-lg w-100 subscribe-btn text-dark"
+                            data-plan-id="10-months"
+                            data-plan-price="500">
+                            <i class="fas fa-shopping-cart me-2"></i>
+                            S'abonner - 500 FCFA
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
+        <!-- Info supplémentaire -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Important :</strong> Ces prix sont temporaires pour les tests. 
+                    Les prix normaux seront: 1 mois = 5000 FCFA | 3 mois = 12000 FCFA | 10 mois = 25000 FCFA
+                </div>
+            </div>
+        </div>
+
+        <!-- Garanties -->
+        <div class="row mt-4">
+            <div class="col-md-4 text-center mb-3">
+                <i class="fas fa-lock fa-2x text-primary mb-2"></i>
+                <h5>Paiement Sécurisé</h5>
+                <p class="text-muted small">Transactions sécurisées par KkiaPay</p>
+            </div>
+            <div class="col-md-4 text-center mb-3">
+                <i class="fas fa-envelope fa-2x text-success mb-2"></i>
+                <h5>Code par Email</h5>
+                <p class="text-muted small">Recevez votre code d'accès instantanément</p>
+            </div>
+            <div class="col-md-4 text-center mb-3">
+                <i class="fas fa-headset fa-2x text-warning mb-2"></i>
+                <h5>Support 7j/7</h5>
+                <p class="text-muted small">Assistance disponible à tout moment</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.pricing-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 15px;
+}
+
+.pricing-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+}
+
+.plan-icon {
+    padding: 20px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.features-list li {
+    font-size: 1rem;
+    text-align: left;
+}
+
+.price-tag {
+    background: rgba(0,0,0,0.03);
+    padding: 20px;
+    border-radius: 10px;
+}
+</style>
     <!-- Login Modal -->
 <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
