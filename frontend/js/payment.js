@@ -11,10 +11,8 @@ export class Payment {
         this.displaySubscriptionInfo();
     }
 
-    // ✅ NOUVELLE FONCTION: Charger le script KkiaPay dynamiquement
     loadKkiapayScript() {
         return new Promise((resolve, reject) => {
-            // Vérifier si déjà chargé
             if (typeof openKkiapayWidget !== 'undefined') {
                 console.log('✅ KkiaPay déjà chargé');
                 this.kkiapayLoaded = true;
@@ -22,7 +20,6 @@ export class Payment {
                 return;
             }
 
-            // Charger le script
             console.log('📥 Chargement du script KkiaPay...');
             const script = document.createElement('script');
             script.src = 'https://cdn.kkiapay.me/k.js';
@@ -71,14 +68,17 @@ export class Payment {
         console.log('🎯 Initialisation des écouteurs de paiement');
         
         document.querySelectorAll('.subscribe-btn, .subscribe-btn-direct').forEach(button => {
-            button.addEventListener('click', (e) => {
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+            
+            newButton.addEventListener('click', (e) => {
                 const planId = e.currentTarget.getAttribute('data-plan-id') || 
                              e.currentTarget.getAttribute('data-plan-key');
                 const amount = e.currentTarget.getAttribute('data-plan-price');
                 
                 console.log(`🖱 Clic paiement: ${planId} - ${amount} FCFA`);
                 this.initiatePayment(planId, amount);
-            });
+            }, { once: true });
         });
         
         document.getElementById('validate-code')?.addEventListener('click', () => {
@@ -99,7 +99,7 @@ export class Payment {
         }
     }
 
-    // ✅ PAIEMENT AVEC WIDGET KKIAPAY - VERSION AMÉLIORÉE
+    // ✅ PAIEMENT AVEC WIDGET KKIAPAY - VERSION CORRIGÉE
     async initiatePayment(planId, amount) {
         try {
             console.log(`💰 Initialisation paiement: ${planId} - ${amount} FCFA`);
@@ -112,7 +112,6 @@ export class Payment {
 
             const user = this.auth.getUser();
             const token = this.auth.getToken();
-            
             const API_BASE_URL = await this.getActiveAPIUrl();
             
             const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"], [data-plan-key="${planId}"]`);
@@ -121,7 +120,6 @@ export class Payment {
                 subscribeBtn.disabled = true;
             }
 
-            // ✅ ATTENDRE LE CHARGEMENT DE KKIAPAY
             if (!this.kkiapayLoaded) {
                 console.log('⏳ Attente chargement KkiaPay...');
                 try {
@@ -131,7 +129,6 @@ export class Payment {
                 }
             }
 
-            // ✅ VÉRIFICATION FINALE
             if (typeof openKkiapayWidget === 'undefined') {
                 throw new Error('Le système de paiement n\'est pas disponible. Veuillez rafraîchir la page et réessayer.');
             }
@@ -161,35 +158,58 @@ export class Payment {
                 
                 console.log('🎯 Ouverture widget KkiaPay...');
                 
-                // ✅ OUVRIR LE WIDGET
+                // ✅ CORRECTION CRITIQUE: Ne pas passer les callbacks dans 'data'
+                // Les stocker séparément pour les utiliser après
+                const callbackUrl = data.callback;
+                
+                // ✅ Configurer le widget avec UNIQUEMENT des données sérialisables
                 openKkiapayWidget({
                     amount: data.amount,
                     api_key: data.publicKey,
                     sandbox: false,
                     phone: data.phone || '',
                     email: data.email,
-                    data: JSON.stringify(data.metadata),
+                    // ✅ IMPORTANT: 'data' doit contenir UNIQUEMENT des données JSON sérialisables
+                    // PAS de fonctions, PAS de callbacks
+                    data: JSON.stringify({
+                        transaction_id: data.metadata.transaction_id,
+                        user_id: data.metadata.user_id,
+                        user_email: data.metadata.user_email,
+                        plan: data.metadata.plan
+                    }),
                     theme: "#13a718",
                     name: "Quiz de Carabin",
-                    callback: data.callback,
                     
-                    // Callback succès
+                    // ✅ Les callbacks sont passés directement ici, PAS dans 'data'
                     successCallback: (response) => {
                         console.log('✅ Paiement réussi:', response);
-                        // Rediriger avec le transactionId retourné par KkiaPay
-                        window.location.href = `${data.callback}?transactionId=${response.transactionId}`;
+                        console.log('📦 Response complète:', JSON.stringify(response));
+                        
+                        // KkiaPay retourne un objet avec transactionId
+                        const kkiapayTxId = response.transactionId || response.transaction_id;
+                        
+                        if (kkiapayTxId) {
+                            console.log(`🔗 Redirection vers: ${callbackUrl}?transactionId=${kkiapayTxId}`);
+                            window.location.href = `${callbackUrl}?transactionId=${kkiapayTxId}`;
+                        } else {
+                            console.warn('⚠ transactionId manquant, utilisation du nôtre');
+                            window.location.href = `${callbackUrl}?transactionId=${data.transactionId}`;
+                        }
                     },
                     
-                    // Callback échec
                     failCallback: (error) => {
                         console.error('❌ Paiement échoué:', error);
                         this.showAlert('Le paiement a échoué. Veuillez réessayer.', 'danger');
+                        
                         if (subscribeBtn) {
                             subscribeBtn.innerHTML = 'S\'abonner';
                             subscribeBtn.disabled = false;
                         }
                     }
                 });
+                
+                console.log('✅ Widget KkiaPay ouvert');
+                
             } else {
                 throw new Error(data.message || 'Erreur création transaction');
             }
@@ -206,7 +226,6 @@ export class Payment {
         }
     }
 
-    // ✅ VALIDATION CODE D'ACCÈS
     async validateAccessCode() {
         try {
             const codeInput = document.getElementById('accessCode');
@@ -284,7 +303,6 @@ export class Payment {
         }
     }
 
-    // ✅ RENVOYER LE CODE D'ACCÈS
     async resendAccessCode() {
         try {
             console.log('🔄 Renvoi du code d\'accès...');
@@ -332,7 +350,6 @@ export class Payment {
         }
     }
 
-    // ✅ AFFICHER LES INFORMATIONS D'ABONNEMENT
     async displaySubscriptionInfo() {
         try {
             if (!this.auth.isAuthenticated()) return;
@@ -422,7 +439,6 @@ export class Payment {
         }
     }
     
-    // ✅ VÉRIFIER L'ABONNEMENT UTILISATEUR
     async checkUserSubscription() {
         try {
             if (!this.auth.isAuthenticated()) return null;
@@ -448,7 +464,6 @@ export class Payment {
         }
     }
     
-    // ✅ AFFICHER UNE ALERTE
     showAlert(message, type) {
         document.querySelectorAll('.global-alert').forEach(alert => alert.remove());
         
@@ -494,7 +509,6 @@ export class Payment {
     }
 }
 
-// ✅ INITIALISATION AUTOMATIQUE
 document.addEventListener('DOMContentLoaded', function() {
     console.log('💰 Initialisation du module Payment');
     try {
