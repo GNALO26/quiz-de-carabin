@@ -88,6 +88,40 @@ export class Payment {
         document.getElementById('resend-code')?.addEventListener('click', () => {
             this.resendAccessCode();
         });
+        
+        // ✅ ÉCOUTER LES ÉVÉNEMENTS GLOBAUX DE KKIAPAY
+        this.setupKkiapayListeners();
+    }
+    
+    setupKkiapayListeners() {
+        // KkiaPay déclenche des événements personnalisés sur window
+        window.addEventListener('message', (event) => {
+            // Vérifier l'origine pour la sécurité
+            if (event.origin !== 'https://widget.kkiapay.me') {
+                return;
+            }
+            
+            console.log('📨 Message KkiaPay reçu:', event.data);
+            
+            // Gérer les différents types de messages
+            if (event.data && event.data.status) {
+                if (event.data.status === 'success') {
+                    console.log('✅ Paiement réussi (via message)');
+                    // La redirection se fera automatiquement via callback URL
+                } else if (event.data.status === 'failed') {
+                    console.error('❌ Paiement échoué (via message)');
+                    this.showAlert('Le paiement a échoué. Veuillez réessayer.', 'danger');
+                    
+                    // Réactiver le bouton
+                    document.querySelectorAll('.subscribe-btn, .subscribe-btn-direct').forEach(btn => {
+                        if (btn.disabled) {
+                            btn.innerHTML = 'S\'abonner';
+                            btn.disabled = false;
+                        }
+                    });
+                }
+            }
+        });
     }
 
     checkPaymentReturn() {
@@ -158,54 +192,28 @@ export class Payment {
                 
                 console.log('🎯 Ouverture widget KkiaPay...');
                 
-                // ✅ CORRECTION CRITIQUE: Ne pas passer les callbacks dans 'data'
-                // Les stocker séparément pour les utiliser après
+                // ✅ SOLUTION DÉFINITIVE: Pas de callbacks du tout!
+                // KkiaPay gère la redirection automatiquement via le paramètre 'callback'
                 const callbackUrl = data.callback;
                 
-                // ✅ Configurer le widget avec UNIQUEMENT des données sérialisables
+                console.log('📋 Configuration widget:', {
+                    amount: data.amount,
+                    email: data.email,
+                    callback: callbackUrl
+                });
+                
+                // ✅ Configurer le widget SANS callbacks JavaScript
+                // KkiaPay redirigera automatiquement vers l'URL callback
                 openKkiapayWidget({
                     amount: data.amount,
                     api_key: data.publicKey,
                     sandbox: false,
                     phone: data.phone || '',
                     email: data.email,
-                    // ✅ IMPORTANT: 'data' doit contenir UNIQUEMENT des données JSON sérialisables
-                    // PAS de fonctions, PAS de callbacks
-                    data: JSON.stringify({
-                        transaction_id: data.metadata.transaction_id,
-                        user_id: data.metadata.user_id,
-                        user_email: data.metadata.user_email,
-                        plan: data.metadata.plan
-                    }),
                     theme: "#13a718",
                     name: "Quiz de Carabin",
-                    
-                    // ✅ Les callbacks sont passés directement ici, PAS dans 'data'
-                    successCallback: (response) => {
-                        console.log('✅ Paiement réussi:', response);
-                        console.log('📦 Response complète:', JSON.stringify(response));
-                        
-                        // KkiaPay retourne un objet avec transactionId
-                        const kkiapayTxId = response.transactionId || response.transaction_id;
-                        
-                        if (kkiapayTxId) {
-                            console.log(`🔗 Redirection vers: ${callbackUrl}?transactionId=${kkiapayTxId}`);
-                            window.location.href = `${callbackUrl}?transactionId=${kkiapayTxId}`;
-                        } else {
-                            console.warn('⚠ transactionId manquant, utilisation du nôtre');
-                            window.location.href = `${callbackUrl}?transactionId=${data.transactionId}`;
-                        }
-                    },
-                    
-                    failCallback: (error) => {
-                        console.error('❌ Paiement échoué:', error);
-                        this.showAlert('Le paiement a échoué. Veuillez réessayer.', 'danger');
-                        
-                        if (subscribeBtn) {
-                            subscribeBtn.innerHTML = 'S\'abonner';
-                            subscribeBtn.disabled = false;
-                        }
-                    }
+                    // ✅ L'URL callback - KkiaPay y ajoute automatiquement ?transactionId=XXX
+                    callback: callbackUrl
                 });
                 
                 console.log('✅ Widget KkiaPay ouvert');
