@@ -50,6 +50,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  lastExpiryWarning: {
+     type: Date,
+     default: null
+   },
   loginHistory: [{
     timestamp: Date,
     deviceId: String,
