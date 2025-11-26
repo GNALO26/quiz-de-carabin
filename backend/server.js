@@ -32,6 +32,10 @@ const webhookQueue = require('./services/webhookQueue');
 const paymentMonitor = require('./services/paymentMonitor');
 
 console.log('🔄 Services background initialisés');
+
+// Configuration des tâches CRON pour la gestion des abonnements
+  const { setupSubscriptionCrons } = require('./utils/subscriptionChecker');
+  setupSubscriptionCrons();
   
   // Import des routes
   const authRoutes = require('./routes/auth');

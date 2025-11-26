@@ -1,41 +1,34 @@
 const User = require('../models/User');
 
-// ✅ Middleware pour vérifier et mettre à jour automatiquement le statut premium
 const checkPremiumStatus = async (req, res, next) => {
   try {
-    if (req.user && req.user._id) {
-      const user = await User.findById(req.user._id);
+    // Si pas d'utilisateur authentifié, passer au suivant
+    if (!req.user) return next();
+    
+    // Récupérer l'utilisateur depuis la base de données
+    const user = await User.findById(req.user._id);
+    
+    // Si l'utilisateur n'existe pas, passer au suivant
+    if (!user) return next();
+    
+    // Vérifier et mettre à jour le statut premium si expiré
+    if (user.isPremium && user.premiumExpiresAt && 
+        new Date() > new Date(user.premiumExpiresAt)) {
       
-      if (user && user.isPremium && user.premiumExpiresAt) {
-        const now = new Date();
-        const expiryDate = new Date(user.premiumExpiresAt);
-        
-        // Vérifier si l'abonnement a expiré
-        if (now > expiryDate) {
-          console.log(`⏰ [PREMIUM] Abonnement expiré pour ${user.email}`);
-          console.log(`   - Date d'expiration: ${expiryDate.toLocaleString('fr-FR')}`);
-          console.log(`   - Date actuelle: ${now.toLocaleString('fr-FR')}`);
-          
-          // Désactiver le premium
-          user.isPremium = false;
-          await user.save();
-          
-          // Mettre à jour l'utilisateur dans la requête
-          req.user.isPremium = false;
-          req.user.premiumExpiresAt = null;
-          
-          console.log(`✅ [PREMIUM] Statut mis à jour: Premium désactivé`);
-        } else {
-          // Calculer les jours restants
-          const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
-          console.log(`✅ [PREMIUM] Abonnement actif pour ${user.email} - ${daysLeft} jours restants`);
-        }
-      }
+      console.log(`⏰ [MIDDLEWARE] Abonnement expiré automatiquement pour ${user.email}`);
+      
+      // Désactiver le premium
+      user.isPremium = false;
+      await user.save();
     }
+    
+    // Mettre à jour req.user avec les données fraîches
+    req.user = user;
     next();
+    
   } catch (error) {
-    console.error('❌ [PREMIUM] Erreur vérification statut:', error.message);
-    // Ne pas bloquer la requête en cas d'erreur
+    console.error('❌ [MIDDLEWARE] Erreur checkPremiumStatus:', error.message);
+    // En cas d'erreur, continuer quand même pour ne pas bloquer l'application
     next();
   }
 };
