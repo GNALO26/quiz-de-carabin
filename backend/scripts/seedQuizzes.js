@@ -128,7 +128,7 @@ async function seedFromDocx() {
         {
           path: path.join(__dirname, '../uploads/physiologie-renale-1.docx'),
           category: 'physiologie-renale-1',
-          free: false
+          free: true
         },
         {
           path: path.join(__dirname, '../uploads/physiologie-renale-1.docx'),
@@ -160,7 +160,7 @@ async function seedFromDocx() {
         {
           path: path.join(__dirname, '../uploads/tissu-epithelial1.docx'),
           category: 'tissu-epithelial-1',
-          free: false
+          free: true
         },
         {
           path: path.join(__dirname, '../uploads/tissu-epithelial2.docx'),
@@ -227,6 +227,24 @@ async function seedFromDocx() {
         {
           path: path.join(__dirname, '../uploads/Biophysique1.docx'), 
           category: 'Biophysique1',
+          free: true 
+        },
+        
+      ],
+      'Anatomie': [
+        {
+          path: path.join(__dirname, '../uploads/OSTEOLOGIE ET ARTHROLOGIE GENERALE.docx'),
+          category: 'OSTEOLOGIE ET ARTHROLOGIE GENERALE',
+          free: false
+        },
+        {
+          path: path.join(__dirname, '../uploads/MYOLOGIE GENERALE ET GLANDE.docx'), 
+          category: 'MYOLOGIE GENERALE ET GLANDE',
+          free: true 
+        },
+        {
+          path: path.join(__dirname, '../uploads/GENERALITES.docx'), 
+          category: 'GENERALITES.docx',
           free: false 
         },
         
