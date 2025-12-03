@@ -209,6 +209,108 @@ exports.activatePremiumSubscription = async (transaction) => {
   }
 };
 
+// ✅ WEBHOOK KKIAPAY - VERSION CORRIGÉE COMPLÈTE
+exports.handleKkiapayWebhook = async (req, res) => {
+  try {
+    console.log('\n=== 🔔 WEBHOOK KKIAPAY REÇU ===');
+    console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+    console.log('🔐 Signature:', req.headers['x-kkiapay-signature']);
+    
+    const { transactionId, status, metadata, amount } = req.body;
+    
+    if (!transactionId) {
+      console.error('❌ [WEBHOOK] transactionId manquant');
+      return res.status(400).json({ error: 'transactionId manquant' });
+    }
+
+    console.log(`🔍 [WEBHOOK] Transaction: ${transactionId}, Statut: ${status}`);
+    
+    // ✅ Extraire les metadata si disponibles
+    const transactionIdFromMetadata = metadata?.transaction_id || 
+                                     (typeof metadata === 'string' ? JSON.parse(metadata).transaction_id : null);
+
+    console.log(`📦 [WEBHOOK] Metadata transaction_id: ${transactionIdFromMetadata}`);
+
+    // ✅ RECHERCHE MULTI-STRATÉGIE
+    let transaction = null;
+    
+    // Stratégie 1: Par metadata.transaction_id
+    if (transactionIdFromMetadata) {
+      transaction = await Transaction.findOne({ transactionId: transactionIdFromMetadata });
+      if (transaction) console.log('✅ [WEBHOOK] Trouvé par metadata.transaction_id');
+    }
+    
+    // Stratégie 2: Par kkiapayTransactionId
+    if (!transaction) {
+      transaction = await Transaction.findOne({ kkiapayTransactionId: transactionId });
+      if (transaction) console.log('✅ [WEBHOOK] Trouvé par kkiapayTransactionId');
+    }
+    
+    // Stratégie 3: Par transactionId direct
+    if (!transaction) {
+      transaction = await Transaction.findOne({ transactionId: transactionId });
+      if (transaction) console.log('✅ [WEBHOOK] Trouvé par transactionId direct');
+    }
+
+    if (!transaction) {
+      console.error(`❌ [WEBHOOK] Transaction non trouvée: ${transactionId}`);
+      return res.status(404).json({ error: 'Transaction non trouvée' });
+    }
+
+    console.log(`📦 [WEBHOOK] Transaction trouvée - ${transaction.transactionId}`);
+    console.log(`📊 [WEBHOOK] Statut actuel: ${transaction.status}`);
+
+    // Traiter uniquement si SUCCESS et pas déjà completed
+    if (status === 'SUCCESS' && transaction.status !== 'completed') {
+      console.log('🎉 [WEBHOOK] Paiement réussi, activation...');
+      
+      // Mettre à jour l'ID KkiaPay
+      transaction.kkiapayTransactionId = transactionId;
+      await transaction.save();
+      
+      // Activer l'abonnement
+      const activationSuccess = await exports.activatePremiumSubscription(transaction);
+      
+      if (activationSuccess) {
+        console.log(`✅ [WEBHOOK] Abonnement activé avec succès`);
+        return res.status(200).json({ 
+          success: true, 
+          message: 'Webhook traité - Abonnement activé' 
+        });
+      } else {
+        console.error(`❌ [WEBHOOK] Échec activation`);
+        return res.status(500).json({ 
+          error: 'Erreur activation abonnement' 
+        });
+      }
+      
+    } else if (status === 'FAILED') {
+      transaction.status = 'failed';
+      await transaction.save();
+      console.log(`❌ [WEBHOOK] Paiement échoué`);
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Webhook traité - Paiement échoué' 
+      });
+      
+    } else {
+      console.log(`ℹ [WEBHOOK] Statut ${status} ignoré (déjà ${transaction.status})`);
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Webhook traité - Statut ignoré' 
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ [WEBHOOK] ERREUR:', error.message);
+    // Toujours répondre 200 pour éviter les retries
+    res.status(200).json({ 
+      success: false, 
+      error: 'Erreur traitement webhook' 
+    });
+  }
+};
+
 // ✅ TRAITEMENT RETOUR DE PAIEMENT
 exports.processPaymentReturn = async (req, res) => {
   try {
@@ -453,7 +555,7 @@ exports.getUserSubscriptionInfo = async (req, res) => {
       });
     }
 
-    const hasActiveSubscription = user.premiumExpiresAt && new Date() < new Date(user.premiumExpiresAt);
+   const hasActiveSubscription = user.premiumExpiresAt && new Date() < new Date(user.premiumExpiresAt);
 
     res.status(200).json({
       success: true,
