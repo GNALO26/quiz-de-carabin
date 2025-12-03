@@ -8,16 +8,9 @@ const kkiapay = require('../config/kkiapay');
 
 // Configuration des plans d'abonnement
 const SUBSCRIPTION_PLANS = {
-  '1-month': { amount: 5000, description: "Abonnement Premium 1 mois", duration: 1 }, 
+  '1-month': { amount: 200, description: "Abonnement Premium 1 mois", duration: 1 }, 
   '3-months': { amount: 12000, description: "Abonnement Premium 3 mois", duration: 3 },
   '10-months': { amount: 25000, description: "Abonnement Premium 10 mois", duration: 10 }
-};
-
-// Configuration pour les liens directs KkiaPay
-const DIRECT_PAYMENT_LINKS = {
-  '1-month': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-test)-Nspyd2qLE',
-  '3-months': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-12k)-glrVnSRX7',
-  '10-months': 'https://direct.kkiapay.me/37641/quiz-de-carabin-(premium-25k)-g1Zc3Pma-'
 };
 
 // ✅ FONCTION UTILITAIRE POUR AJOUTER DES MOIS
@@ -32,10 +25,13 @@ const generateUniqueTransactionID = () => {
   return 'TXN_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
 };
 
-// ✅ ENVOI D'EMAIL AVEC CODE D'ACCÈS
+// ✅ ENVOI D'EMAIL AVEC CODE D'ACCÈS - VERSION CORRIGÉE
 const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur', durationMonths = 1) => {
   try {
-    console.log(`[EMAIL] 📧 Envoi code d'accès ${accessCode} à ${email}`);
+    console.log(`\n📧 [EMAIL] ========================================`);
+    console.log(`📧 [EMAIL] Tentative envoi à: ${email}`);
+    console.log(`📧 [EMAIL] Code: ${accessCode}`);
+    console.log(`📧 [EMAIL] Durée: ${durationMonths} mois`);
     
     const expiryDate = addMonths(new Date(), durationMonths);
     const formattedDate = expiryDate.toLocaleDateString('fr-FR', {
@@ -44,10 +40,20 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur', 
       year: 'numeric'
     });
     
+    console.log(`📧 [EMAIL] Date expiration: ${formattedDate}`);
+    console.log(`📧 [EMAIL] Configuration SMTP:`);
+    console.log(`   - Host: ${process.env.EMAIL_HOST}`);
+    console.log(`   - Port: ${process.env.EMAIL_PORT}`);
+    console.log(`   - User: ${process.env.EMAIL_USER}`);
+    console.log(`   - Pass configuré: ${process.env.EMAIL_PASS ? 'OUI' : 'NON'}`);
+    
     const mailOptions = {
-      from: `"Quiz de Carabin" <${process.env.EMAIL_USER}>`,
+      from: {
+        name: 'Quiz de Carabin',
+        address: process.env.EMAIL_USER
+      },
       to: email,
-      subject: `Votre code d'accès Premium - Quiz de Carabin`,
+      subject: `✅ Votre code d'accès Premium - Quiz de Carabin`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; padding: 20px;">
           <div style="background: #13a718; color: white; padding: 30px 20px; text-align: center; border-radius: 10px 10px 0 0;">
@@ -98,11 +104,25 @@ const sendAccessCodeEmail = async (email, accessCode, userName = 'Utilisateur', 
       `
     };
     
+    console.log(`📧 [EMAIL] Envoi en cours...`);
+    
     const info = await transporter.sendMail(mailOptions);
-    console.log(`[EMAIL] ✅ Email envoyé avec succès. Message ID: ${info.messageId}`);
+    
+    console.log(`✅ [EMAIL] ========================================`);
+    console.log(`✅ [EMAIL] Email envoyé avec succès !`);
+    console.log(`✅ [EMAIL] Message ID: ${info.messageId}`);
+    console.log(`✅ [EMAIL] Response: ${info.response}`);
+    console.log(`✅ [EMAIL] ========================================\n`);
+    
     return true;
   } catch (error) {
-    console.error(`[EMAIL] ❌ Erreur envoi email à ${email}:`, error.message);
+    console.error(`\n❌ [EMAIL] ========================================`);
+    console.error(`❌ [EMAIL] ERREUR envoi email à ${email}`);
+    console.error(`❌ [EMAIL] Message: ${error.message}`);
+    console.error(`❌ [EMAIL] Code: ${error.code}`);
+    console.error(`❌ [EMAIL] Stack:`, error.stack);
+    console.error(`❌ [EMAIL] ========================================\n`);
+    
     return false;
   }
 };
@@ -112,7 +132,8 @@ exports.sendAccessCodeEmail = sendAccessCodeEmail;
 // ✅ ACTIVATION ABONNEMENT PREMIUM
 exports.activatePremiumSubscription = async (transaction) => {
   try {
-    console.log(`🎯 [ACTIVATION] Début pour transaction: ${transaction.transactionId}`);
+    console.log(`\n🎯 [ACTIVATION] ========================================`);
+    console.log(`🎯 [ACTIVATION] Transaction: ${transaction.transactionId}`);
     
     // Générer le code d'accès
     const accessCode = generateCode();
@@ -163,6 +184,7 @@ exports.activatePremiumSubscription = async (transaction) => {
     console.log(`✅ [ACTIVATION] Utilisateur mis à jour - Premium jusqu'au ${newExpiryDate}`);
     
     // Envoyer l'email
+    console.log(`📧 [ACTIVATION] Envoi email...`);
     const emailSent = await sendAccessCodeEmail(user.email, accessCode, user.name, transaction.durationInMonths);
     
     if (!emailSent) {
@@ -174,192 +196,16 @@ exports.activatePremiumSubscription = async (transaction) => {
     console.log(`💾 [ACTIVATION] Transaction sauvegardée`);
     
     console.log(`🎉 [ACTIVATION] SUCCÈS pour ${user.email}`);
+    console.log(`🎉 [ACTIVATION] ========================================\n`);
+    
     return true;
     
   } catch (error) {
-    console.error('❌ [ACTIVATION] Erreur:', error.message);
+    console.error(`\n❌ [ACTIVATION] ========================================`);
+    console.error('❌ [ACTIVATION] ERREUR:', error.message);
+    console.error('❌ [ACTIVATION] Stack:', error.stack);
+    console.error(`❌ [ACTIVATION] ========================================\n`);
     return false;
-  }
-};
-
-// ✅ WEBHOOK KKIAPAY - VERSION CORRIGÉE
-exports.handleKkiapayWebhook = async (req, res) => {
-  try {
-    console.log('\n=== 🔔 WEBHOOK KKIAPAY REÇU ===');
-    console.log('📦 Body:', JSON.stringify(req.body, null, 2));
-    console.log('🔐 Signature:', req.headers['x-kkiapay-signature']);
-    
-    const { transactionId, status, metadata, amount } = req.body;
-    
-    if (!transactionId) {
-      console.error('❌ [WEBHOOK] transactionId manquant');
-      return res.status(400).json({ error: 'transactionId manquant' });
-    }
-
-    console.log(`🔍 [WEBHOOK] Transaction: ${transactionId}, Statut: ${status}`);
-    
-    // ✅ Extraire les metadata si disponibles
-    const transactionIdFromMetadata = metadata?.transaction_id || 
-                                     (typeof metadata === 'string' ? JSON.parse(metadata).transaction_id : null);
-
-    console.log(`📦 [WEBHOOK] Metadata transaction_id: ${transactionIdFromMetadata}`);
-
-    // ✅ RECHERCHE MULTI-STRATÉGIE AMÉLIORÉE
-    let transaction = null;
-    
-    // Stratégie 1: Par metadata.transaction_id (PRIORITAIRE pour widget)
-    if (transactionIdFromMetadata) {
-      transaction = await Transaction.findOne({ transactionId: transactionIdFromMetadata });
-      if (transaction) console.log('✅ [WEBHOOK] Trouvé par metadata.transaction_id');
-    }
-    
-    // Stratégie 2: Par kkiapayTransactionId
-    if (!transaction) {
-      transaction = await Transaction.findOne({ kkiapayTransactionId: transactionId });
-      if (transaction) console.log('✅ [WEBHOOK] Trouvé par kkiapayTransactionId');
-    }
-    
-    // Stratégie 3: Par transactionId direct
-    if (!transaction) {
-      transaction = await Transaction.findOne({ transactionId: transactionId });
-      if (transaction) console.log('✅ [WEBHOOK] Trouvé par transactionId direct');
-    }
-
-    // ✅ STRATÉGIE 4: SI TOUJOURS PAS TROUVÉ, CRÉER UNE TRANSACTION ORPHELINE
-    if (!transaction && status === 'SUCCESS') {
-      console.log('⚠ [WEBHOOK] Transaction non trouvée, tentative de création automatique...');
-      
-      // Essayer de trouver un utilisateur par email dans metadata
-      let userId = null;
-      let userEmail = null;
-      
-      // Essayer plusieurs sources pour l'email
-      if (metadata?.user_email) {
-        userEmail = metadata.user_email;
-      } else if (req.body.email) {
-        userEmail = req.body.email;
-      } else if (req.body.customer?.email) {
-        userEmail = req.body.customer.email;
-      }
-      
-      if (userEmail) {
-        const user = await User.findOne({ email: userEmail });
-        if (user) {
-          userId = user._id;
-          console.log(`✅ [WEBHOOK] Utilisateur trouvé: ${user.email}`);
-        } else {
-          console.warn(`⚠ [WEBHOOK] Email ${userEmail} non trouvé en base`);
-        }
-      }
-      
-      // Si toujours pas d'utilisateur, chercher le dernier utilisateur créé (dernier recours)
-      if (!userId) {
-        console.warn('⚠ [WEBHOOK] Tentative de récupération du dernier utilisateur créé...');
-        const lastUser = await User.findOne().sort({ createdAt: -1 });
-        if (lastUser) {
-          userId = lastUser._id;
-          console.log(`✅ [WEBHOOK] Utilisation du dernier utilisateur: ${lastUser.email}`);
-        }
-      }
-      
-      if (!userId) {
-        console.error('❌ [WEBHOOK] Impossible de créer la transaction: aucun utilisateur trouvé');
-        return res.status(404).json({ 
-          error: 'Transaction non trouvée et impossible de créer automatiquement',
-          help: 'Veuillez créer la transaction depuis votre site web avant de payer'
-        });
-      }
-      
-      // Déterminer le plan depuis le montant
-      let planId = '1-month';
-      let durationInMonths = 1;
-      
-      if (amount >= 25000) {
-        planId = '10-months';
-        durationInMonths = 10;
-      } else if (amount >= 12000) {
-        planId = '3-months';
-        durationInMonths = 3;
-      } else if (amount >= 5000) {
-        planId = '1-month';
-        durationInMonths = 1;
-      }
-      
-      console.log(`📊 [WEBHOOK] Plan détecté: ${planId} (${durationInMonths} mois) pour ${amount} FCFA`);
-      
-      // Créer la transaction
-      transaction = new Transaction({
-        userId: userId,
-        transactionId: `TXN_WEBHOOK_${Date.now()}`,
-        kkiapayTransactionId: transactionId,
-        amount: amount || 5000,
-        durationInMonths: durationInMonths,
-        planId: planId,
-        status: 'pending',
-        paymentGateway: 'kkiapay_webhook',
-        description: `Paiement webhook KkiaPay - ${planId}`
-      });
-      
-      await transaction.save();
-      console.log(`✅ [WEBHOOK] Transaction créée automatiquement: ${transaction.transactionId}`);
-    }
-
-    if (!transaction) {
-      console.error(`❌ [WEBHOOK] Transaction non trouvée: ${transactionId}`);
-      return res.status(404).json({ error: 'Transaction non trouvée' });
-    }
-
-    console.log(`📦 [WEBHOOK] Transaction trouvée - ${transaction.transactionId}`);
-    console.log(`📊 [WEBHOOK] Statut actuel: ${transaction.status}`);
-
-    // Traiter uniquement si SUCCESS et pas déjà completed
-    if (status === 'SUCCESS' && transaction.status !== 'completed') {
-      console.log('🎉 [WEBHOOK] Paiement réussi, activation...');
-      
-      // Mettre à jour l'ID KkiaPay
-      transaction.kkiapayTransactionId = transactionId;
-      await transaction.save();
-      
-      // Activer l'abonnement
-      const activationSuccess = await exports.activatePremiumSubscription(transaction);
-      
-      if (activationSuccess) {
-        console.log(`✅ [WEBHOOK] Abonnement activé avec succès`);
-        return res.status(200).json({ 
-          success: true, 
-          message: 'Webhook traité - Abonnement activé' 
-        });
-      } else {
-        console.error(`❌ [WEBHOOK] Échec activation`);
-        return res.status(500).json({ 
-          error: 'Erreur activation abonnement' 
-        });
-      }
-      
-    } else if (status === 'FAILED') {
-      transaction.status = 'failed';
-      await transaction.save();
-      console.log(`❌ [WEBHOOK] Paiement échoué`);
-      return res.status(200).json({ 
-        success: true, 
-        message: 'Webhook traité - Paiement échoué' 
-      });
-      
-    } else {
-      console.log(`ℹ [WEBHOOK] Statut ${status} ignoré (déjà ${transaction.status})`);
-      return res.status(200).json({ 
-        success: true, 
-        message: 'Webhook traité - Statut ignoré' 
-      });
-    }
-
-  } catch (error) {
-    console.error('❌ [WEBHOOK] ERREUR:', error.message);
-    // Toujours répondre 200 pour éviter les retries
-    res.status(200).json({ 
-      success: false, 
-      error: 'Erreur traitement webhook' 
-    });
   }
 };
 
@@ -466,78 +312,7 @@ exports.processPaymentReturn = async (req, res) => {
   }
 };
 
-// ✅ INITIATION PAIEMENT DIRECT
-exports.initiateDirectPayment = async (req, res) => {
-  try {
-    console.log('\n=== 💳 PAIEMENT DIRECT ===');
-    console.log('📦 Body:', req.body);
-    console.log('👤 User:', req.user?.email);
-    
-    const { planKey } = req.body;
-    
-    if (!planKey) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Plan key manquant' 
-      });
-    }
-
-    const plan = SUBSCRIPTION_PLANS[planKey];
-    
-    if (!plan) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Plan invalide: ${planKey}` 
-      });
-    }
-
-    const user = req.user;
-    const transactionID = generateUniqueTransactionID();
-
-    console.log('🎯 Création transaction:', {
-      user: user.email,
-      plan: planKey,
-      amount: plan.amount,
-      duration: plan.duration,
-      transactionId: transactionID
-    });
-
-    // Créer la transaction
-    const transaction = new Transaction({
-      userId: user._id,
-      transactionId: transactionID,
-      amount: plan.amount,
-      durationInMonths: plan.duration,
-      planId: planKey,
-      status: 'pending',
-      paymentGateway: 'kkiapay_direct',
-      description: plan.description,
-      kkiapayPaymentUrl: DIRECT_PAYMENT_LINKS[planKey]
-    });
-
-    await transaction.save();
-    console.log('✅ Transaction créée:', transactionID);
-
-    return res.status(200).json({
-      success: true,
-      message: "Lien de paiement direct généré",
-      paymentUrl: DIRECT_PAYMENT_LINKS[planKey],
-      transactionId: transactionID,
-      amount: plan.amount,
-      duration: plan.duration,
-      description: plan.description
-    });
-
-  } catch (error) {
-    console.error('❌ Erreur paiement direct:', error.message);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Erreur génération lien de paiement' 
-    });
-  }
-};
-
-// ✅ INITIATION PAIEMENT WIDGET (MÉTHODE PRINCIPALE)
+// ✅ INITIATION PAIEMENT WIDGET
 exports.initiatePayment = async (req, res) => {
   try {
     console.log('\n=== 💳 PAIEMENT WIDGET ===');
@@ -551,6 +326,7 @@ exports.initiatePayment = async (req, res) => {
         message: 'Plan ou montant invalide' 
       });
     }
+    
     const user = req.user;
     const transactionID = generateUniqueTransactionID();
 
