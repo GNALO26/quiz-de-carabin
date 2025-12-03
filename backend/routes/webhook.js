@@ -1,76 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const crypto = require('crypto');
-
-console.log('🔔 Chargement des routes webhook...');
-
-// ✅ Import du paymentController
 const paymentController = require('../controllers/paymentController');
+const verifyWebhook = require('../middleware/verifyWebhook');
+const webhookLogger = require('../middleware/webhookLogger');
 
-// ✅ Vérification des exports
-console.log('🔍 Vérification des exports paymentController pour webhooks:');
-console.log('   - handleKkiapayWebhook:', typeof paymentController.handleKkiapayWebhook);
-console.log('   - activatePremiumSubscription:', typeof paymentController.activatePremiumSubscription);
+// Appliquer le logger pour tous les webhooks
+router.use(webhookLogger);
 
-// ✅ WEBHOOK KKIAPAY - ROUTE PUBLIQUE (PAS DE AUTH)
-router.post('/kkiapay', async (req, res) => {
-  try {
-    console.log('\n=== 🔔 WEBHOOK KKIAPAY REÇU ===');
-    console.log('📦 Body:', JSON.stringify(req.body, null, 2));
-    console.log('📦 Headers:', JSON.stringify(req.headers, null, 2));
-    console.log('🔐 Signature:', req.headers['x-kkiapay-signature']);
-    
-    // ✅ Vérifier que handleKkiapayWebhook existe
-    if (typeof paymentController.handleKkiapayWebhook !== 'function') {
-      console.error('❌ handleKkiapayWebhook non trouvée dans paymentController');
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Configuration serveur incorrecte' 
-      });
-    }
-    
-    // ✅ Appeler le contrôleur
-    await paymentController.handleKkiapayWebhook(req, res);
-    
-  } catch (error) {
-    console.error('❌ Erreur webhook:', error);
-    // Toujours répondre 200 pour éviter les retries
-    res.status(200).json({ 
-      success: false, 
-      error: 'Erreur traitement webhook',
-      message: error.message 
-    });
-  }
-});
-
-// ✅ ROUTE DE TEST WEBHOOK (pour debug)
-router.post('/kkiapay/test', (req, res) => {
-  console.log('\n🧪 TEST WEBHOOK');
-  console.log('📦 Body:', req.body);
-  console.log('📦 Headers:', req.headers);
-  
-  res.status(200).json({
-    success: true,
-    message: 'Webhook test reçu',
-    received: {
-      body: req.body,
-      headers: req.headers
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
-// ✅ ROUTE HEALTH CHECK WEBHOOK
-router.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Webhook endpoint opérationnel',
-    timestamp: new Date().toISOString(),
-    handleKkiapayWebhook: typeof paymentController.handleKkiapayWebhook === 'function' ? 'available' : 'missing'
-  });
-});
-
-console.log('✅ Routes webhook chargées avec succès');
+// Webhook KkiaPay PRODUCTION
+router.post('/kkiapay', verifyWebhook, paymentController.handleKkiapayWebhook);
 
 module.exports = router;
 /*const express = require('express');
