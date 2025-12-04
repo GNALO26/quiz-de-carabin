@@ -127,11 +127,6 @@ async function seedFromDocx() {
       'Physiologie': [
         {
           path: path.join(__dirname, '../uploads/physiologie-renale-1.docx'),
-          category: 'physiologie-renale-1',
-          free: true
-        },
-        {
-          path: path.join(__dirname, '../uploads/physiologie-renale-1.docx'),
           category: 'physiologie-renale-2',
           free: false
         },
