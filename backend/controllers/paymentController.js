@@ -270,39 +270,62 @@ exports.handleKkiapayWebhook = async (req, res) => {
 };
 
 // ✅ TRAITEMENT RETOUR - GÈRE L'ID KKIAPAY
+// ✅ TRAITEMENT RETOUR - VERSION AMÉLIORÉE
 exports.processPaymentReturn = async (req, res) => {
   try {
     const { transactionId } = req.body;
     
     console.log(`\n=== 🔄 RETOUR PAIEMENT ===`);
     console.log(`🔍 ID reçu: ${transactionId}`);
+    console.log(`👤 Utilisateur: ${req.user?.email || 'non connecté'}`);
     
-    // ✅ CHERCHER PAR ID KKIAPAY D'ABORD
+    // ✅ STRATÉGIE 1: Chercher par ID KkiaPay
     let transaction = await Transaction.findOne({ 
       kkiapayTransactionId: transactionId 
     });
     
-    // Si pas trouvé, chercher par ID interne
+    if (transaction) {
+      console.log(`✅ [RETOUR] Transaction trouvée par kkiapayTransactionId`);
+    }
+    
+    // ✅ STRATÉGIE 2: Chercher par ID interne
     if (!transaction) {
       transaction = await Transaction.findOne({ 
         transactionId: transactionId 
       });
+      
+      if (transaction) {
+        console.log(`✅ [RETOUR] Transaction trouvée par transactionId`);
+      }
+    }
+    
+    // ✅ STRATÉGIE 3: Chercher par utilisateur + pending récent (dernière tentative)
+    if (!transaction && req.user) {
+      transaction = await Transaction.findOne({
+        userId: req.user._id,
+        status: 'pending'
+      }).sort({ createdAt: -1 });
+      
+      if (transaction) {
+        console.log(`✅ [RETOUR] Transaction pending trouvée pour l'utilisateur`);
+        // Lier l'ID KkiaPay
+        transaction.kkiapayTransactionId = transactionId;
+        await transaction.save();
+      }
     }
 
+    // ✅ SI TOUJOURS PAS TROUVÉ : VÉRIFIER CHEZ KKIAPAY ET CRÉER
     if (!transaction) {
-      console.error(`❌ [RETOUR] Transaction non trouvée: ${transactionId}`);
-      
-      // ✅ CRÉER TRANSACTION SI PAIEMENT KKIAPAY RÉUSSI
-      console.log('🔍 [RETOUR] Vérification chez KkiaPay...');
+      console.log(`⚠ [RETOUR] Transaction non trouvée, vérification KkiaPay...`);
       
       try {
         const kkiapayStatus = await kkiapay.verifyTransaction(transactionId);
-        console.log(`📨 [RETOUR] KkiaPay réponse:`, kkiapayStatus);
+        console.log(`📨 [RETOUR] KkiaPay:`, kkiapayStatus);
         
         if (kkiapayStatus.status === 'SUCCESS') {
-          console.log('✅ [RETOUR] Paiement confirmé par KkiaPay');
+          console.log(`✅ [RETOUR] Paiement confirmé par KkiaPay, création transaction...`);
           
-          // Déterminer le plan
+          // Déterminer le plan depuis le montant
           const amount = kkiapayStatus.amount || 200;
           let planId = '1-month';
           let durationInMonths = 1;
@@ -313,21 +336,38 @@ exports.processPaymentReturn = async (req, res) => {
           } else if (amount >= 12000) {
             planId = '3-months';
             durationInMonths = 3;
+          } else if (amount >= 200) {
+            planId = '1-month';
+            durationInMonths = 1;
           }
           
-          // Trouver l'utilisateur
-          const lastUser = await User.findOne().sort({ createdAt: -1 });
+          console.log(`📊 [RETOUR] Plan: ${planId} (${amount} FCFA)`);
           
-          if (!lastUser) {
+          // Utiliser l'utilisateur connecté OU le dernier créé
+          let userId = req.user?._id;
+          let userEmail = req.user?.email;
+          
+          if (!userId) {
+            console.log(`⚠ [RETOUR] Pas d'utilisateur connecté, recherche du dernier...`);
+            const lastUser = await User.findOne().sort({ createdAt: -1 });
+            if (lastUser) {
+              userId = lastUser._id;
+              userEmail = lastUser.email;
+              console.log(`✅ [RETOUR] Utilisateur trouvé: ${userEmail}`);
+            }
+          }
+          
+          if (!userId) {
+            console.error(`❌ [RETOUR] Aucun utilisateur trouvé`);
             return res.status(404).json({ 
               success: false, 
-              message: 'Utilisateur non trouvé' 
+              message: 'Utilisateur non trouvé pour ce paiement' 
             });
           }
           
           // Créer la transaction
           transaction = new Transaction({
-            userId: lastUser._id,
+            userId: userId,
             transactionId: `TXN_RETURN_${Date.now()}`,
             kkiapayTransactionId: transactionId,
             amount: amount,
@@ -339,43 +379,31 @@ exports.processPaymentReturn = async (req, res) => {
           });
           
           await transaction.save();
-          console.log(`✅ [RETOUR] Transaction créée`);
+          console.log(`✅ [RETOUR] Transaction créée: ${transaction.transactionId}`);
           
-          // Activer
-          const activationSuccess = await exports.activatePremiumSubscription(transaction);
-          
-          if (activationSuccess) {
-            const user = await User.findById(transaction.userId);
-            return res.status(200).json({
-              success: true,
-              status: 'completed',
-              accessCode: transaction.accessCode,
-              user: {
-                _id: user._id,
-                email: user.email,
-                name: user.name,
-                isPremium: user.isPremium,
-                premiumExpiresAt: user.premiumExpiresAt
-              },
-              subscriptionEnd: user.premiumExpiresAt,
-              message: "Paiement confirmé"
-            });
-          }
+        } else {
+          console.log(`❌ [RETOUR] Paiement non réussi chez KkiaPay: ${kkiapayStatus.status}`);
+          return res.status(404).json({ 
+            success: false, 
+            message: 'Paiement non confirmé par KkiaPay' 
+          });
         }
+        
       } catch (kkiapayError) {
-        console.log(`ℹ [RETOUR] Erreur KkiaPay:`, kkiapayError.message);
+        console.error(`❌ [RETOUR] Erreur KkiaPay:`, kkiapayError.message);
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Transaction non trouvée et impossible de vérifier avec KkiaPay' 
+        });
       }
-      
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Transaction non trouvée' 
-      });
     }
     
-    console.log(`📦 [RETOUR] Transaction trouvée - Statut: ${transaction.status}`);
+    console.log(`📦 [RETOUR] Transaction: ${transaction.transactionId} - Statut: ${transaction.status}`);
 
-    // Si déjà complétée
+    // ✅ SI DÉJÀ COMPLÉTÉE, RETOURNER LES INFOS
     if (transaction.status === 'completed') {
+      console.log(`✅ [RETOUR] Transaction déjà complétée`);
+      
       const user = await User.findById(transaction.userId);
       return res.status(200).json({
         success: true,
@@ -393,54 +421,54 @@ exports.processPaymentReturn = async (req, res) => {
       });
     }
     
-    // Vérifier avec KkiaPay
-    console.log(`🔍 [RETOUR] Vérification chez KkiaPay...`);
-    
-    try {
-      const kkiapayStatus = await kkiapay.verifyTransaction(
-        transaction.kkiapayTransactionId || transactionId
-      );
+    // ✅ SI PENDING, ACTIVER MAINTENANT
+    if (transaction.status === 'pending') {
+      console.log(`🎯 [RETOUR] Activation de l'abonnement...`);
       
-      console.log(`📨 [RETOUR] Réponse KkiaPay:`, kkiapayStatus);
+      const activationSuccess = await exports.activatePremiumSubscription(transaction);
       
-      if (kkiapayStatus.status === 'SUCCESS') {
-        console.log(`✅ [RETOUR] Activation...`);
+      if (activationSuccess) {
+        const user = await User.findById(transaction.userId);
         
-        const activationSuccess = await exports.activatePremiumSubscription(transaction);
+        console.log(`✅ [RETOUR] Abonnement activé avec succès`);
         
-        if (activationSuccess) {
-          const user = await User.findById(transaction.userId);
-          return res.status(200).json({
-            success: true,
-            status: 'completed',
-            accessCode: transaction.accessCode,
-            user: {
-              _id: user._id,
-              email: user.email,
-              name: user.name,
-              isPremium: user.isPremium,
-              premiumExpiresAt: user.premiumExpiresAt
-            },
-            subscriptionEnd: user.premiumExpiresAt,
-            message: "Paiement confirmé"
-          });
-        }
+        return res.status(200).json({
+          success: true,
+          status: 'completed',
+          accessCode: transaction.accessCode,
+          user: {
+            _id: user._id,
+            email: user.email,
+            name: user.name,
+            isPremium: user.isPremium,
+            premiumExpiresAt: user.premiumExpiresAt
+          },
+          subscriptionEnd: user.premiumExpiresAt,
+          message: "Paiement confirmé et abonnement activé"
+        });
+      } else {
+        console.error(`❌ [RETOUR] Échec activation`);
+        return res.status(500).json({
+          success: false,
+          message: "Erreur lors de l'activation de l'abonnement"
+        });
       }
-    } catch (kkiapayError) {
-      console.log(`ℹ [RETOUR] Erreur KkiaPay:`, kkiapayError.message);
     }
     
+    // ✅ AUTRES STATUTS
     return res.status(200).json({
       success: true,
-      status: 'pending',
-      message: "En attente de confirmation"
+      status: transaction.status,
+      message: `Transaction ${transaction.status}`
     });
     
   } catch (error) {
     console.error(`❌ [RETOUR] Erreur:`, error.message);
+    console.error(error.stack);
     res.status(500).json({
       success: false,
-      message: "Erreur serveur"
+      message: "Erreur serveur",
+      error: error.message
     });
   }
 };
