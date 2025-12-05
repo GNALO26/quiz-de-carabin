@@ -118,7 +118,7 @@ exports.activatePremiumSubscription = async (transaction) => {
     console.log(`\n🎯 [ACTIVATION] ========================================`);
     console.log(`🎯 [ACTIVATION] Transaction: ${transaction.transactionId}`);
     
-    const accessCode = generateCode();
+    const accessCode = await generateCode();
     console.log(`🔑 [ACTIVATION] Code généré: ${accessCode}`);
     
     transaction.status = 'completed';
