@@ -121,6 +121,28 @@ exports.getQuizHistory = async (req, res) => {
     });
   }
 };
+// Middleware pour bloquer les quiz premium
+const checkQuizAccess = async (req, res, next) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz non trouvé' });
+    }
+    
+    // Si le quiz est premium et l'utilisateur n'est pas premium
+    if (!quiz.free && !req.user.hasActivePremium()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès premium requis pour ce quiz'
+      });
+    }
+    
+    next();
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
 /*const Quiz = require('../models/Quiz');
 
 exports.getAllQuizzes = async (req, res) => {
