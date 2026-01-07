@@ -98,13 +98,13 @@ exports.register = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        // message: "Un utilisateur avec cet email existe déjà"
+        message: "Un utilisateur avec cet email existe déjà"
       });
     }
     
     res.status(500).json({
       success: false,
-      //message: "Erreur serveur lors de la création du compte"
+      message: "Erreur serveur lors de la création du compte"
     });
   }
 };
@@ -198,7 +198,7 @@ async function addLoginHistory(req, email, success, reason) {
       deviceId: req.deviceId,
       deviceInfo: req.deviceInfo,
       ipAddress: req.clientIp,
-      location: geo ?`${geo.city}, ${geo.country}` : 'Inconnu',
+      location: geo ? `${geo.city}, ${geo.country}` : 'Inconnu',
       success,
       reason
     };
@@ -292,6 +292,19 @@ exports.requestPasswordReset = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Aucun utilisateur trouvé avec cet email"
+      });
+    }
+
+    // ✅ AJOUT: Limite de tentatives (sécurité)
+    const recentRequests = await PasswordReset.countDocuments({
+      email: normalizedEmail,
+      createdAt: { $gt: new Date(Date.now() - 15 * 60 * 1000) } // 15 minutes
+    });
+
+    if (recentRequests >= 3) {
+      return res.status(429).json({
+        success: false,
+        message: 'Trop de demandes. Veuillez réessayer dans 15 minutes.'
       });
     }
 
@@ -391,7 +404,7 @@ exports.verifyResetCode = async (req, res) => {
   }
 };
 
-// Réinitialisation du mot de passe
+// ✅ CORRECTION: Réinitialisation du mot de passe (SANS DOUBLE HASHAGE)
 exports.resetPassword = async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
@@ -400,6 +413,14 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Email, code et nouveau mot de passe requis"
+      });
+    }
+
+    // Validation du mot de passe
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Le mot de passe doit contenir au moins 6 caractères"
       });
     }
 
@@ -428,18 +449,21 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // Hachage du nouveau mot de passe
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
+    // ✅ CORRECTION CRITIQUE: NE PAS HASHER MANUELLEMENT
+    // Le middleware pre-save dans User.js va automatiquement hasher le mot de passe
+    user.password = newPassword;
     
-    // Incrémentation du tokenVersion pour invalider les anciens tokens et réinitialiser la session
+    // Incrémentation du tokenVersion pour invalider les anciens tokens
     user.tokenVersion = (user.tokenVersion || 0) + 1;
     user.activeSessionId = null;
     
     await user.save();
 
+    // Marquer le code comme utilisé
     passwordReset.used = true;
     await passwordReset.save();
+
+    console.log(`✅ Mot de passe réinitialisé pour ${user.email}`);
 
     res.status(200).json({
       success: true,
@@ -497,7 +521,7 @@ exports.adminResetAccount = async (req, res) => {
   }
 };
 
-// Fonction pour réparer un compte utilisateur
+// ✅ CORRECTION: Fonction pour réparer un compte utilisateur (SANS DOUBLE HASHAGE)
 exports.repairAccount = async (req, res) => {
   try {
     const { email, newPassword } = req.body;
@@ -513,9 +537,9 @@ exports.repairAccount = async (req, res) => {
       });
     }
 
-    // Réinitialiser le mot de passe
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
+    // ✅ CORRECTION: NE PAS HASHER MANUELLEMENT
+    // Le middleware pre-save va automatiquement hasher
+    user.password = newPassword;
     
     // Réinitialiser le tokenVersion et la session
     user.tokenVersion = 0;
@@ -554,13 +578,13 @@ exports.checkSession = async (req, res) => {
 };
 
 // Debug: Vérifier que toutes les fonctions sont bien exportées
-console.log('Exportations du authController:');
+console.log('✅ Exportations du authController (VERSION CORRIGÉE):');
 console.log('- register:', typeof exports.register);
 console.log('- login:', typeof exports.login);
 console.log('- logout:', typeof exports.logout);
 console.log('- forceLogout:', typeof exports.forceLogout);
 console.log('- requestPasswordReset:', typeof exports.requestPasswordReset);
 console.log('- verifyResetCode:', typeof exports.verifyResetCode);
-console.log('- resetPassword:', typeof exports.resetPassword);
+console.log('- resetPassword:', typeof exports.resetPassword, '← CORRIGÉ');
 console.log('- adminResetAccount:', typeof exports.adminResetAccount);
-console.log('- repairAccount:', typeof exports.repairAccount);
+console.log('- repairAccount:', typeof exports.repairAccount, '← CORRIGÉ');
