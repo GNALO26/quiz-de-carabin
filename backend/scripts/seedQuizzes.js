@@ -149,6 +149,11 @@ async function seedFromDocx() {
           path: path.join(__dirname, '../uploads/ENDOCRINO-QCM1.docx'),
           category: 'ENDOCRINO',
           free: false
+        },
+        {
+          path: path.join(__dirname, '../uploads/PHYSIO-DIGESTIVE.docx'),
+          category: 'Physiologie Digestive',
+          free: false
         }
       ],
       'Histologie': [
@@ -226,6 +231,28 @@ async function seedFromDocx() {
         },
         
       ],
+      'Biologie Cellulaire': [
+        {
+          path: path.join(__dirname, '../uploads/Cycle_Cellulaire.docx'),
+          category: 'Cycle Cellulaire',
+          free: false
+        },
+        {
+          path: path.join(__dirname, '../uploads/Mitochondrie.docx'), 
+          category: 'Mitochondrie',
+          free: false 
+        },
+        {
+          path: path.join(__dirname, '../uploads/Noyau-1.docx'), 
+          category: 'Noyau-1',
+          free: false
+        },
+        {
+          path: path.join(__dirname, '../uploads/Membrane_plasmique.docx'), 
+          category: 'Membrane plasmique',
+          free: true 
+        }
+      ],
       'Anatomie': [
         {
           path: path.join(__dirname, '../uploads/OSTEOLOGIE ET ARTHROLOGIE GENERALE.docx'),
@@ -238,8 +265,8 @@ async function seedFromDocx() {
           free: true 
         },
         {
-          path: path.join(__dirname, '../uploads/GENERALITES.docx'), 
-          category: 'GENERALITES.docx',
+          path: path.join(__dirname, '../uploads/generalite.docx'), 
+          category: 'GENERALITES',
           free: false 
         },
         
