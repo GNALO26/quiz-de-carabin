@@ -6,8 +6,16 @@ export class Auth {
         this.token = this.getToken();
         this.user = JSON.parse(localStorage.getItem('quizUser') || 'null');
         this.sessionCheckInterval = null;
+        this.sessionCheckerStarted = false;
         this.init();
-        this.startSessionChecker();
+        
+        // ✅ CORRECTION: Démarrer le vérificateur après un délai
+        setTimeout(() => {
+            if (!this.sessionCheckerStarted) {
+                this.startSessionChecker();
+                this.sessionCheckerStarted = true;
+            }
+        }, 3000);
     }
 
     init() {
@@ -141,6 +149,7 @@ export class Auth {
             const data = await response.json();
 
             if (data.success) {
+                // ✅ CORRECTION: Sauvegarder TOUTES les données utilisateur
                 this.token = data.token;
                 this.user = data.user;
                 
@@ -151,9 +160,10 @@ export class Auth {
                 this.hideModals();
                 this.showAlert('Connexion réussie!', 'success');
                 
-                if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-                    window.quiz.loadQuizzes();
-                }
+                // ✅ CORRECTION: Recharger la page complètement
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
             } else {
                 this.showAlert(data.message, 'danger');
             }
@@ -179,6 +189,11 @@ export class Auth {
             return;
         }
 
+        if (password.length < 6) {
+            this.showAlert('Le mot de passe doit contenir au moins 6 caractères', 'danger');
+            return;
+        }
+
         try {
             const API_BASE_URL = await this.getActiveAPIUrl();
             
@@ -193,6 +208,7 @@ export class Auth {
             const data = await response.json();
 
             if (data.success) {
+                // ✅ CORRECTION: Sauvegarder TOUTES les données utilisateur
                 this.token = data.token;
                 this.user = data.user;
                 
@@ -203,9 +219,10 @@ export class Auth {
                 this.hideModals();
                 this.showAlert('Compte créé avec succès! Vous êtes maintenant connecté.', 'success');
                 
-                if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-                    window.quiz.loadQuizzes();
-                }
+                // ✅ CORRECTION: Recharger la page complètement
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
                 this.showAlert(data.message || 'Erreur lors de la création du compte', 'danger');
             }
@@ -235,32 +252,51 @@ export class Auth {
             console.warn('URL principale inaccessible:', error.message);
         }
         
-        return CONFIG.API_BACKUP_URL;
+        return CONFIG.API_BACKUP_URL || CONFIG.API_BASE_URL;
     }
 
+    // ✅ CORRECTION: Vérification de session plus intelligente
     startSessionChecker() {
+        if (this.sessionCheckInterval) {
+            clearInterval(this.sessionCheckInterval);
+        }
+
         this.sessionCheckInterval = setInterval(async () => {
-            if (this.isAuthenticated()) {
-                try {
-                    const response = await this.apiRequest('/api/auth/check-session');
-                    if (!response.ok) {
-                        const data = await response.json();
-                        if (data.code === 'SESSION_EXPIRED' || data.code === 'SESSION_INVALIDATED') {
-                            this.logout();
-                            this.showAlert('Votre session a expiré ou a été utilisée sur un autre appareil. Veuillez vous reconnecter.', 'warning');
-                        }
-                    }
-                } catch (error) {
-                    console.error('Erreur vérification session:', error);
-                }
+            if (!this.isAuthenticated()) {
+                return; // Ne rien faire si pas authentifié
             }
-        }, 60000);
+            
+            try {
+                const response = await this.apiRequest('/api/auth/check-session');
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.code === 'SESSION_EXPIRED' || 
+                        data.code === 'SESSION_INVALIDATED' || 
+                        data.code === 'TOKEN_VERSION_MISMATCH') {
+                        
+                        console.warn('⚠️ Session invalide détectée:', data.code);
+                        this.cleanInvalidToken();
+                        this.showAlert('Votre session a expiré. Veuillez vous reconnecter.', 'warning');
+                        
+                        setTimeout(() => {
+                            window.location.href = CONFIG.PAGES.INDEX;
+                        }, 2000);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur vérification session:', error);
+                // Ne pas déconnecter automatiquement en cas d'erreur réseau
+            }
+        }, 60000); // Vérifier toutes les 60 secondes
     }
 
     logout() {
         try {
             if (this.sessionCheckInterval) {
                 clearInterval(this.sessionCheckInterval);
+                this.sessionCheckInterval = null;
             }
 
             localStorage.removeItem('quizToken');
@@ -273,10 +309,6 @@ export class Auth {
             
             this.updateUI();
             this.showAlert('Déconnexion réussie', 'success');
-            
-            if (window.location.pathname.includes('quiz.html') && window.quiz && typeof window.quiz.loadQuizzes === 'function') {
-                window.quiz.loadQuizzes();
-            }
             
             setTimeout(() => {
                 window.location.href = CONFIG.PAGES.INDEX;
@@ -359,7 +391,7 @@ export class Auth {
     }
 
     isAuthenticated() {
-        return this.getToken() !== null;
+        return this.getToken() !== null && this.user !== null;
     }
 
     isPremium() {
@@ -379,6 +411,7 @@ export class Auth {
                 } else {
                     console.log(`Abonnement expiré pour ${user.email}`);
                     this.user.isPremium = false;
+                    localStorage.setItem('quizUser', JSON.stringify(this.user));
                     this.updateUI();
                     return false;
                 }
@@ -405,6 +438,11 @@ export class Auth {
     
     async apiRequest(url, options = {}) {
         const token = this.getToken();
+        
+        if (!token) {
+            throw new Error('Aucun token disponible');
+        }
+
         const API_BASE_URL = await this.getActiveAPIUrl();
         
         const headers = {
@@ -412,9 +450,7 @@ export class Auth {
             ...options.headers
         };
         
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
+        headers['Authorization'] = `Bearer ${token}`;
         
         try {
             const response = await fetch(`${API_BASE_URL}${url}`, {
@@ -423,12 +459,8 @@ export class Auth {
                 credentials: 'include'
             });
             
-            if (response.status === 401) {
-                this.cleanInvalidToken();
-                this.showAlert('Session expirée. Veuillez vous reconnecter.', 'warning');
-                window.location.reload();
-                throw new Error('Session expirée');
-            }
+            // ✅ CORRECTION: Ne pas auto-déconnecter sur 401 dans apiRequest
+            // Laisser startSessionChecker() gérer ça
             
             return response;
         } catch (error) {
@@ -438,12 +470,11 @@ export class Auth {
     }
 }
 
-// Exposer la classe Auth globalement
 window.Auth = Auth;
 
-// Initialisation automatique
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('auth-buttons') || document.getElementById('user-menu')) {
         window.auth = new Auth();
+        console.log('✅ Auth initialisé');
     }
 });

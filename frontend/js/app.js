@@ -13,8 +13,11 @@ class App {
         this.init();
     }
 
-    init() {
+    async init() {
         console.log("🚀 Initialisation de l'application Quiz de Carabin");
+        
+        // ✅ CORRECTION: Attendre que l'auth soit complètement initialisé
+        await this.waitForAuth();
         
         // Initialiser les modules en fonction de la page
         if (window.location.pathname.includes('quiz.html') || 
@@ -23,13 +26,25 @@ class App {
         }
         
         if (window.location.pathname.includes('quiz.html')) {
-            this.quiz = new Quiz();
+            // ✅ CORRECTION: Attendre avant d'initialiser Quiz
+            setTimeout(() => {
+                this.quiz = new Quiz();
+            }, 500);
         }
         
         this.checkAuthenticationStatus();
-        
-        // ✅ AJOUT: Log de diagnostic
         this.logDiagnostic();
+    }
+
+    // ✅ AJOUT: Fonction pour attendre l'initialisation de Auth
+    async waitForAuth() {
+        return new Promise((resolve) => {
+            if (this.auth && this.auth.token !== undefined) {
+                resolve();
+            } else {
+                setTimeout(() => resolve(), 100);
+            }
+        });
     }
 
     checkAuthenticationStatus() {
@@ -41,7 +56,6 @@ class App {
         }
     }
 
-    // ✅ AJOUT: Diagnostic de l'application
     logDiagnostic() {
         console.log('🔍 DIAGNOSTIC APPLICATION:');
         console.log('   - URL:', window.location.href);
@@ -53,10 +67,12 @@ class App {
     }
 }
 
-// Démarrer l'application quand le DOM est chargé
+// ✅ CORRECTION: Démarrer l'application avec un léger délai
 document.addEventListener('DOMContentLoaded', function() {
-    window.app = new App();
-    console.log("🎯 Application Quiz de Carabin initialisée");
+    setTimeout(() => {
+        window.app = new App();
+        console.log("🎯 Application Quiz de Carabin initialisée");
+    }, 100);
 });
 
 // Fonction globale pour fermer le modal de connexion

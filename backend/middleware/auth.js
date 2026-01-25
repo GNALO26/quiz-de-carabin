@@ -90,7 +90,7 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // Vérifier si la session existe et est active dans la base de données
+    // ✅ CORRECTION: Vérifier si la session existe et est active dans la base de données
     const activeSession = await Session.findOne({
       userId: user._id,
       sessionId: decoded.sessionId,

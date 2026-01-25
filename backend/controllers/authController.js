@@ -28,7 +28,7 @@ const generateToken = (user, sessionId) => {
   );
 };
 
-// Fonction register
+// ✅ FONCTION REGISTER CORRIGÉE
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -72,13 +72,38 @@ exports.register = async (req, res) => {
 
     await user.save();
 
-    // Générer un ID de session et un token
+    // ✅ CORRECTION CRITIQUE : Créer une SESSION COMPLÈTE
     const sessionId = generateSessionId();
+    
+    // Obtenir les informations géographiques
+    const clientIp = req.clientIp || req.ip || req.connection.remoteAddress;
+    const geo = geoip.lookup(clientIp);
+    
+    // Créer l'entrée de session dans la base de données
+    const newSession = new Session({
+      userId: user._id,
+      sessionId: sessionId,
+      deviceInfo: req.deviceInfo || {
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        platform: 'Web'
+      },
+      ipAddress: clientIp,
+      location: geo ? `${geo.city}, ${geo.country}` : 'Inconnu',
+      isActive: true
+    });
+
+    await newSession.save();
+    console.log(`✅ Session créée pour ${user.email} - SessionID: ${sessionId}`);
+
+    // Mettre à jour l'utilisateur avec le sessionId actif
     user.activeSessionId = sessionId;
     user.tokenVersion = 0;
     await user.save();
 
+    // Générer le token JWT
     const token = generateToken(user, sessionId);
+
+    console.log(`✅ Compte créé avec succès pour ${user.email}`);
 
     res.status(201).json({
       success: true,
@@ -88,11 +113,12 @@ exports.register = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        isPremium: user.isPremium
+        isPremium: user.isPremium,
+        premiumExpiresAt: user.premiumExpiresAt
       }
     });
   } catch (error) {
-    console.error('Erreur register:', error);
+    console.error('❌ Erreur register:', error);
     
     // Gestion spécifique des erreurs de duplication
     if (error.code === 11000) {
@@ -138,7 +164,10 @@ exports.login = async (req, res) => {
     }
 
     // Désactiver toutes les sessions existantes pour cet utilisateur
-    await Session.deactivateAllUserSessions(user._id);
+    await Session.updateMany(
+      { userId: user._id, isActive: true },
+      { isActive: false }
+    );
 
     // Générer un nouvel ID de session et incrémenter tokenVersion
     const sessionId = generateSessionId();
@@ -148,13 +177,18 @@ exports.login = async (req, res) => {
     await user.save();
 
     // Créer une nouvelle session
-    const geo = geoip.lookup(req.clientIp);
+    const clientIp = req.clientIp || req.ip || req.connection.remoteAddress;
+    const geo = geoip.lookup(clientIp);
     const newSession = new Session({
       userId: user._id,
       sessionId: sessionId,
-      deviceInfo: req.deviceInfo,
-      ipAddress: req.clientIp,
-      location: geo ? `${geo.city}, ${geo.country}` : 'Inconnu'
+      deviceInfo: req.deviceInfo || {
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        platform: 'Web'
+      },
+      ipAddress: clientIp,
+      location: geo ? `${geo.city}, ${geo.country}` : 'Inconnu',
+      isActive: true
     });
 
     await newSession.save();
@@ -165,6 +199,8 @@ exports.login = async (req, res) => {
     // Générer le token JWT avec l'ID de session
     const token = generateToken(user, sessionId);
 
+    console.log(`✅ Connexion réussie pour ${user.email}`);
+
     res.status(200).json({
       success: true,
       message: "Connexion réussie",
@@ -173,11 +209,12 @@ exports.login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        isPremium: user.isPremium
+        isPremium: user.isPremium,
+        premiumExpiresAt: user.premiumExpiresAt
       }
     });
   } catch (error) {
-    console.error('Erreur login:', error);
+    console.error('❌ Erreur login:', error);
     await addLoginHistory(req, req.body.email, false, 'Erreur serveur');
     res.status(500).json({
       success: false,
@@ -192,12 +229,16 @@ async function addLoginHistory(req, email, success, reason) {
     const user = await User.findOne({ email });
     if (!user) return;
     
-    const geo = geoip.lookup(req.clientIp);
+    const clientIp = req.clientIp || req.ip || req.connection.remoteAddress;
+    const geo = geoip.lookup(clientIp);
     const loginEntry = {
       timestamp: new Date(),
       deviceId: req.deviceId,
-      deviceInfo: req.deviceInfo,
-      ipAddress: req.clientIp,
+      deviceInfo: req.deviceInfo || {
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        platform: 'Web'
+      },
+      ipAddress: clientIp,
       location: geo ? `${geo.city}, ${geo.country}` : 'Inconnu',
       success,
       reason
@@ -259,6 +300,12 @@ exports.forceLogout = async (req, res) => {
     req.user.activeSessionId = null;
     await req.user.save();
     
+    // Désactiver toutes les sessions
+    await Session.updateMany(
+      { userId: req.user._id },
+      { isActive: false }
+    );
+    
     res.status(200).json({
       success: true,
       message: "Toutes les sessions ont été déconnectées"
@@ -295,10 +342,10 @@ exports.requestPasswordReset = async (req, res) => {
       });
     }
 
-    // ✅ AJOUT: Limite de tentatives (sécurité)
+    // Limite de tentatives (sécurité)
     const recentRequests = await PasswordReset.countDocuments({
       email: normalizedEmail,
-      createdAt: { $gt: new Date(Date.now() - 15 * 60 * 1000) } // 15 minutes
+      createdAt: { $gt: new Date(Date.now() - 15 * 60 * 1000) }
     });
 
     if (recentRequests >= 3) {
@@ -404,7 +451,7 @@ exports.verifyResetCode = async (req, res) => {
   }
 };
 
-// ✅ CORRECTION: Réinitialisation du mot de passe (SANS DOUBLE HASHAGE)
+// Réinitialisation du mot de passe
 exports.resetPassword = async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
@@ -449,7 +496,6 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // ✅ CORRECTION CRITIQUE: NE PAS HASHER MANUELLEMENT
     // Le middleware pre-save dans User.js va automatiquement hasher le mot de passe
     user.password = newPassword;
     
@@ -458,6 +504,12 @@ exports.resetPassword = async (req, res) => {
     user.activeSessionId = null;
     
     await user.save();
+
+    // Désactiver toutes les sessions
+    await Session.updateMany(
+      { userId: user._id },
+      { isActive: false }
+    );
 
     // Marquer le code comme utilisé
     passwordReset.used = true;
@@ -507,6 +559,12 @@ exports.adminResetAccount = async (req, res) => {
     user.activeSessionId = null;
     await user.save();
 
+    // Désactiver toutes les sessions
+    await Session.updateMany(
+      { userId: user._id },
+      { isActive: false }
+    );
+
     res.status(200).json({
       success: true,
       message: `Compte ${email} réinitialisé avec succès. TokenVersion: ${user.tokenVersion}`
@@ -521,7 +579,7 @@ exports.adminResetAccount = async (req, res) => {
   }
 };
 
-// ✅ CORRECTION: Fonction pour réparer un compte utilisateur (SANS DOUBLE HASHAGE)
+// Fonction pour réparer un compte utilisateur
 exports.repairAccount = async (req, res) => {
   try {
     const { email, newPassword } = req.body;
@@ -537,7 +595,6 @@ exports.repairAccount = async (req, res) => {
       });
     }
 
-    // ✅ CORRECTION: NE PAS HASHER MANUELLEMENT
     // Le middleware pre-save va automatiquement hasher
     user.password = newPassword;
     
@@ -546,6 +603,12 @@ exports.repairAccount = async (req, res) => {
     user.activeSessionId = null;
     
     await user.save();
+
+    // Désactiver toutes les sessions
+    await Session.updateMany(
+      { userId: user._id },
+      { isActive: false }
+    );
 
     res.status(200).json({
       success: true,
@@ -564,10 +627,17 @@ exports.repairAccount = async (req, res) => {
 // Vérification de l'état de la session
 exports.checkSession = async (req, res) => {
   try {
-    // La vérification est faite par le middleware sessionCheck
+    // La vérification est faite par le middleware auth
     res.status(200).json({
       success: true,
-      message: 'Session valide'
+      message: 'Session valide',
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        isPremium: req.user.isPremium,
+        premiumExpiresAt: req.user.premiumExpiresAt
+      }
     });
   } catch (error) {
     res.status(500).json({
@@ -577,14 +647,4 @@ exports.checkSession = async (req, res) => {
   }
 };
 
-// Debug: Vérifier que toutes les fonctions sont bien exportées
-console.log('✅ Exportations du authController (VERSION CORRIGÉE):');
-console.log('- register:', typeof exports.register);
-console.log('- login:', typeof exports.login);
-console.log('- logout:', typeof exports.logout);
-console.log('- forceLogout:', typeof exports.forceLogout);
-console.log('- requestPasswordReset:', typeof exports.requestPasswordReset);
-console.log('- verifyResetCode:', typeof exports.verifyResetCode);
-console.log('- resetPassword:', typeof exports.resetPassword, '← CORRIGÉ');
-console.log('- adminResetAccount:', typeof exports.adminResetAccount);
-console.log('- repairAccount:', typeof exports.repairAccount, '← CORRIGÉ');
+console.log('✅ authController chargé avec CORRECTIONS');
