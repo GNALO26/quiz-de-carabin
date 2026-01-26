@@ -3,82 +3,99 @@ import { Auth } from './auth.js';
 import { Payment } from './payment.js';
 import { Quiz } from './quiz.js';
 
-// Initialiser l'application
 class App {
     constructor() {
-        this.auth = new Auth();
+        this.auth = null;
         this.payment = null;
         this.quiz = null;
+        this.isQuizPage = window.location.pathname.includes('quiz.html');
         
         this.init();
     }
 
     async init() {
-        console.log("🚀 Initialisation de l'application Quiz de Carabin");
+        console.log("🚀 Initialisation Quiz de Carabin");
         
-        // ✅ CORRECTION: Attendre que l'auth soit complètement initialisé
-        await this.waitForAuth();
-        
-        // Initialiser les modules en fonction de la page
-        if (window.location.pathname.includes('quiz.html') || 
-            window.location.pathname.includes('index.html')) {
-            this.payment = new Payment();
-        }
-        
-        if (window.location.pathname.includes('quiz.html')) {
-            // ✅ CORRECTION: Attendre avant d'initialiser Quiz
-            setTimeout(() => {
+        try {
+            // Étape 1 : Initialiser Auth EN PREMIER
+            this.auth = new Auth();
+            console.log("✅ Auth initialisé");
+            
+            // Étape 2 : Attendre qu'Auth soit complètement prêt
+            await this.waitForAuth();
+            console.log("✅ Auth prêt");
+            
+            // Étape 3 : Initialiser Payment si nécessaire
+            if (this.isQuizPage || window.location.pathname.includes('index.html')) {
+                this.payment = new Payment();
+                console.log("✅ Payment initialisé");
+            }
+            
+            // Étape 4 : Initialiser Quiz SEULEMENT sur quiz.html
+            if (this.isQuizPage) {
+                console.log("📝 Initialisation Quiz sur quiz.html");
                 this.quiz = new Quiz();
-            }, 500);
+                console.log("✅ Quiz initialisé");
+            }
+            
+            this.checkAuthenticationStatus();
+            this.logDiagnostic();
+            
+        } catch (error) {
+            console.error("❌ Erreur initialisation:", error);
         }
-        
-        this.checkAuthenticationStatus();
-        this.logDiagnostic();
     }
 
-    // ✅ AJOUT: Fonction pour attendre l'initialisation de Auth
     async waitForAuth() {
         return new Promise((resolve) => {
-            if (this.auth && this.auth.token !== undefined) {
-                resolve();
-            } else {
-                setTimeout(() => resolve(), 100);
-            }
+            const maxAttempts = 50; // 5 secondes max
+            let attempts = 0;
+            
+            const checkAuth = () => {
+                attempts++;
+                
+                if (this.auth && typeof this.auth.getToken === 'function') {
+                    console.log(`✅ Auth prêt après ${attempts} tentatives`);
+                    resolve();
+                } else if (attempts >= maxAttempts) {
+                    console.warn('⚠️ Timeout Auth, on continue quand même');
+                    resolve();
+                } else {
+                    setTimeout(checkAuth, 100);
+                }
+            };
+            
+            checkAuth();
         });
     }
 
     checkAuthenticationStatus() {
-        if (this.auth.isAuthenticated()) {
-            console.log('✅ Utilisateur authentifié:', this.auth.getUser()?.email);
-            console.log('📊 Statut Premium:', this.auth.isPremium() ? 'OUI' : 'NON');
+        if (this.auth && this.auth.isAuthenticated()) {
+            const user = this.auth.getUser();
+            console.log('✅ Utilisateur:', user?.email);
+            console.log('📊 Premium:', this.auth.isPremium() ? 'OUI' : 'NON');
         } else {
-            console.log('🔐 Utilisateur non authentifié');
+            console.log('🔐 Non authentifié');
         }
     }
 
     logDiagnostic() {
-        console.log('🔍 DIAGNOSTIC APPLICATION:');
-        console.log('   - URL:', window.location.href);
-        console.log('   - API Base:', CONFIG.API_BASE_URL);
-        console.log('   - Token présent:', this.auth.getToken() ? 'OUI' : 'NON');
-        console.log('   - User présent:', this.auth.getUser() ? 'OUI' : 'NON');
-        console.log('   - Payment initialisé:', this.payment ? 'OUI' : 'NON');
-        console.log('   - Quiz initialisé:', this.quiz ? 'OUI' : 'NON');
+        console.log('🔍 === DIAGNOSTIC ===');
+        console.log('URL:', window.location.pathname);
+        console.log('Token:', this.auth?.getToken() ? 'OUI' : 'NON');
+        console.log('User:', this.auth?.getUser() ? 'OUI' : 'NON');
+        console.log('Quiz:', this.quiz ? 'INITIALISÉ' : 'NON INITIALISÉ');
+        console.log('==================');
     }
 }
 
-// ✅ CORRECTION: Démarrer l'application avec un léger délai
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        window.app = new App();
-        console.log("🎯 Application Quiz de Carabin initialisée");
-    }, 100);
+// ✅ Démarrage IMMÉDIAT
+document.addEventListener('DOMContentLoaded', () => {
+    window.app = new App();
+    console.log("🎯 App démarrée");
 });
 
-// Fonction globale pour fermer le modal de connexion
 window.closeLoginModal = function() {
     const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-    if (loginModal) {
-        loginModal.hide();
-    }
+    if (loginModal) loginModal.hide();
 };
