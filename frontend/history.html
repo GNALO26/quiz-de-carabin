@@ -56,6 +56,68 @@
         }
     </style>
 </head>
+<script>
+// Charger les stats au chargement de la page
+document.addEventListener('DOMContentLoaded', async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    window.location.href = '/index.html';
+    return;
+  }
+  
+  try {
+    // Récupérer le dashboard
+    const response = await fetch(`${API_URL}/api/stats/dashboard`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      displayDashboard(data.data);
+    }
+  } catch (error) {
+    console.error('Erreur chargement stats:', error);
+  }
+});
+
+function displayDashboard(stats) {
+  // Afficher les stats globales
+  document.getElementById('totalQuizzes').textContent = stats.global.totalQuizzes;
+  document.getElementById('averageMastery').textContent = stats.global.averageMastery + '%';
+  document.getElementById('totalAttempts').textContent = stats.global.totalAttempts;
+  
+  // Afficher les quiz à réviser
+  const reviewList = document.getElementById('reviewList');
+  reviewList.innerHTML = stats.toReview.map(quiz => `
+    <div class="review-item ${quiz.isUrgent ? 'urgent' : ''}">
+      <h4>${quiz.title}</h4>
+      <p>Maîtrise: ${quiz.mastery}% - ${quiz.masteryLevel}</p>
+      <p>${quiz.daysOverdue > 0 ? 'En retard de ' + quiz.daysOverdue + ' jours' : 'À réviser bientôt'}</p>
+      <button onclick="startQuiz('${quiz.quizId}')">Réviser</button>
+    </div>
+  `).join('');
+  
+  // Afficher la progression par matière
+  const subjectProgress = document.getElementById('subjectProgress');
+  subjectProgress.innerHTML = stats.bySubject.map(subject => `
+    <div class="subject-card">
+      <h3>${subject.subject}</h3>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: ${subject.averageMastery}%"></div>
+      </div>
+      <p>${subject.averageMastery}% maîtrisé • ${subject.totalQuizzes} quiz</p>
+    </div>
+  `).join('');
+}
+
+function startQuiz(quizId) {
+  window.location.href = `/quiz.html?id=${quizId}`;
+}
+</script>
 <body>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light sticky-top">
