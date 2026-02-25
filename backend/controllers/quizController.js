@@ -1,5 +1,6 @@
 const Quiz = require('../models/Quiz');
 const User = require('../models/User');
+const UserProgress = require('../models/UserProgress');
 
 exports.getAllQuizzes = async (req, res) => {
   try {
