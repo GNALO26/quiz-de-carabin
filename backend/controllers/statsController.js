@@ -1,22 +1,7 @@
-/**
- * ================================================================
- * STATS CONTROLLER - QUIZ DE CARABIN
- * ================================================================
- * Gère toutes les statistiques utilisateur et recommandations
- * À placer dans: backend/controllers/statsController.js
- * ================================================================
- */
-
 const UserProgress = require('../models/UserProgress');
 const Quiz = require('../models/Quiz');
 const mongoose = require('mongoose');
 
-/**
- * ================================================================
- * GET /api/stats/dashboard
- * Obtenir le dashboard complet de l'utilisateur
- * ================================================================
- */
 exports.getDashboard = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -130,13 +115,6 @@ exports.getDashboard = async (req, res) => {
     });
   }
 };
-
-/**
- * ================================================================
- * GET /api/stats/subject/:subject
- * Obtenir les statistiques détaillées pour une matière
- * ================================================================
- */
 exports.getSubjectStats = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -429,13 +407,6 @@ exports.getRecommendations = async (req, res) => {
     });
   }
 };
-
-/**
- * ================================================================
- * GET /api/stats/performance-chart
- * Obtenir les données pour graphique de performance
- * ================================================================
- */
 exports.getPerformanceChart = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -505,12 +476,6 @@ exports.getPerformanceChart = async (req, res) => {
     });
   }
 };
-
-/**
- * ================================================================
- * EXPORT
- * ================================================================
- */
 module.exports = {
   getDashboard,
   getSubjectStats,
