@@ -2,6 +2,12 @@ const UserProgress = require('../models/UserProgress');
 const Quiz = require('../models/Quiz');
 const mongoose = require('mongoose');
 
+/**
+ * ================================================================
+ * GET /api/stats/dashboard
+ * Obtenir toutes les stats du dashboard
+ * ================================================================
+ */
 exports.getDashboard = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -115,6 +121,13 @@ exports.getDashboard = async (req, res) => {
     });
   }
 };
+
+/**
+ * ================================================================
+ * GET /api/stats/subject/:subject
+ * Obtenir les stats d'une matière spécifique
+ * ================================================================
+ */
 exports.getSubjectStats = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -407,6 +420,13 @@ exports.getRecommendations = async (req, res) => {
     });
   }
 };
+
+/**
+ * ================================================================
+ * GET /api/stats/performance-chart
+ * Obtenir les données pour le graphique de performance
+ * ================================================================
+ */
 exports.getPerformanceChart = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -476,10 +496,5 @@ exports.getPerformanceChart = async (req, res) => {
     });
   }
 };
-module.exports = {
-  getDashboard,
-  getSubjectStats,
-  getQuizHistory,
-  getRecommendations,
-  getPerformanceChart
-};
+
+// ✅ PAS DE module.exports ICI - Déjà fait avec exports.xxx plus haut
