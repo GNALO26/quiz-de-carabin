@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passez Premium - Quiz de Carabin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/premium.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="premium-background">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+        <div class="floating-particles"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar transparent">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="/assets/images/logo.png" alt="Quiz de Carabin">
+                <span>Quiz de Carabin</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/index.html"><i class="fas fa-home"></i> Accueil</a></li>
+                <li><a href="/quiz.html"><i class="fas fa-book"></i> Quiz</a></li>
+                <li><a href="/history.html"><i class="fas fa-chart-line"></i> Tableau de Bord</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="premium-hero">
+        <div class="hero-content">
+            <div class="crown-icon">
+                <i class="fas fa-crown"></i>
+            </div>
+            <h1 class="hero-title">
+                Débloquez Votre 
+                <span class="gradient-text">Potentiel Médical</span>
+            </h1>
+            <p class="hero-subtitle">
+                Accédez à l'intégralité de notre bibliothèque de quiz, 
+                suivez votre progression en temps réel et devenez le meilleur de votre promotion.
+            </p>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-number">500+</span>
+                    <span class="stat-label">Quiz Premium</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">10k+</span>
+                    <span class="stat-label">Étudiants</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">95%</span>
+                    <span class="stat-label">Taux de Réussite</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section class="plans-comparison">
+        <div class="section-header">
+            <h2>Choisissez Votre Plan</h2>
+            <p>Investissez dans votre avenir médical dès aujourd'hui</p>
+        </div>
+
+        <div class="plans-grid">
+            <!-- Plan Gratuit -->
+            <div class="plan-card free-plan">
+                <div class="plan-header">
+                    <div class="plan-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h3 class="plan-name">Gratuit</h3>
+                    <div class="plan-price">
+                        <span class="price-amount">0</span>
+                        <span class="price-currency">XOF</span>
+                    </div>
+                    <p class="plan-description">Pour découvrir la plateforme</p>
+                </div>
+
+                <ul class="plan-features">
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span>1 quiz par matière</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span>Statistiques basiques</span>
+                    </li>
+                    <li class="feature-item disabled">
+                        <i class="fas fa-times"></i>
+                        <span>Accès limité aux corrections</span>
+                    </li>
+                    <li class="feature-item disabled">
+                        <i class="fas fa-times"></i>
+                        <span>Pas de révisions personnalisées</span>
+                    </li>
+                    <li class="feature-item disabled">
+                        <i class="fas fa-times"></i>
+                        <span>Pas de comparaison avec la promo</span>
+                    </li>
+                </ul>
+
+                <button class="plan-btn btn-free" onclick="stayFree()">
+                    Rester Gratuit
+                </button>
+            </div>
+
+            <!-- Plan Premium Mensuel -->
+            <div class="plan-card premium-plan featured">
+                <div class="featured-badge">
+                    <i class="fas fa-star"></i> Populaire
+                </div>
+                
+                <div class="plan-header">
+                    <div class="plan-icon premium">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <h3 class="plan-name">Premium Mensuel</h3>
+                    <div class="plan-price">
+                        <span class="price-amount">5,000</span>
+                        <span class="price-currency">XOF</span>
+                        <span class="price-period">/mois</span>
+                    </div>
+                    <p class="plan-description">Le meilleur rapport qualité-prix</p>
+                </div>
+
+                <ul class="plan-features">
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span><strong>Quiz illimités</strong> dans toutes les matières</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span><strong>Statistiques avancées</strong> avec graphiques</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span><strong>Corrections détaillées</strong> avec justifications</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span><strong>Alertes de révision</strong> personnalisées</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span><strong>Comparaison</strong> avec la moyenne de promo</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span><strong>Badge Premium</strong> sur votre profil</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span><strong>Support prioritaire</strong> par WhatsApp</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span><strong>Export PDF</strong> de vos statistiques</span>
+                    </li>
+                </ul>
+
+                <button class="plan-btn btn-premium" onclick="subscribePremium('monthly')">
+                    <i class="fas fa-crown"></i> Devenir Premium
+                </button>
+
+                <div class="guarantee">
+                    <i class="fas fa-shield-alt"></i>
+                    Garantie satisfait ou remboursé 7 jours
+                </div>
+            </div>
+
+            <!-- Plan Premium Annuel -->
+            <div class="plan-card premium-plan annual">
+                <div class="savings-badge">
+                    <i class="fas fa-bolt"></i> Économisez 17%
+                </div>
+
+                <div class="plan-header">
+                    <div class="plan-icon premium">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <h3 class="plan-name">Premium Annuel</h3>
+                    <div class="plan-price">
+                        <span class="price-amount">50,000</span>
+                        <span class="price-currency">XOF</span>
+                        <span class="price-period">/an</span>
+                    </div>
+                    <p class="plan-description">
+                        <span class="original-price">60,000 XOF</span>
+                        Meilleure offre pour toute l'année
+                    </p>
+                </div>
+
+                <ul class="plan-features">
+                    <li class="feature-item">
+                        <i class="fas fa-check"></i>
+                        <span>Tous les avantages Premium</span>
+                    </li>
+                    <li class="feature-item highlight">
+                        <i class="fas fa-star"></i>
+                        <span><strong>10,000 XOF d'économies</strong> par an</span>
+                    </li>
+                    <li class="feature-item highlight">
+                        <i class="fas fa-star"></i>
+                        <span><strong>Accès anticipé</strong> aux nouveaux quiz</span>
+                    </li>
+                    <li class="feature-item highlight">
+                        <i class="fas fa-star"></i>
+                        <span><strong>Contenus exclusifs</strong> annales concours</span>
+                    </li>
+                </ul>
+
+                <button class="plan-btn btn-annual" onclick="subscribePremium('annual')">
+                    <i class="fas fa-gem"></i> S'abonner pour l'Année
+                </button>
+
+                <div class="guarantee">
+                    <i class="fas fa-shield-alt"></i>
+                    Garantie satisfait ou remboursé 30 jours
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Showcase -->
+    <section class="features-showcase">
+        <div class="section-header">
+            <h2>Pourquoi Passer Premium ?</h2>
+            <p>Des outils conçus pour votre réussite</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-infinity"></i>
+                </div>
+                <h3>Quiz Illimités</h3>
+                <p>Accédez à plus de 500 quiz couvrant l'ensemble du programme médical. Entraînez-vous autant que vous le souhaitez.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3>Statistiques Avancées</h3>
+                <p>Visualisez votre progression avec des graphiques détaillés. Identifiez vos points forts et faibles instantanément.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h3>Révisions Intelligentes</h3>
+                <p>Notre algorithme vous rappelle automatiquement quand réviser chaque quiz pour une mémorisation optimale.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3>Comparaison de Promo</h3>
+                <p>Comparez vos performances avec la moyenne de votre promotion. Restez motivé et compétitif.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <h3>Alertes Personnalisées</h3>
+                <p>Recevez des notifications par email pour ne jamais manquer une révision importante.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <h3>Export PDF</h3>
+                <p>Exportez vos statistiques et rapports de progression en PDF pour les partager ou les archiver.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials">
+        <div class="section-header">
+            <h2>Ce Que Disent Nos Étudiants Premium</h2>
+        </div>
+
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="rating">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">
+                    "Grâce à Quiz de Carabin Premium, j'ai amélioré mes notes de 15%. 
+                    Les révisions personnalisées font vraiment la différence !"
+                </p>
+                <div class="testimonial-author">
+                    <img src="/assets/images/CALEB.jpg" alt="Student">
+                    <div>
+                        <strong>Caleb M.</strong>
+                        <span>Étudiant 2e année - FMOS</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <div class="rating">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">
+                    "Le meilleur investissement de mon cursus médical. 
+                    Je recommande à tous mes collègues de promo !"
+                </p>
+                <div class="testimonial-author">
+                    <img src="/assets/images/BONOU.jpg" alt="Student">
+                    <div>
+                        <strong>Bonou A.</strong>
+                        <span>Étudiant 3e année - FMPOS</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <div class="rating">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">
+                    "Les statistiques détaillées m'ont permis de cibler mes révisions. 
+                    Je gagne un temps précieux !"
+                </p>
+                <div class="testimonial-author">
+                    <div class="avatar-placeholder">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <strong>Aïcha D.</strong>
+                        <span>Étudiante 1ère année - FSS</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq-section">
+        <div class="section-header">
+            <h2>Questions Fréquentes</h2>
+        </div>
+
+        <div class="faq-container">
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Comment fonctionne le paiement ?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Nous utilisons KKiaPay, une solution de paiement sécurisée disponible au Bénin, Togo, Côte d'Ivoire et Sénégal. Vous pouvez payer par Mobile Money, carte bancaire ou portefeuille électronique. Le paiement est instantané et sécurisé.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Puis-je annuler mon abonnement ?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Oui, vous pouvez annuler votre abonnement à tout moment depuis votre tableau de bord. Pour le plan mensuel, vous gardez l'accès jusqu'à la fin du mois payé. Pour le plan annuel, contactez-nous pour un remboursement proportionnel.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Que se passe-t-il si je ne suis pas satisfait ?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Nous offrons une garantie satisfait ou remboursé de 7 jours pour le plan mensuel et 30 jours pour le plan annuel. Si vous n'êtes pas satisfait, contactez-nous par WhatsApp et nous vous rembourserons intégralement.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Les quiz sont-ils adaptés à ma faculté ?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Oui ! Nous couvrons les programmes de FMOS (Abidjan), FMPOS (Dakar), FSS (Lomé) et d'autres facultés d'Afrique de l'Ouest. Les quiz sont créés par des étudiants et validés par des professeurs de médecine.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Puis-je partager mon compte ?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Non, chaque compte est personnel et lié à votre progression individuelle. Le partage de compte est interdit et peut entraîner la suspension du compte.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Final -->
+    <section class="final-cta">
+        <div class="cta-content">
+            <h2>Prêt à Exceller dans Vos Études Médicales ?</h2>
+            <p>Rejoignez les milliers d'étudiants qui ont transformé leurs résultats avec Quiz de Carabin Premium</p>
+            <button class="cta-btn" onclick="subscribePremium('monthly')">
+                <i class="fas fa-crown"></i> Devenir Premium Maintenant
+            </button>
+            <p class="cta-note">Sans engagement • Annulation à tout moment</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <!-- Copier le footer complet ici -->
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/premium.js"></script>
+</body>
+</html>
