@@ -45,6 +45,7 @@ console.log('🔄 Services background initialisés');
   const accessCodeRoutes = require('./routes/accessCode');
   const tokenRoutes = require('./routes/token');
   const webhookRoutes = require('./routes/webhook');
+  const statsRoutes = require('./routes/stats');
 
   const app = express();
   
@@ -194,6 +195,7 @@ app.use('/api/admin', adminRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/access-code', accessCodeRoutes);
   app.use('/api/auth', tokenRoutes);
+  app.use('/api/stats', statsRoutes);
 
   // ✅ SERVIR LES FICHIERS STATIQUES POUR LES UPLOADS
   app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));

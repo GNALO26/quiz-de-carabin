@@ -144,10 +144,6 @@ const checkQuizAccess = async (req, res, next) => {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
-cron.schedule('0 6 * * *', async () => {
-    const count = await UserProgress.markQuizzesNeedingReview();
-    console.log(`✅ ${count} quiz marqués pour révision`);
-  });
 exports.checkReviewsDaily = async () => {
   try {
     const count = await UserProgress.markQuizzesNeedingReview();
