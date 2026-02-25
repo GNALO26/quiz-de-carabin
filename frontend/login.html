@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Quiz de Carabin</title>
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- Background animé -->
+    <div class="auth-background">
+        <div class="floating-orb orb-1"></div>
+        <div class="floating-orb orb-2"></div>
+        <div class="floating-orb orb-3"></div>
+        <div class="particles" id="particles"></div>
+    </div>
+
+    <!-- Container principal -->
+    <div class="auth-container">
+        <!-- Logo & Retour -->
+        <div class="auth-header">
+            <a href="index.html" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                <span>Retour à l'accueil</span>
+            </a>
+        </div>
+
+        <!-- Card de connexion -->
+        <div class="auth-card">
+            <!-- Logo -->
+            <div class="auth-logo">
+                <div class="logo-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h1>Quiz de Carabin</h1>
+                <p class="tagline">Votre succès commence ici</p>
+            </div>
+
+            <!-- Formulaire de connexion -->
+            <form id="loginForm" class="auth-form">
+                <h2 class="form-title">Connexion</h2>
+                <p class="form-subtitle">Content de vous revoir ! 👋</p>
+
+                <!-- Email -->
+                <div class="form-group">
+                    <label for="email">
+                        <i class="fas fa-envelope"></i>
+                        Adresse Email
+                    </label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email"
+                        placeholder="votre.email@exemple.com"
+                        required
+                        autocomplete="email"
+                    >
+                    <span class="error-message" id="emailError"></span>
+                </div>
+
+                <!-- Mot de passe -->
+                <div class="form-group">
+                    <label for="password">
+                        <i class="fas fa-lock"></i>
+                        Mot de Passe
+                    </label>
+                    <div class="password-input">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password"
+                            placeholder="••••••••"
+                            required
+                            autocomplete="current-password"
+                        >
+                        <button type="button" class="toggle-password" id="togglePassword">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <span class="error-message" id="passwordError"></span>
+                </div>
+
+                <!-- Se souvenir & Mot de passe oublié -->
+                <div class="form-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rememberMe" name="rememberMe">
+                        <span class="checkmark"></span>
+                        Se souvenir de moi
+                    </label>
+                    <a href="forgot-password.html" class="forgot-link">
+                        Mot de passe oublié ?
+                    </a>
+                </div>
+
+                <!-- Bouton de connexion -->
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    <span class="btn-text">Se Connecter</span>
+                    <span class="btn-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+
+                <!-- Divider -->
+                <div class="divider">
+                    <span>ou</span>
+                </div>
+
+                <!-- Connexion sociale -->
+                <div class="social-login">
+                    <button type="button" class="social-btn google-btn">
+                        <i class="fab fa-google"></i>
+                        <span>Google</span>
+                    </button>
+                    <button type="button" class="social-btn facebook-btn">
+                        <i class="fab fa-facebook-f"></i>
+                        <span>Facebook</span>
+                    </button>
+                </div>
+
+                <!-- Message d'erreur global -->
+                <div class="alert alert-error" id="globalError" style="display: none;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="globalErrorMessage"></span>
+                </div>
+            </form>
+
+            <!-- Lien vers inscription -->
+            <div class="auth-footer">
+                <p>Pas encore de compte ?</p>
+                <a href="register.html" class="switch-link">
+                    Créer un compte gratuitement
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="auth-features">
+            <div class="feature">
+                <i class="fas fa-infinity"></i>
+                <span>Quiz Illimités</span>
+            </div>
+            <div class="feature">
+                <i class="fas fa-trophy"></i>
+                <span>Classements</span>
+            </div>
+            <div class="feature">
+                <i class="fas fa-certificate"></i>
+                <span>Certifications</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/auth-login.js"></script>
+</body>
+</html>

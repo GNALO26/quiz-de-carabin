@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - Quiz de Carabin</title>
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- Background animé -->
+    <div class="auth-background">
+        <div class="floating-orb orb-1"></div>
+        <div class="floating-orb orb-2"></div>
+        <div class="floating-orb orb-3"></div>
+        <div class="particles" id="particles"></div>
+    </div>
+
+    <!-- Container principal -->
+    <div class="auth-container">
+        <!-- Logo & Retour -->
+        <div class="auth-header">
+            <a href="index.html" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                <span>Retour à l'accueil</span>
+            </a>
+        </div>
+
+        <!-- Card d'inscription -->
+        <div class="auth-card register-card">
+            <!-- Logo -->
+            <div class="auth-logo">
+                <div class="logo-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h1>Quiz de Carabin</h1>
+                <p class="tagline">Rejoignez des milliers d'étudiants</p>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="progress-steps" id="progressSteps">
+                <div class="step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <span class="step-label">Informations</span>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-number">2</div>
+                    <span class="step-label">Université</span>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-number">3</div>
+                    <span class="step-label">Confirmation</span>
+                </div>
+            </div>
+
+            <!-- Formulaire d'inscription -->
+            <form id="registerForm" class="auth-form">
+                <!-- ÉTAPE 1 : Informations personnelles -->
+                <div class="form-step active" data-step="1">
+                    <h2 class="form-title">Créer votre compte</h2>
+                    <p class="form-subtitle">Commencez gratuitement dès maintenant 🚀</p>
+
+                    <!-- Nom complet -->
+                    <div class="form-group">
+                        <label for="name">
+                            <i class="fas fa-user"></i>
+                            Nom Complet
+                        </label>
+                        <input 
+                            type="text" 
+                            id="name" 
+                            name="name"
+                            placeholder="Ex: Jean Dupont"
+                            required
+                            autocomplete="name"
+                        >
+                        <span class="error-message" id="nameError"></span>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label for="registerEmail">
+                            <i class="fas fa-envelope"></i>
+                            Adresse Email
+                        </label>
+                        <input 
+                            type="email" 
+                            id="registerEmail" 
+                            name="email"
+                            placeholder="votre.email@exemple.com"
+                            required
+                            autocomplete="email"
+                        >
+                        <span class="error-message" id="registerEmailError"></span>
+                        <span class="helper-text">
+                            <i class="fas fa-info-circle"></i>
+                            Utilisez votre email universitaire pour des avantages
+                        </span>
+                    </div>
+
+                    <!-- Mot de passe -->
+                    <div class="form-group">
+                        <label for="registerPassword">
+                            <i class="fas fa-lock"></i>
+                            Mot de Passe
+                        </label>
+                        <div class="password-input">
+                            <input 
+                                type="password" 
+                                id="registerPassword" 
+                                name="password"
+                                placeholder="••••••••"
+                                required
+                                autocomplete="new-password"
+                            >
+                            <button type="button" class="toggle-password" id="toggleRegisterPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <!-- Force du mot de passe -->
+                        <div class="password-strength">
+                            <div class="strength-bar">
+                                <div class="strength-fill" id="strengthFill"></div>
+                            </div>
+                            <span class="strength-text" id="strengthText">Faible</span>
+                        </div>
+                        <span class="error-message" id="registerPasswordError"></span>
+                    </div>
+
+                    <!-- Confirmer mot de passe -->
+                    <div class="form-group">
+                        <label for="confirmPassword">
+                            <i class="fas fa-lock"></i>
+                            Confirmer le Mot de Passe
+                        </label>
+                        <div class="password-input">
+                            <input 
+                                type="password" 
+                                id="confirmPassword" 
+                                name="confirmPassword"
+                                placeholder="••••••••"
+                                required
+                                autocomplete="new-password"
+                            >
+                            <button type="button" class="toggle-password" id="toggleConfirmPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <span class="error-message" id="confirmPasswordError"></span>
+                    </div>
+
+                    <button type="button" class="btn-submit" onclick="nextStep(2)">
+                        <span>Continuer</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- ÉTAPE 2 : Université et préférences -->
+                <div class="form-step" data-step="2">
+                    <h2 class="form-title">Votre Université</h2>
+                    <p class="form-subtitle">Personnalisez votre expérience 🎓</p>
+
+                    <!-- Université -->
+                    <div class="form-group">
+                        <label for="university">
+                            <i class="fas fa-university"></i>
+                            Université / Faculté
+                        </label>
+                        <select id="university" name="university" required>
+                            <option value="">Sélectionnez votre université</option>
+                            <option value="FMOS">🇨🇮 FMOS - Abidjan, Côte d'Ivoire</option>
+                            <option value="FMPOS">🇸🇳 FMPOS - Dakar, Sénégal</option>
+                            <option value="FSS">🇹🇬 FSS - Lomé, Togo</option>
+                            <option value="UNB">🇧🇯 UNB - Cotonou, Bénin</option>
+                            <option value="GENERAL">🌍 Autre / Programme Général</option>
+                        </select>
+                        <span class="error-message" id="universityError"></span>
+                    </div>
+
+                    <!-- Année d'étude -->
+                    <div class="form-group">
+                        <label for="academicYear">
+                            <i class="fas fa-calendar-alt"></i>
+                            Année d'Étude (Optionnel)
+                        </label>
+                        <select id="academicYear" name="academicYear">
+                            <option value="">Choisissez votre année</option>
+                            <option value="1ère année">1ère année</option>
+                            <option value="2ème année">2ème année</option>
+                            <option value="3ème année">3ème année</option>
+                            <option value="4ème année">4ème année</option>
+                            <option value="5ème année">5ème année</option>
+                            <option value="6ème année">6ème année</option>
+                            <option value="7ème année (Internat)">7ème année (Internat)</option>
+                        </select>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="emailNotifications" name="emailNotifications" checked>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <span class="checkbox-title">Notifications par email</span>
+                                <span class="checkbox-desc">Recevez des rappels et des mises à jour</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="form-buttons">
+                        <button type="button" class="btn-secondary" onclick="prevStep(1)">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Retour</span>
+                        </button>
+                        <button type="button" class="btn-submit" onclick="nextStep(3)">
+                            <span>Continuer</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ÉTAPE 3 : Confirmation -->
+                <div class="form-step" data-step="3">
+                    <h2 class="form-title">Dernière étape ! 🎉</h2>
+                    <p class="form-subtitle">Vérifiez vos informations</p>
+
+                    <!-- Résumé -->
+                    <div class="summary-box">
+                        <div class="summary-item">
+                            <i class="fas fa-user"></i>
+                            <div>
+                                <span class="summary-label">Nom</span>
+                                <span class="summary-value" id="summaryName">-</span>
+                            </div>
+                        </div>
+                        <div class="summary-item">
+                            <i class="fas fa-envelope"></i>
+                            <div>
+                                <span class="summary-label">Email</span>
+                                <span class="summary-value" id="summaryEmail">-</span>
+                            </div>
+                        </div>
+                        <div class="summary-item">
+                            <i class="fas fa-university"></i>
+                            <div>
+                                <span class="summary-label">Université</span>
+                                <span class="summary-value" id="summaryUniversity">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conditions générales -->
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="acceptTerms" name="acceptTerms" required>
+                            <span class="checkmark"></span>
+                            <div class="checkbox-content">
+                                <span class="checkbox-title">
+                                    J'accepte les <a href="terms.html" target="_blank">conditions d'utilisation</a> 
+                                    et la <a href="privacy.html" target="_blank">politique de confidentialité</a>
+                                </span>
+                            </div>
+                        </label>
+                        <span class="error-message" id="termsError"></span>
+                    </div>
+
+                    <div class="form-buttons">
+                        <button type="button" class="btn-secondary" onclick="prevStep(2)">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Retour</span>
+                        </button>
+                        <button type="submit" class="btn-submit" id="submitBtn">
+                            <span class="btn-text">Créer mon Compte</span>
+                            <span class="btn-loader" style="display: none;">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Message d'erreur global -->
+                <div class="alert alert-error" id="globalError" style="display: none;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="globalErrorMessage"></span>
+                </div>
+            </form>
+
+            <!-- Lien vers connexion -->
+            <div class="auth-footer">
+                <p>Vous avez déjà un compte ?</p>
+                <a href="login.html" class="switch-link">
+                    Se connecter
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="auth-features">
+            <div class="feature">
+                <i class="fas fa-check-circle"></i>
+                <span>Gratuit pour toujours</span>
+            </div>
+            <div class="feature">
+                <i class="fas fa-shield-alt"></i>
+                <span>Données sécurisées</span>
+            </div>
+            <div class="feature">
+                <i class="fas fa-clock"></i>
+                <span>Inscription en 2 min</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/auth-register.js"></script>
+</body>
+</html>

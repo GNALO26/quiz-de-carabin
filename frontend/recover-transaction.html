@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Récupération de Transaction - Quiz de Carabin</title>
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- Background animé -->
+    <div class="auth-background">
+        <div class="floating-orb orb-1"></div>
+        <div class="floating-orb orb-2"></div>
+        <div class="floating-orb orb-3"></div>
+        <div class="particles" id="particles"></div>
+    </div>
+
+    <!-- Container principal -->
+    <div class="auth-container">
+        <!-- Logo & Retour -->
+        <div class="auth-header">
+            <a href="premium.html" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                <span>Retour Premium</span>
+            </a>
+        </div>
+
+        <!-- Card de récupération -->
+        <div class="auth-card recovery-card">
+            <!-- Logo -->
+            <div class="auth-logo">
+                <div class="logo-icon premium-icon">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <h1>Récupération de Transaction</h1>
+                <p class="tagline">Problème avec votre paiement Premium ? 💳</p>
+            </div>
+
+            <!-- Onglets -->
+            <div class="recovery-tabs">
+                <button class="recovery-tab active" data-tab="transaction">
+                    <i class="fas fa-receipt"></i>
+                    <span>Par Transaction</span>
+                </button>
+                <button class="recovery-tab" data-tab="email">
+                    <i class="fas fa-envelope"></i>
+                    <span>Par Email</span>
+                </button>
+            </div>
+
+            <!-- TAB 1 : Récupération par numéro de transaction -->
+            <div class="recovery-tab-content active" data-content="transaction">
+                <form id="transactionRecoveryForm" class="auth-form">
+                    <h2 class="form-title">Retrouvez votre abonnement</h2>
+                    <p class="form-subtitle">
+                        Entrez votre numéro de transaction KKiaPay pour activer votre compte Premium.
+                    </p>
+
+                    <!-- Numéro de transaction -->
+                    <div class="form-group">
+                        <label for="transactionId">
+                            <i class="fas fa-hashtag"></i>
+                            Numéro de Transaction KKiaPay
+                        </label>
+                        <input 
+                            type="text" 
+                            id="transactionId" 
+                            name="transactionId"
+                            placeholder="Ex: kkiapay_12345abcde"
+                            required
+                        >
+                        <span class="helper-text">
+                            <i class="fas fa-info-circle"></i>
+                            Vous l'avez reçu par SMS ou email après paiement
+                        </span>
+                        <span class="error-message" id="transactionIdError"></span>
+                    </div>
+
+                    <!-- Email (optionnel pour vérification) -->
+                    <div class="form-group">
+                        <label for="email">
+                            <i class="fas fa-envelope"></i>
+                            Votre Email (Optionnel)
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email"
+                            placeholder="email@exemple.com"
+                        >
+                        <span class="helper-text">
+                            <i class="fas fa-info-circle"></i>
+                            Pour vérifier que la transaction vous appartient
+                        </span>
+                    </div>
+
+                    <!-- Bouton de vérification -->
+                    <button type="submit" class="btn-submit" id="verifyTransactionBtn">
+                        <span class="btn-text">
+                            <i class="fas fa-search"></i>
+                            Vérifier la transaction
+                        </span>
+                        <span class="btn-loader" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
+
+                    <!-- Message d'erreur global -->
+                    <div class="alert alert-error" id="transactionError" style="display: none;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span id="transactionErrorMessage"></span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TAB 2 : Récupération par email -->
+            <div class="recovery-tab-content" data-content="email">
+                <form id="emailRecoveryForm" class="auth-form">
+                    <h2 class="form-title">Récupération par Email</h2>
+                    <p class="form-subtitle">
+                        Entrez l'email utilisé lors du paiement. Nous vérifierons vos transactions.
+                    </p>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label for="recoveryEmail">
+                            <i class="fas fa-envelope"></i>
+                            Adresse Email du Paiement
+                        </label>
+                        <input 
+                            type="email" 
+                            id="recoveryEmail" 
+                            name="recoveryEmail"
+                            placeholder="email.paiement@exemple.com"
+                            required
+                        >
+                        <span class="helper-text">
+                            <i class="fas fa-info-circle"></i>
+                            L'email utilisé pour le paiement KKiaPay
+                        </span>
+                        <span class="error-message" id="recoveryEmailError"></span>
+                    </div>
+
+                    <!-- Téléphone (optionnel) -->
+                    <div class="form-group">
+                        <label for="phone">
+                            <i class="fas fa-phone"></i>
+                            Numéro de Téléphone (Optionnel)
+                        </label>
+                        <input 
+                            type="tel" 
+                            id="phone" 
+                            name="phone"
+                            placeholder="+225 XX XX XX XX"
+                        >
+                        <span class="helper-text">
+                            <i class="fas fa-info-circle"></i>
+                            Le numéro utilisé pour le paiement Mobile Money
+                        </span>
+                    </div>
+
+                    <!-- Bouton de recherche -->
+                    <button type="submit" class="btn-submit" id="searchEmailBtn">
+                        <span class="btn-text">
+                            <i class="fas fa-search"></i>
+                            Rechercher mes transactions
+                        </span>
+                        <span class="btn-loader" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
+
+                    <!-- Message d'erreur global -->
+                    <div class="alert alert-error" id="emailError" style="display: none;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span id="emailErrorMessage"></span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Résultat de la recherche -->
+            <div id="resultSection" class="result-section" style="display: none;">
+                <!-- Transaction trouvée -->
+                <div id="transactionFound" style="display: none;">
+                    <div class="success-message">
+                        <div class="success-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h2>Transaction trouvée ! 🎉</h2>
+                        
+                        <div class="transaction-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Transaction ID:</span>
+                                <span class="detail-value" id="foundTransactionId">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Montant:</span>
+                                <span class="detail-value" id="foundAmount">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Date:</span>
+                                <span class="detail-value" id="foundDate">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Statut:</span>
+                                <span class="detail-value status" id="foundStatus">-</span>
+                            </div>
+                        </div>
+
+                        <button class="btn-submit" id="activatePremiumBtn">
+                            <i class="fas fa-crown"></i>
+                            Activer mon compte Premium
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Transactions multiples trouvées -->
+                <div id="multipleTransactions" style="display: none;">
+                    <h3>Transactions trouvées</h3>
+                    <p class="form-subtitle">Sélectionnez la transaction à activer :</p>
+                    
+                    <div id="transactionsList" class="transactions-list">
+                        <!-- Sera rempli dynamiquement -->
+                    </div>
+                </div>
+
+                <!-- Aucune transaction trouvée -->
+                <div id="noTransaction" style="display: none;">
+                    <div class="error-state">
+                        <div class="error-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <h2>Aucune transaction trouvée</h2>
+                        <p class="error-text">
+                            Nous n'avons pas trouvé de transaction correspondant à vos critères.
+                        </p>
+                        
+                        <div class="help-actions">
+                            <button class="btn-secondary" onclick="resetSearch()">
+                                <i class="fas fa-redo"></i>
+                                Réessayer
+                            </button>
+                            <button class="btn-submit" onclick="contactSupport()">
+                                <i class="fas fa-headset"></i>
+                                Contacter le support
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section d'aide -->
+            <div class="help-section">
+                <div class="help-card">
+                    <i class="fas fa-question-circle"></i>
+                    <div>
+                        <h4>Où trouver mon numéro de transaction ?</h4>
+                        <p>Après votre paiement KKiaPay, vous avez reçu un SMS et/ou un email contenant le numéro de transaction (format: kkiapay_xxxxx).</p>
+                    </div>
+                </div>
+
+                <div class="help-card">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <h4>Combien de temps prend l'activation ?</h4>
+                        <p>Une fois la transaction vérifiée, votre compte Premium est activé instantanément.</p>
+                    </div>
+                </div>
+
+                <div class="help-card">
+                    <i class="fas fa-headset"></i>
+                    <div>
+                        <h4>Besoin d'aide ?</h4>
+                        <p>Notre équipe est disponible 24/7. <a href="contact.html">Contactez-nous</a></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="auth-footer">
+                <p>Problème non résolu ?</p>
+                <a href="contact.html" class="switch-link">
+                    Contacter le support
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="auth-features">
+            <div class="feature">
+                <i class="fas fa-shield-check"></i>
+                <span>Paiement sécurisé</span>
+            </div>
+            <div class="feature">
+                <i class="fas fa-bolt"></i>
+                <span>Activation instantanée</span>
+            </div>
+            <div class="feature">
+                <i class="fas fa-support"></i>
+                <span>Support 24/7</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/recover-transaction.js"></script>
+</body>
+</html>
