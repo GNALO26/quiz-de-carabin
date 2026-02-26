@@ -4,376 +4,481 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mentions Légales - Quiz de Carabin</title>
-    <link rel="stylesheet" href="css/legal.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/global.css">
-    
-    
+    <link rel="stylesheet" href="css/legal-pages.css">
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="index.html" class="nav-brand">
-                <i class="fas fa-graduation-cap"></i>
-                <span>Quiz de Carabin</span>
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-graduation-cap me-2"></i>Quiz de Carabin
             </a>
-            <ul class="nav-menu">
-                <li><a href="index.html"><i class="fas fa-home"></i> Accueil</a></li>
-                <li><a href="contact.html"><i class="fas fa-envelope"></i> Contact</a></li>
-            </ul>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Accueil</a></li>
+                    <li class="nav-item"><a class="nav-link" href="quiz.html">Quiz</a></li>
+                    <li class="nav-item"><a class="nav-link" href="about.html">À propos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
+                </ul>
+            </div>
         </div>
     </nav>
 
+    <!-- Hero Section -->
+    <section class="legal-hero">
+        <div class="container">
+            <div class="legal-hero-content">
+                <i class="fas fa-scale-balanced hero-icon"></i>
+                <h1 class="display-4">Mentions Légales</h1>
+                <p class="lead">Informations légales et réglementaires</p>
+                <p class="last-update"><i class="fas fa-calendar-alt me-2"></i>Dernière mise à jour : 25 février 2026</p>
+            </div>
+        </div>
+    </section>
+
     <!-- Main Content -->
-    <main class="legal-page">
-        <div class="legal-container">
-            <!-- Header -->
-            <header class="legal-header">
-                <h1><i class="fas fa-scale-balanced"></i> Mentions Légales</h1>
-                <p class="last-update">Dernière mise à jour : 25 février 2026</p>
-            </header>
+    <main class="legal-content">
+        <div class="container">
+            <div class="row">
+                <!-- Sidebar Navigation -->
+                <div class="col-lg-3 d-none d-lg-block">
+                    <div class="sidebar-nav sticky-top">
+                        <h5>Navigation</h5>
+                        <ul class="nav flex-column">
+                            <li><a href="#editeur">Éditeur du site</a></li>
+                            <li><a href="#hebergeur">Hébergement</a></li>
+                            <li><a href="#propriete">Propriété intellectuelle</a></li>
+                            <li><a href="#donnees">Données personnelles</a></li>
+                            <li><a href="#cookies">Cookies</a></li>
+                            <li><a href="#responsabilite">Responsabilité</a></li>
+                            <li><a href="#contact">Contact</a></li>
+                        </ul>
+                    </div>
+                </div>
 
-            <!-- Quick Links -->
-            <nav class="legal-nav">
-                <h3>Navigation rapide</h3>
-                <ul>
-                    <li><a href="#editeur">1. Éditeur du site</a></li>
-                    <li><a href="#hebergeur">2. Hébergement</a></li>
-                    <li><a href="#propriete">3. Propriété intellectuelle</a></li>
-                    <li><a href="#donnees">4. Données personnelles</a></li>
-                    <li><a href="#cookies">5. Cookies</a></li>
-                    <li><a href="#responsabilite">6. Responsabilité</a></li>
-                    <li><a href="#contact">7. Contact</a></li>
-                </ul>
-            </nav>
-
-            <!-- Content -->
-            <div class="legal-content">
-                
-                <!-- Section 1 -->
-                <section id="editeur" class="legal-section">
-                    <h2><i class="fas fa-building"></i> 1. Éditeur du site</h2>
-                    <div class="section-content">
-                        <p>Le site <strong>Quiz de Carabin</strong> est édité par :</p>
+                <!-- Content -->
+                <div class="col-lg-9">
+                    <div class="legal-document">
                         
-                        <div class="info-box">
-                            <p><strong>Raison sociale :</strong> Quiz de Carabin</p>
-                            <p><strong>Forme juridique :</strong> [À compléter - Ex: Auto-entrepreneur / SARL / SAS]</p>
-                            <p><strong>Siège social :</strong> [À compléter - Adresse complète]</p>
-                            <p><strong>Pays :</strong> [À compléter - Ex: Bénin / Côte d'Ivoire / Sénégal / Togo]</p>
-                            <p><strong>Email :</strong> contact@quizdecarabin.com</p>
-                            <p><strong>Téléphone :</strong> [À compléter]</p>
-                            <p><strong>Numéro d'immatriculation :</strong> [À compléter - RCCM ou équivalent]</p>
-                        </div>
+                        <!-- Section 1 -->
+                        <section id="editeur" class="doc-section">
+                            <h2><i class="fas fa-building me-2"></i>Éditeur du site</h2>
+                            <div class="section-content">
+                                <p>Le site <strong>Quiz de Carabin</strong> est édité par :</p>
+                                
+                                <div class="highlight-box">
+                                    <p><strong>Raison sociale :</strong> Quiz du Carabin</p>
+                                    <p><strong>Forme juridique :</strong> Projet numérique éducatif indépendant</p>
+                                    <p><strong>Siège social :</strong> [À compléter - Adresse complète]</p>
+                                    <p><strong>Pays :</strong> Bénin</p>
+                                    <p><strong>Email :</strong> <a href="mailto:contactquizdecarabin@gmail.com">contactquizdecarabin@gmail.com</a></p>
+                                    <p><strong>Téléphone :</strong> [À compléter]</p>
+                                </div>
 
-                        <p><strong>Directeur de la publication :</strong> [À compléter - Nom du responsable légal]</p>
-                    </div>
-                </section>
+                                <p><strong>Directeur de la publication :</strong> [À compléter - Nom du responsable légal]</p>
+                            </div>
+                        </section>
 
-                <!-- Section 2 -->
-                <section id="hebergeur" class="legal-section">
-                    <h2><i class="fas fa-server"></i> 2. Hébergement</h2>
-                    <div class="section-content">
-                        <h3>Frontend (Site web)</h3>
-                        <div class="info-box">
-                            <p><strong>Hébergeur :</strong> Netlify, Inc.</p>
-                            <p><strong>Adresse :</strong> 44 Montgomery Street, Suite 300, San Francisco, CA 94104, USA</p>
-                            <p><strong>Site web :</strong> <a href="https://www.netlify.com" target="_blank">www.netlify.com</a></p>
-                        </div>
+                        <!-- Section 2 -->
+                        <section id="hebergeur" class="doc-section">
+                            <h2><i class="fas fa-server me-2"></i>Hébergement</h2>
+                            <div class="section-content">
+                                <h4>Frontend (Site web)</h4>
+                                <div class="info-card">
+                                    <h5><i class="fas fa-globe me-2"></i>Netlify</h5>
+                                    <p><strong>Hébergeur :</strong> Netlify, Inc.</p>
+                                    <p><strong>Site web :</strong> <a href="https://www.netlify.com" target="_blank">www.netlify.com</a></p>
+                                </div>
 
-                        <h3>Backend (Serveur API)</h3>
-                        <div class="info-box">
-                            <p><strong>Hébergeur :</strong> Render Services, Inc.</p>
-                            <p><strong>Adresse :</strong> 525 Brannan Street, Suite 300, San Francisco, CA 94107, USA</p>
-                            <p><strong>Site web :</strong> <a href="https://render.com" target="_blank">render.com</a></p>
-                        </div>
+                                <h4>Backend (Serveur API)</h4>
+                                <div class="info-card">
+                                    <h5><i class="fas fa-server me-2"></i>Render</h5>
+                                    <p><strong>Hébergeur :</strong> Render Services, Inc.</p>
+                                    <p><strong>Adresse :</strong> 525 Brannan Street, Suite 300, San Francisco, CA 94107, USA</p>
+                                    <p><strong>Site web :</strong> <a href="https://render.com" target="_blank">render.com</a></p>
+                                </div>
 
-                        <h3>Base de données</h3>
-                        <div class="info-box">
-                            <p><strong>Service :</strong> MongoDB Atlas</p>
-                            <p><strong>Fournisseur :</strong> MongoDB, Inc.</p>
-                            <p><strong>Adresse :</strong> 1633 Broadway, 38th Floor, New York, NY 10019, USA</p>
-                            <p><strong>Site web :</strong> <a href="https://www.mongodb.com" target="_blank">www.mongodb.com</a></p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Section 3 -->
-                <section id="propriete" class="legal-section">
-                    <h2><i class="fas fa-copyright"></i> 3. Propriété intellectuelle</h2>
-                    <div class="section-content">
-                        <p>L'ensemble du contenu présent sur le site <strong>Quiz de Carabin</strong> (textes, images, graphismes, logo, icônes, sons, logiciels, etc.) est la propriété exclusive de Quiz de Carabin, à l'exception des marques, logos ou contenus appartenant à d'autres sociétés partenaires ou auteurs.</p>
-
-                        <h3>Quiz et contenu pédagogique</h3>
-                        <p>Les quiz, questions et contenus pédagogiques sont la propriété de Quiz de Carabin. Toute reproduction, représentation, modification, publication, adaptation de tout ou partie des éléments du site, quel que soit le moyen ou le procédé utilisé, est interdite, sauf autorisation écrite préalable.</p>
-
-                        <h3>Utilisation autorisée</h3>
-                        <p>L'utilisation du site et de son contenu est strictement réservée à un usage personnel et non commercial. Les utilisateurs s'engagent à :</p>
-                        <ul>
-                            <li>Ne pas copier, reproduire ou distribuer le contenu</li>
-                            <li>Ne pas créer de sites miroirs ou copier la structure</li>
-                            <li>Ne pas vendre ou commercialiser le contenu</li>
-                            <li>Respecter les droits d'auteur</li>
-                        </ul>
-
-                        <h3>Marque déposée</h3>
-                        <p>Le nom "Quiz de Carabin" ainsi que le logo sont des marques déposées. Toute utilisation non autorisée constitue une contrefaçon.</p>
-                    </div>
-                </section>
-
-                <!-- Section 4 -->
-                <section id="donnees" class="legal-section">
-                    <h2><i class="fas fa-shield-halved"></i> 4. Données personnelles</h2>
-                    <div class="section-content">
-                        <p>Conformément au Règlement Général sur la Protection des Données (RGPD) et aux lois locales applicables, Quiz de Carabin s'engage à protéger vos données personnelles.</p>
-
-                        <h3>Données collectées</h3>
-                        <p>Lors de votre inscription et utilisation du site, nous collectons :</p>
-                        <ul>
-                            <li>Nom et prénom</li>
-                            <li>Adresse email</li>
-                            <li>Mot de passe (chiffré)</li>
-                            <li>Université et année d'étude</li>
-                            <li>Statistiques d'utilisation (quiz complétés, scores)</li>
-                            <li>Données de paiement (via KKiaPay - non stockées par nous)</li>
-                        </ul>
-
-                        <h3>Utilisation des données</h3>
-                        <p>Vos données sont utilisées pour :</p>
-                        <ul>
-                            <li>Gérer votre compte utilisateur</li>
-                            <li>Personnaliser votre expérience</li>
-                            <li>Vous envoyer des emails de notification</li>
-                            <li>Traiter vos paiements Premium</li>
-                            <li>Améliorer nos services</li>
-                            <li>Respecter nos obligations légales</li>
-                        </ul>
-
-                        <h3>Vos droits</h3>
-                        <p>Conformément à la loi, vous disposez des droits suivants :</p>
-                        <ul>
-                            <li><strong>Droit d'accès :</strong> Obtenir une copie de vos données</li>
-                            <li><strong>Droit de rectification :</strong> Corriger vos données inexactes</li>
-                            <li><strong>Droit à l'effacement :</strong> Supprimer vos données</li>
-                            <li><strong>Droit à la portabilité :</strong> Récupérer vos données dans un format structuré</li>
-                            <li><strong>Droit d'opposition :</strong> Vous opposer au traitement de vos données</li>
-                        </ul>
-
-                        <p>Pour exercer ces droits, contactez-nous à : <strong>privacy@quizdecarabin.com</strong></p>
-
-                        <h3>Conservation des données</h3>
-                        <p>Vos données sont conservées :</p>
-                        <ul>
-                            <li>Compte actif : Tant que votre compte existe</li>
-                            <li>Compte inactif : 3 ans d'inactivité puis suppression</li>
-                            <li>Données de paiement : 5 ans (obligation légale)</li>
-                        </ul>
-
-                        <h3>Sécurité</h3>
-                        <p>Nous mettons en œuvre des mesures techniques et organisationnelles pour protéger vos données :</p>
-                        <ul>
-                            <li>Chiffrement des mots de passe (bcrypt)</li>
-                            <li>Connexion HTTPS/SSL</li>
-                            <li>Sauvegardes régulières</li>
-                            <li>Accès restreint aux données</li>
-                        </ul>
-
-                        <div class="info-box warning">
-                            <p><strong>⚠️ Important :</strong> Pour plus de détails sur la protection de vos données, consultez notre <a href="politique-confidentialite.html">Politique de Confidentialité</a>.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Section 5 -->
-                <section id="cookies" class="legal-section">
-                    <h2><i class="fas fa-cookie-bite"></i> 5. Cookies</h2>
-                    <div class="section-content">
-                        <p>Le site Quiz de Carabin utilise des cookies pour améliorer votre expérience de navigation.</p>
-
-                        <h3>Qu'est-ce qu'un cookie ?</h3>
-                        <p>Un cookie est un petit fichier texte stocké sur votre appareil lors de votre visite sur un site web.</p>
-
-                        <h3>Types de cookies utilisés</h3>
-                        
-                        <div class="cookie-type">
-                            <h4>🔹 Cookies essentiels (obligatoires)</h4>
-                            <p>Ces cookies sont nécessaires au fonctionnement du site :</p>
-                            <ul>
-                                <li>Session utilisateur (token JWT)</li>
-                                <li>Préférences de langue</li>
-                                <li>Sécurité et prévention des fraudes</li>
-                            </ul>
-                        </div>
-
-                        <div class="cookie-type">
-                            <h4>🔹 Cookies de performance</h4>
-                            <p>Ces cookies nous aident à analyser l'utilisation du site :</p>
-                            <ul>
-                                <li>Statistiques de visite</li>
-                                <li>Pages les plus consultées</li>
-                                <li>Temps de chargement</li>
-                            </ul>
-                        </div>
-
-                        <div class="cookie-type">
-                            <h4>🔹 Cookies fonctionnels</h4>
-                            <p>Ces cookies améliorent votre expérience :</p>
-                            <ul>
-                                <li>Préférences d'affichage</li>
-                                <li>Dernière université sélectionnée</li>
-                                <li>Progression dans les quiz</li>
-                            </ul>
-                        </div>
-
-                        <h3>Gestion des cookies</h3>
-                        <p>Vous pouvez configurer votre navigateur pour refuser les cookies :</p>
-                        <ul>
-                            <li><strong>Chrome :</strong> Paramètres > Confidentialité > Cookies</li>
-                            <li><strong>Firefox :</strong> Options > Vie privée > Cookies</li>
-                            <li><strong>Safari :</strong> Préférences > Confidentialité</li>
-                        </ul>
-
-                        <div class="info-box warning">
-                            <p><strong>⚠️ Attention :</strong> La désactivation des cookies essentiels peut empêcher l'utilisation de certaines fonctionnalités du site.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Section 6 -->
-                <section id="responsabilite" class="legal-section">
-                    <h2><i class="fas fa-triangle-exclamation"></i> 6. Limitation de responsabilité</h2>
-                    <div class="section-content">
-                        <h3>Contenu pédagogique</h3>
-                        <p>Quiz de Carabin s'efforce de fournir un contenu médical exact et à jour. Cependant :</p>
-                        <ul>
-                            <li>Le contenu est fourni à titre <strong>informatif et pédagogique uniquement</strong></li>
-                            <li>Il ne remplace pas l'enseignement officiel de votre faculté</li>
-                            <li>Il ne constitue pas un conseil médical professionnel</li>
-                            <li>Nous ne garantissons pas l'exactitude à 100% de toutes les informations</li>
-                        </ul>
-
-                        <h3>Disponibilité du service</h3>
-                        <p>Nous nous efforçons d'assurer un accès continu au site. Cependant :</p>
-                        <ul>
-                            <li>Des interruptions peuvent survenir (maintenance, bugs techniques)</li>
-                            <li>Nous ne garantissons pas un service sans interruption</li>
-                            <li>Nous ne sommes pas responsables des dommages liés à l'indisponibilité</li>
-                        </ul>
-
-                        <h3>Liens externes</h3>
-                        <p>Le site peut contenir des liens vers des sites tiers. Nous ne sommes pas responsables du contenu de ces sites externes.</p>
-
-                        <h3>Utilisation à vos risques</h3>
-                        <p>L'utilisateur reconnaît utiliser le site à ses propres risques et sous sa responsabilité exclusive.</p>
-
-                        <div class="info-box warning">
-                            <p><strong>🏥 Disclaimer médical :</strong> Quiz de Carabin est un outil d'apprentissage pour étudiants en médecine. En cas de doute médical réel, consultez toujours un professionnel de santé qualifié.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Section 7 -->
-                <section id="contact" class="legal-section">
-                    <h2><i class="fas fa-envelope"></i> 7. Nous contacter</h2>
-                    <div class="section-content">
-                        <p>Pour toute question concernant les mentions légales, la protection des données ou l'utilisation du site :</p>
-
-                        <div class="contact-box">
-                            <div class="contact-item">
-                                <i class="fas fa-envelope"></i>
-                                <div>
-                                    <strong>Email général :</strong>
-                                    <a href="mailto:contact@quizdecarabin.com">contact@quizdecarabin.com</a>
+                                <h4>Base de données</h4>
+                                <div class="info-card">
+                                    <h5><i class="fas fa-database me-2"></i>MongoDB Atlas</h5>
+                                    <p><strong>Service :</strong> MongoDB Atlas</p>
+                                    <p><strong>Fournisseur :</strong> MongoDB, Inc.</p>
+                                    <p><strong>Site web :</strong> <a href="https://www.mongodb.com" target="_blank">www.mongodb.com</a></p>
                                 </div>
                             </div>
+                        </section>
 
-                            <div class="contact-item">
-                                <i class="fas fa-shield-halved"></i>
-                                <div>
-                                    <strong>Données personnelles :</strong>
-                                    <a href="mailto:privacy@quizdecarabin.com">privacy@quizdecarabin.com</a>
+                        <!-- Section 3 -->
+                        <section id="propriete" class="doc-section">
+                            <h2><i class="fas fa-copyright me-2"></i>Propriété Intellectuelle</h2>
+                            <div class="section-content">
+                                <p>L'ensemble du contenu présent sur le site <strong>Quiz de Carabin</strong> (textes, images, graphismes, logo, icônes, logiciels, etc.) est la propriété exclusive de Quiz de Carabin, à l'exception des marques, logos ou contenus appartenant à d'autres sociétés partenaires ou auteurs.</p>
+
+                                <h4>Quiz et contenu pédagogique</h4>
+                                <p>Les quiz, questions et contenus pédagogiques sont la propriété de Quiz de Carabin. Toute reproduction, représentation, modification, publication, adaptation de tout ou partie des éléments du site, quel que soit le moyen ou le procédé utilisé, est interdite, sauf autorisation écrite préalable.</p>
+
+                                <h4>Utilisation autorisée</h4>
+                                <div class="allowed-box">
+                                    <h5><i class="fas fa-check-circle text-success me-2"></i>Vous POUVEZ :</h5>
+                                    <ul>
+                                        <li>Utiliser le site pour votre formation personnelle</li>
+                                        <li>Partager vos résultats sur les réseaux sociaux</li>
+                                        <li>Recommander Quiz de Carabin</li>
+                                        <li>Imprimer du contenu pour usage personnel</li>
+                                    </ul>
+                                </div>
+
+                                <div class="forbidden-box mt-3">
+                                    <h5><i class="fas fa-times-circle text-danger me-2"></i>Vous NE POUVEZ PAS :</h5>
+                                    <ul>
+                                        <li>Copier, reproduire ou distribuer le contenu</li>
+                                        <li>Créer des sites miroirs</li>
+                                        <li>Vendre ou commercialiser le contenu</li>
+                                        <li>Utiliser à des fins commerciales sans autorisation</li>
+                                    </ul>
+                                </div>
+
+                                <h4>Marque déposée</h4>
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-trademark me-2"></i>
+                                    Le nom "Quiz de Carabin" ainsi que le logo sont des marques déposées. Toute utilisation non autorisée constitue une contrefaçon.
                                 </div>
                             </div>
+                        </section>
 
-                            <div class="contact-item">
-                                <i class="fas fa-scale-balanced"></i>
-                                <div>
-                                    <strong>Questions juridiques :</strong>
-                                    <a href="mailto:legal@quizdecarabin.com">legal@quizdecarabin.com</a>
+                        <!-- Section 4 -->
+                        <section id="donnees" class="doc-section">
+                            <h2><i class="fas fa-shield-halved me-2"></i>Données Personnelles</h2>
+                            <div class="section-content">
+                                <p>Conformément au Règlement Général sur la Protection des Données (RGPD) et aux lois locales applicables, Quiz de Carabin s'engage à protéger vos données personnelles.</p>
+
+                                <h4>Données collectées</h4>
+                                <div class="info-card">
+                                    <p>Lors de votre inscription et utilisation du site, nous collectons :</p>
+                                    <ul>
+                                        <li><strong>Identification :</strong> Nom, prénom, email</li>
+                                        <li><strong>Sécurité :</strong> Mot de passe (chiffré bcrypt)</li>
+                                        <li><strong>Profil :</strong> Université, année d'étude</li>
+                                        <li><strong>Utilisation :</strong> Quiz complétés, scores, statistiques</li>
+                                        <li><strong>Paiement :</strong> Via KKiaPay (non stockées par nous)</li>
+                                    </ul>
+                                </div>
+
+                                <h4>Utilisation des données</h4>
+                                <div class="row g-3 mt-2">
+                                    <div class="col-md-6">
+                                        <div class="purpose-card">
+                                            <i class="fas fa-user-check"></i>
+                                            <h5>Gestion compte</h5>
+                                            <p>Créer et gérer votre profil</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="purpose-card">
+                                            <i class="fas fa-chart-line"></i>
+                                            <h5>Personnalisation</h5>
+                                            <p>Adapter le contenu à votre profil</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="purpose-card">
+                                            <i class="fas fa-envelope"></i>
+                                            <h5>Communications</h5>
+                                            <p>Notifications et rappels</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="purpose-card">
+                                            <i class="fas fa-credit-card"></i>
+                                            <h5>Paiements</h5>
+                                            <p>Traiter abonnement Premium</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4>Vos droits</h4>
+                                <div class="rights-grid">
+                                    <div class="right-item">
+                                        <i class="fas fa-eye"></i>
+                                        <h5>Droit d'accès</h5>
+                                        <p>Obtenir une copie de vos données</p>
+                                    </div>
+                                    <div class="right-item">
+                                        <i class="fas fa-pen"></i>
+                                        <h5>Droit de rectification</h5>
+                                        <p>Corriger données inexactes</p>
+                                    </div>
+                                    <div class="right-item">
+                                        <i class="fas fa-trash"></i>
+                                        <h5>Droit à l'effacement</h5>
+                                        <p>Supprimer vos données</p>
+                                    </div>
+                                    <div class="right-item">
+                                        <i class="fas fa-download"></i>
+                                        <h5>Droit à la portabilité</h5>
+                                        <p>Récupérer format structuré</p>
+                                    </div>
+                                    <div class="right-item">
+                                        <i class="fas fa-ban"></i>
+                                        <h5>Droit d'opposition</h5>
+                                        <p>S'opposer au traitement</p>
+                                    </div>
+                                </div>
+
+                                <div class="action-box mt-4">
+                                    <h5>Exercer vos droits</h5>
+                                    <p>Contactez-nous par email :</p>
+                                    <a href="mailto:privacy4.quizdecarabin@gmail.com" class="btn btn-primary">
+                                        <i class="fas fa-envelope me-2"></i>privacy4.quizdecarabin@gmail.com
+                                    </a>
+                                    <p class="mt-3 mb-0"><small>Réponse sous 30 jours maximum</small></p>
+                                </div>
+
+                                <h4>Conservation des données</h4>
+                                <div class="timeline">
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker active"></div>
+                                        <div class="timeline-content">
+                                            <h5>Compte actif</h5>
+                                            <p>Conservation tant que le compte existe</p>
+                                        </div>
+                                    </div>
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker"></div>
+                                        <div class="timeline-content">
+                                            <h5>Après 3 ans d'inactivité</h5>
+                                            <p>Suppression automatique du compte</p>
+                                        </div>
+                                    </div>
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker"></div>
+                                        <div class="timeline-content">
+                                            <h5>Données paiement</h5>
+                                            <p>10 ans (obligation légale)</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4>Sécurité</h4>
+                                <div class="row g-3 mt-2">
+                                    <div class="col-md-4">
+                                        <div class="security-item">
+                                            <i class="fas fa-key"></i>
+                                            <h6>Chiffrement</h6>
+                                            <p>Mots de passe bcrypt</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="security-item">
+                                            <i class="fas fa-certificate"></i>
+                                            <h6>SSL/TLS</h6>
+                                            <p>Connexion HTTPS</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="security-item">
+                                            <i class="fas fa-cloud-arrow-up"></i>
+                                            <h6>Sauvegardes</h6>
+                                            <p>Backups réguliers</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info mt-4">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Pour plus de détails, consultez notre <a href="politique-confidentialite.html">Politique de Confidentialité</a> complète.
                                 </div>
                             </div>
+                        </section>
 
-                            <div class="contact-item">
-                                <i class="fas fa-headset"></i>
-                                <div>
-                                    <strong>Support technique :</strong>
-                                    <a href="mailto:support@quizdecarabin.com">support@quizdecarabin.com</a>
+                        <!-- Section 5 -->
+                        <section id="cookies" class="doc-section">
+                            <h2><i class="fas fa-cookie-bite me-2"></i>Cookies</h2>
+                            <div class="section-content">
+                                <p>Le site Quiz de Carabin utilise des cookies pour améliorer votre expérience.</p>
+
+                                <h4>Qu'est-ce qu'un cookie ?</h4>
+                                <p>Un cookie est un petit fichier texte stocké sur votre appareil lors de votre visite sur un site web.</p>
+
+                                <div class="cookie-summary">
+                                    <div class="cookie-type">
+                                        <h5><i class="fas fa-check-circle text-success me-2"></i>Cookies essentiels</h5>
+                                        <p>Nécessaires au fonctionnement (session, sécurité)</p>
+                                        <span class="badge bg-success">Toujours actifs</span>
+                                    </div>
+                                    <div class="cookie-type">
+                                        <h5><i class="fas fa-toggle-on text-primary me-2"></i>Cookies fonctionnels</h5>
+                                        <p>Préférences d'affichage, dernière université</p>
+                                        <span class="badge bg-primary">Configurables</span>
+                                    </div>
+                                    <div class="cookie-type">
+                                        <h5><i class="fas fa-chart-bar text-info me-2"></i>Cookies analytiques</h5>
+                                        <p>Statistiques d'utilisation anonymes</p>
+                                        <span class="badge bg-info">Configurables</span>
+                                    </div>
                                 </div>
+
+                                <h4>Gestion des cookies</h4>
+                                <div class="info-card">
+                                    <p>Vous pouvez configurer votre navigateur pour refuser les cookies :</p>
+                                    <ul>
+                                        <li><strong>Chrome :</strong> Paramètres → Confidentialité → Cookies</li>
+                                        <li><strong>Firefox :</strong> Options → Vie privée → Cookies</li>
+                                        <li><strong>Safari :</strong> Préférences → Confidentialité</li>
+                                    </ul>
+                                </div>
+
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    La désactivation des cookies essentiels peut empêcher l'utilisation de certaines fonctionnalités.
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Section 6 -->
+                        <section id="responsabilite" class="doc-section">
+                            <h2><i class="fas fa-triangle-exclamation me-2"></i>Limitation de Responsabilité</h2>
+                            <div class="section-content">
+                                <div class="disclaimer-box">
+                                    <h5><i class="fas fa-exclamation me-2"></i>Disclaimer Important</h5>
+                                    <p><strong>Quiz de Carabin est un outil d'apprentissage et de révision.</strong></p>
+                                    <ul>
+                                        <li>Le contenu est fourni à titre <strong>informatif et pédagogique</strong></li>
+                                        <li>Il ne remplace pas l'enseignement officiel</li>
+                                        <li>Il ne constitue pas un conseil médical professionnel</li>
+                                        <li>Nous ne garantissons pas la réussite aux examens</li>
+                                    </ul>
+                                </div>
+
+                                <h4>Exactitude du contenu</h4>
+                                <p>Bien que nous nous efforçons de fournir un contenu exact :</p>
+                                <ul>
+                                    <li>Des erreurs peuvent subsister</li>
+                                    <li>Les informations médicales évoluent constamment</li>
+                                    <li>Vérifiez toujours avec vos sources officielles</li>
+                                </ul>
+
+                                <h4>Disponibilité du service</h4>
+                                <div class="alert alert-info">
+                                    <p><strong>Nous nous efforçons d'assurer un service continu, mais :</strong></p>
+                                    <ul class="mb-0">
+                                        <li>Des interruptions peuvent survenir (maintenance, bugs)</li>
+                                        <li>Nous ne garantissons pas un service sans interruption</li>
+                                        <li>Nous ne sommes pas responsables des dommages liés</li>
+                                    </ul>
+                                </div>
+
+                                <h4>Liens externes</h4>
+                                <p>Le site peut contenir des liens vers des sites tiers. Nous ne sommes pas responsables de leur contenu.</p>
+                            </div>
+                        </section>
+
+                        <!-- Section 7 -->
+                        <section id="contact" class="doc-section">
+                            <h2><i class="fas fa-envelope me-2"></i>Nous Contacter</h2>
+                            <div class="section-content">
+                                <p>Pour toute question concernant les mentions légales :</p>
+
+                                <div class="contact-cards">
+                                    <div class="contact-card">
+                                        <i class="fas fa-envelope"></i>
+                                        <h5>Contact général</h5>
+                                        <a href="mailto:contactquizdecarabin@gmail.com">contactquizdecarabin@gmail.com</a>
+                                    </div>
+                                    <div class="contact-card">
+                                        <i class="fas fa-shield-halved"></i>
+                                        <h5>Données personnelles</h5>
+                                        <a href="mailto:privacy4.quizdecarabin@gmail.com">privacy4.quizdecarabin@gmail.com</a>
+                                    </div>
+                                    <div class="contact-card">
+                                        <i class="fas fa-scale-balanced"></i>
+                                        <h5>Questions juridiques</h5>
+                                        <a href="mailto:legalquizdecarabin@gmail.com">legalquizdecarabin@gmail.com</a>
+                                    </div>
+                                    <div class="contact-card">
+                                        <i class="fas fa-headset"></i>
+                                        <h5>Support technique</h5>
+                                        <a href="mailto:supquizdecarabin@gmail.com">supquizdecarabin@gmail.com</a>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-success mt-4">
+                                    <i class="fas fa-clock me-2"></i>
+                                    Nous nous engageons à répondre dans un délai de <strong>72 heures ouvrées</strong>.
+                                </div>
+                            </div>
+                        </section>
+
+                    </div>
+
+                    <!-- Related Documents -->
+                    <div class="related-docs mt-5">
+                        <h4 class="mb-4">Documents connexes</h4>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <a href="politique-confidentialite.html" class="doc-link-card">
+                                    <i class="fas fa-shield-halved"></i>
+                                    <span>Politique de Confidentialité</span>
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="conditions-utilisation.html" class="doc-link-card">
+                                    <i class="fas fa-file-contract"></i>
+                                    <span>Conditions d'Utilisation</span>
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="cgv.html" class="doc-link-card">
+                                    <i class="fas fa-file-invoice"></i>
+                                    <span>CGV Premium</span>
+                                </a>
                             </div>
                         </div>
-
-                        <p class="response-time">Nous nous engageons à répondre dans un délai de <strong>72 heures ouvrées</strong>.</p>
                     </div>
-                </section>
-
-                <!-- Footer Section -->
-                <section class="legal-footer-section">
-                    <h3>Documents liés</h3>
-                    <div class="related-docs">
-                        <a href="politique-confidentialite.html" class="doc-link">
-                            <i class="fas fa-file-shield"></i>
-                            <span>Politique de Confidentialité</span>
-                        </a>
-                        <a href="conditions-utilisation.html" class="doc-link">
-                            <i class="fas fa-file-contract"></i>
-                            <span>Conditions Générales d'Utilisation</span>
-                        </a>
-                        <a href="cgv.html" class="doc-link">
-                            <i class="fas fa-file-invoice"></i>
-                            <span>Conditions Générales de Vente</span>
-                        </a>
-                    </div>
-                </section>
-
+                </div>
             </div>
         </div>
     </main>
 
     <!-- Footer -->
-    <footer class="site-footer">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3>Quiz de Carabin</h3>
-                <p>La plateforme e-learning pour les étudiants en médecine d'Afrique de l'Ouest</p>
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h4>Quiz de Carabin</h4>
+                    <p>La plateforme e-learning pour les étudiants en médecine d'Afrique de l'Ouest</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>Liens rapides</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="about.html">À propos</a></li>
+                        <li><a href="quiz.html">Quiz</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Légal</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="mentions-legales.html">Mentions Légales</a></li>
+                        <li><a href="politique-confidentialite.html">Politique de Confidentialité</a></li>
+                        <li><a href="conditions-utilisation.html">CGU</a></li>
+                        <li><a href="cgv.html">CGV</a></li>
+                    </ul>
+                </div>
             </div>
-
-            <div class="footer-section">
-                <h4>Légal</h4>
-                <ul>
-                    <li><a href="mentions-legales.html">Mentions Légales</a></li>
-                    <li><a href="politique-confidentialite.html">Politique de Confidentialité</a></li>
-                    <li><a href="conditions-utilisation.html">CGU</a></li>
-                    <li><a href="cgv.html">CGV</a></li>
-                </ul>
+            <div class="text-center mt-4">
+                <p>&copy; 2025 Quiz de Carabin. Tous droits réservés.</p>
             </div>
-
-            <div class="footer-section">
-                <h4>Contact</h4>
-                <ul>
-                    <li><a href="mailto:contact@quizdecarabin.com">contact@quizdecarabin.com</a></li>
-                    <li><a href="contact.html">Formulaire de contact</a></li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="footer-bottom">
-            <p>&copy; 2026 Quiz de Carabin. Tous droits réservés.</p>
         </div>
     </footer>
 
-    <script src="js/navbar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
