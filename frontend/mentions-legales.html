@@ -4,57 +4,376 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mentions Légales - Quiz de Carabin</title>
+    <link rel="stylesheet" href="css/legal.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/global.css">
+    
+    
 </head>
 <body>
-    <div class="container">
-        <h1>Mentions Légales</h1>
-        
-        <h2>Éditeur du Site</h2>
-        <p>
-            <strong>Nom :</strong> Quiz de Carabin<br>
-            <strong>Forme juridique :</strong> [À compléter]<br>
-            <strong>Siège social :</strong> [Adresse]<br>
-            <strong>Email :</strong> contact@quizdecarabin.com<br>
-            <strong>Numéro RCCM :</strong> [Si enregistré]
-        </p>
-        
-        <h2>Hébergement</h2>
-        <p>
-            <strong>Netlify, Inc.</strong><br>
-            2325 3rd Street, Suite 296<br>
-            San Francisco, CA 94107, USA<br>
-            Site web: https://www.netlify.com
-        </p>
-        
-        <p>
-            <strong>Render Services, Inc.</strong> (Backend)<br>
-            525 Brannan Street<br>
-            San Francisco, CA 94107, USA<br>
-            Site web: https://render.com
-        </p>
-        
-        <h2>Propriété Intellectuelle</h2>
-        <p>
-            L'ensemble du contenu de ce site (textes, quiz, images, logos) est la 
-            propriété exclusive de Quiz de Carabin, sauf mention contraire.
-            Toute reproduction est interdite sans autorisation préalable.
-        </p>
-        
-        <h2>Données Personnelles</h2>
-        <p>
-            Conformément à la loi relative à la protection des données personnelles,
-            vous disposez d'un droit d'accès, de rectification et de suppression
-            des données vous concernant.
-        </p>
-        
-        <h2>Droit Applicable</h2>
-        <p>
-            Le présent site est soumis au droit de l'OHADA (Organisation pour 
-            l'Harmonisation en Afrique du Droit des Affaires).
-        </p>
-    </div>
-    
-    <!-- Copier le footer ici -->
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Quiz de Carabin</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="index.html"><i class="fas fa-home"></i> Accueil</a></li>
+                <li><a href="contact.html"><i class="fas fa-envelope"></i> Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="legal-page">
+        <div class="legal-container">
+            <!-- Header -->
+            <header class="legal-header">
+                <h1><i class="fas fa-scale-balanced"></i> Mentions Légales</h1>
+                <p class="last-update">Dernière mise à jour : 25 février 2026</p>
+            </header>
+
+            <!-- Quick Links -->
+            <nav class="legal-nav">
+                <h3>Navigation rapide</h3>
+                <ul>
+                    <li><a href="#editeur">1. Éditeur du site</a></li>
+                    <li><a href="#hebergeur">2. Hébergement</a></li>
+                    <li><a href="#propriete">3. Propriété intellectuelle</a></li>
+                    <li><a href="#donnees">4. Données personnelles</a></li>
+                    <li><a href="#cookies">5. Cookies</a></li>
+                    <li><a href="#responsabilite">6. Responsabilité</a></li>
+                    <li><a href="#contact">7. Contact</a></li>
+                </ul>
+            </nav>
+
+            <!-- Content -->
+            <div class="legal-content">
+                
+                <!-- Section 1 -->
+                <section id="editeur" class="legal-section">
+                    <h2><i class="fas fa-building"></i> 1. Éditeur du site</h2>
+                    <div class="section-content">
+                        <p>Le site <strong>Quiz de Carabin</strong> est édité par :</p>
+                        
+                        <div class="info-box">
+                            <p><strong>Raison sociale :</strong> Quiz de Carabin</p>
+                            <p><strong>Forme juridique :</strong> [À compléter - Ex: Auto-entrepreneur / SARL / SAS]</p>
+                            <p><strong>Siège social :</strong> [À compléter - Adresse complète]</p>
+                            <p><strong>Pays :</strong> [À compléter - Ex: Bénin / Côte d'Ivoire / Sénégal / Togo]</p>
+                            <p><strong>Email :</strong> contact@quizdecarabin.com</p>
+                            <p><strong>Téléphone :</strong> [À compléter]</p>
+                            <p><strong>Numéro d'immatriculation :</strong> [À compléter - RCCM ou équivalent]</p>
+                        </div>
+
+                        <p><strong>Directeur de la publication :</strong> [À compléter - Nom du responsable légal]</p>
+                    </div>
+                </section>
+
+                <!-- Section 2 -->
+                <section id="hebergeur" class="legal-section">
+                    <h2><i class="fas fa-server"></i> 2. Hébergement</h2>
+                    <div class="section-content">
+                        <h3>Frontend (Site web)</h3>
+                        <div class="info-box">
+                            <p><strong>Hébergeur :</strong> Netlify, Inc.</p>
+                            <p><strong>Adresse :</strong> 44 Montgomery Street, Suite 300, San Francisco, CA 94104, USA</p>
+                            <p><strong>Site web :</strong> <a href="https://www.netlify.com" target="_blank">www.netlify.com</a></p>
+                        </div>
+
+                        <h3>Backend (Serveur API)</h3>
+                        <div class="info-box">
+                            <p><strong>Hébergeur :</strong> Render Services, Inc.</p>
+                            <p><strong>Adresse :</strong> 525 Brannan Street, Suite 300, San Francisco, CA 94107, USA</p>
+                            <p><strong>Site web :</strong> <a href="https://render.com" target="_blank">render.com</a></p>
+                        </div>
+
+                        <h3>Base de données</h3>
+                        <div class="info-box">
+                            <p><strong>Service :</strong> MongoDB Atlas</p>
+                            <p><strong>Fournisseur :</strong> MongoDB, Inc.</p>
+                            <p><strong>Adresse :</strong> 1633 Broadway, 38th Floor, New York, NY 10019, USA</p>
+                            <p><strong>Site web :</strong> <a href="https://www.mongodb.com" target="_blank">www.mongodb.com</a></p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 3 -->
+                <section id="propriete" class="legal-section">
+                    <h2><i class="fas fa-copyright"></i> 3. Propriété intellectuelle</h2>
+                    <div class="section-content">
+                        <p>L'ensemble du contenu présent sur le site <strong>Quiz de Carabin</strong> (textes, images, graphismes, logo, icônes, sons, logiciels, etc.) est la propriété exclusive de Quiz de Carabin, à l'exception des marques, logos ou contenus appartenant à d'autres sociétés partenaires ou auteurs.</p>
+
+                        <h3>Quiz et contenu pédagogique</h3>
+                        <p>Les quiz, questions et contenus pédagogiques sont la propriété de Quiz de Carabin. Toute reproduction, représentation, modification, publication, adaptation de tout ou partie des éléments du site, quel que soit le moyen ou le procédé utilisé, est interdite, sauf autorisation écrite préalable.</p>
+
+                        <h3>Utilisation autorisée</h3>
+                        <p>L'utilisation du site et de son contenu est strictement réservée à un usage personnel et non commercial. Les utilisateurs s'engagent à :</p>
+                        <ul>
+                            <li>Ne pas copier, reproduire ou distribuer le contenu</li>
+                            <li>Ne pas créer de sites miroirs ou copier la structure</li>
+                            <li>Ne pas vendre ou commercialiser le contenu</li>
+                            <li>Respecter les droits d'auteur</li>
+                        </ul>
+
+                        <h3>Marque déposée</h3>
+                        <p>Le nom "Quiz de Carabin" ainsi que le logo sont des marques déposées. Toute utilisation non autorisée constitue une contrefaçon.</p>
+                    </div>
+                </section>
+
+                <!-- Section 4 -->
+                <section id="donnees" class="legal-section">
+                    <h2><i class="fas fa-shield-halved"></i> 4. Données personnelles</h2>
+                    <div class="section-content">
+                        <p>Conformément au Règlement Général sur la Protection des Données (RGPD) et aux lois locales applicables, Quiz de Carabin s'engage à protéger vos données personnelles.</p>
+
+                        <h3>Données collectées</h3>
+                        <p>Lors de votre inscription et utilisation du site, nous collectons :</p>
+                        <ul>
+                            <li>Nom et prénom</li>
+                            <li>Adresse email</li>
+                            <li>Mot de passe (chiffré)</li>
+                            <li>Université et année d'étude</li>
+                            <li>Statistiques d'utilisation (quiz complétés, scores)</li>
+                            <li>Données de paiement (via KKiaPay - non stockées par nous)</li>
+                        </ul>
+
+                        <h3>Utilisation des données</h3>
+                        <p>Vos données sont utilisées pour :</p>
+                        <ul>
+                            <li>Gérer votre compte utilisateur</li>
+                            <li>Personnaliser votre expérience</li>
+                            <li>Vous envoyer des emails de notification</li>
+                            <li>Traiter vos paiements Premium</li>
+                            <li>Améliorer nos services</li>
+                            <li>Respecter nos obligations légales</li>
+                        </ul>
+
+                        <h3>Vos droits</h3>
+                        <p>Conformément à la loi, vous disposez des droits suivants :</p>
+                        <ul>
+                            <li><strong>Droit d'accès :</strong> Obtenir une copie de vos données</li>
+                            <li><strong>Droit de rectification :</strong> Corriger vos données inexactes</li>
+                            <li><strong>Droit à l'effacement :</strong> Supprimer vos données</li>
+                            <li><strong>Droit à la portabilité :</strong> Récupérer vos données dans un format structuré</li>
+                            <li><strong>Droit d'opposition :</strong> Vous opposer au traitement de vos données</li>
+                        </ul>
+
+                        <p>Pour exercer ces droits, contactez-nous à : <strong>privacy@quizdecarabin.com</strong></p>
+
+                        <h3>Conservation des données</h3>
+                        <p>Vos données sont conservées :</p>
+                        <ul>
+                            <li>Compte actif : Tant que votre compte existe</li>
+                            <li>Compte inactif : 3 ans d'inactivité puis suppression</li>
+                            <li>Données de paiement : 5 ans (obligation légale)</li>
+                        </ul>
+
+                        <h3>Sécurité</h3>
+                        <p>Nous mettons en œuvre des mesures techniques et organisationnelles pour protéger vos données :</p>
+                        <ul>
+                            <li>Chiffrement des mots de passe (bcrypt)</li>
+                            <li>Connexion HTTPS/SSL</li>
+                            <li>Sauvegardes régulières</li>
+                            <li>Accès restreint aux données</li>
+                        </ul>
+
+                        <div class="info-box warning">
+                            <p><strong>⚠️ Important :</strong> Pour plus de détails sur la protection de vos données, consultez notre <a href="politique-confidentialite.html">Politique de Confidentialité</a>.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 5 -->
+                <section id="cookies" class="legal-section">
+                    <h2><i class="fas fa-cookie-bite"></i> 5. Cookies</h2>
+                    <div class="section-content">
+                        <p>Le site Quiz de Carabin utilise des cookies pour améliorer votre expérience de navigation.</p>
+
+                        <h3>Qu'est-ce qu'un cookie ?</h3>
+                        <p>Un cookie est un petit fichier texte stocké sur votre appareil lors de votre visite sur un site web.</p>
+
+                        <h3>Types de cookies utilisés</h3>
+                        
+                        <div class="cookie-type">
+                            <h4>🔹 Cookies essentiels (obligatoires)</h4>
+                            <p>Ces cookies sont nécessaires au fonctionnement du site :</p>
+                            <ul>
+                                <li>Session utilisateur (token JWT)</li>
+                                <li>Préférences de langue</li>
+                                <li>Sécurité et prévention des fraudes</li>
+                            </ul>
+                        </div>
+
+                        <div class="cookie-type">
+                            <h4>🔹 Cookies de performance</h4>
+                            <p>Ces cookies nous aident à analyser l'utilisation du site :</p>
+                            <ul>
+                                <li>Statistiques de visite</li>
+                                <li>Pages les plus consultées</li>
+                                <li>Temps de chargement</li>
+                            </ul>
+                        </div>
+
+                        <div class="cookie-type">
+                            <h4>🔹 Cookies fonctionnels</h4>
+                            <p>Ces cookies améliorent votre expérience :</p>
+                            <ul>
+                                <li>Préférences d'affichage</li>
+                                <li>Dernière université sélectionnée</li>
+                                <li>Progression dans les quiz</li>
+                            </ul>
+                        </div>
+
+                        <h3>Gestion des cookies</h3>
+                        <p>Vous pouvez configurer votre navigateur pour refuser les cookies :</p>
+                        <ul>
+                            <li><strong>Chrome :</strong> Paramètres > Confidentialité > Cookies</li>
+                            <li><strong>Firefox :</strong> Options > Vie privée > Cookies</li>
+                            <li><strong>Safari :</strong> Préférences > Confidentialité</li>
+                        </ul>
+
+                        <div class="info-box warning">
+                            <p><strong>⚠️ Attention :</strong> La désactivation des cookies essentiels peut empêcher l'utilisation de certaines fonctionnalités du site.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 6 -->
+                <section id="responsabilite" class="legal-section">
+                    <h2><i class="fas fa-triangle-exclamation"></i> 6. Limitation de responsabilité</h2>
+                    <div class="section-content">
+                        <h3>Contenu pédagogique</h3>
+                        <p>Quiz de Carabin s'efforce de fournir un contenu médical exact et à jour. Cependant :</p>
+                        <ul>
+                            <li>Le contenu est fourni à titre <strong>informatif et pédagogique uniquement</strong></li>
+                            <li>Il ne remplace pas l'enseignement officiel de votre faculté</li>
+                            <li>Il ne constitue pas un conseil médical professionnel</li>
+                            <li>Nous ne garantissons pas l'exactitude à 100% de toutes les informations</li>
+                        </ul>
+
+                        <h3>Disponibilité du service</h3>
+                        <p>Nous nous efforçons d'assurer un accès continu au site. Cependant :</p>
+                        <ul>
+                            <li>Des interruptions peuvent survenir (maintenance, bugs techniques)</li>
+                            <li>Nous ne garantissons pas un service sans interruption</li>
+                            <li>Nous ne sommes pas responsables des dommages liés à l'indisponibilité</li>
+                        </ul>
+
+                        <h3>Liens externes</h3>
+                        <p>Le site peut contenir des liens vers des sites tiers. Nous ne sommes pas responsables du contenu de ces sites externes.</p>
+
+                        <h3>Utilisation à vos risques</h3>
+                        <p>L'utilisateur reconnaît utiliser le site à ses propres risques et sous sa responsabilité exclusive.</p>
+
+                        <div class="info-box warning">
+                            <p><strong>🏥 Disclaimer médical :</strong> Quiz de Carabin est un outil d'apprentissage pour étudiants en médecine. En cas de doute médical réel, consultez toujours un professionnel de santé qualifié.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 7 -->
+                <section id="contact" class="legal-section">
+                    <h2><i class="fas fa-envelope"></i> 7. Nous contacter</h2>
+                    <div class="section-content">
+                        <p>Pour toute question concernant les mentions légales, la protection des données ou l'utilisation du site :</p>
+
+                        <div class="contact-box">
+                            <div class="contact-item">
+                                <i class="fas fa-envelope"></i>
+                                <div>
+                                    <strong>Email général :</strong>
+                                    <a href="mailto:contact@quizdecarabin.com">contact@quizdecarabin.com</a>
+                                </div>
+                            </div>
+
+                            <div class="contact-item">
+                                <i class="fas fa-shield-halved"></i>
+                                <div>
+                                    <strong>Données personnelles :</strong>
+                                    <a href="mailto:privacy@quizdecarabin.com">privacy@quizdecarabin.com</a>
+                                </div>
+                            </div>
+
+                            <div class="contact-item">
+                                <i class="fas fa-scale-balanced"></i>
+                                <div>
+                                    <strong>Questions juridiques :</strong>
+                                    <a href="mailto:legal@quizdecarabin.com">legal@quizdecarabin.com</a>
+                                </div>
+                            </div>
+
+                            <div class="contact-item">
+                                <i class="fas fa-headset"></i>
+                                <div>
+                                    <strong>Support technique :</strong>
+                                    <a href="mailto:support@quizdecarabin.com">support@quizdecarabin.com</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="response-time">Nous nous engageons à répondre dans un délai de <strong>72 heures ouvrées</strong>.</p>
+                    </div>
+                </section>
+
+                <!-- Footer Section -->
+                <section class="legal-footer-section">
+                    <h3>Documents liés</h3>
+                    <div class="related-docs">
+                        <a href="politique-confidentialite.html" class="doc-link">
+                            <i class="fas fa-file-shield"></i>
+                            <span>Politique de Confidentialité</span>
+                        </a>
+                        <a href="conditions-utilisation.html" class="doc-link">
+                            <i class="fas fa-file-contract"></i>
+                            <span>Conditions Générales d'Utilisation</span>
+                        </a>
+                        <a href="cgv.html" class="doc-link">
+                            <i class="fas fa-file-invoice"></i>
+                            <span>Conditions Générales de Vente</span>
+                        </a>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Quiz de Carabin</h3>
+                <p>La plateforme e-learning pour les étudiants en médecine d'Afrique de l'Ouest</p>
+            </div>
+
+            <div class="footer-section">
+                <h4>Légal</h4>
+                <ul>
+                    <li><a href="mentions-legales.html">Mentions Légales</a></li>
+                    <li><a href="politique-confidentialite.html">Politique de Confidentialité</a></li>
+                    <li><a href="conditions-utilisation.html">CGU</a></li>
+                    <li><a href="cgv.html">CGV</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h4>Contact</h4>
+                <ul>
+                    <li><a href="mailto:contact@quizdecarabin.com">contact@quizdecarabin.com</a></li>
+                    <li><a href="contact.html">Formulaire de contact</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2026 Quiz de Carabin. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+    <script src="js/navbar.js"></script>
 </body>
 </html>
