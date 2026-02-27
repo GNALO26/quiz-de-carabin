@@ -56,10 +56,10 @@ console.log('🔄 Services background initialisés');
   // Middleware CORS pour la production
   app.use(cors({
     origin: [
-      'https://quiz-de-carabin.netlify.app',
-      'https://quiz-de-carabin-backend.onrender.com',
-      'http://localhost:3000',
-      'http://localhost:3001'
+      'https://quiz-de-carabin.com',
+      'https://www.quiz-de-carabin.com',
+      'https://quiz-de-carabin.netlify.app', // Garde pendant la transition
+      'http://localhost:3000'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
