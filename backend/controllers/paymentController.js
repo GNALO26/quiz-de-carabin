@@ -8,7 +8,7 @@ const kkiapay = require('../config/kkiapay');
 
 // Configuration des plans d'abonnement
 const SUBSCRIPTION_PLANS = {
-  '1-month': { amount: 5000, description: "Abonnement Premium 1 mois", duration: 1 }, 
+  '1-month': { amount: 5000, description: "Abonnement Premium 1 mois", duration: 2 }, 
   '3-months': { amount: 12000, description: "Abonnement Premium 3 mois", duration: 3 },
   '10-months': { amount: 25000, description: "Abonnement Premium 10 mois", duration: 10 }
 };
@@ -204,7 +204,7 @@ exports.handleKkiapayWebhook = async (req, res) => {
       
       // Déterminer le plan depuis le montant
       let planId = '1-month';
-      let durationInMonths = 1;
+      let durationInMonths = 2;
       
       if (amount >= 25000) {
         planId = '10-months';
