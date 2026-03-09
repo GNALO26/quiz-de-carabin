@@ -1,191 +1,235 @@
-const Transaction = require('../models/Transaction');
-const User = require('../models/User');
-const fedapayService = require('../services/fedapayService');
-const emailService = require('../services/emailService');
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 
-// Plans disponibles — source unique de vérité
-const PLANS = {
-    '1month':   { amount: 5000,  durationInMonths: 2,  name: '1 mois' },
-    '3months':  { amount: 12000, durationInMonths: 3,  name: '3 mois' },
-    '10months': { amount: 25000, durationInMonths: 10, name: '10 mois' }
+const deviceDetection = require('./middleware/deviceDetection');
+const auth = require('./middleware/auth');
+const sessionCheck = require('./middleware/sessionCheck');
+const handleDatabaseError = require('./middleware/handleDatabaseError');
+const productionMonitor = require('./middleware/productionMonitor');
+const checkPremiumStatus = require('./middleware/checkPremiumStatus');
+
+const mongooseOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000
 };
 
-/**
- * Créer une transaction de paiement FedaPay
- */
-exports.createPayment = async (req, res) => {
+mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
+.then(() => {
+  console.log('✅ Connected to MongoDB - PRODUCTION MODE');
+  console.log('📊 Database:', mongoose.connection.name);
+
+  // FIX: Supprimer l'ancien index unique non-sparse sur transactionId
+  mongoose.connection.db.collection('transactions').indexExists('transactionId_1')
+    .then(exists => {
+      if (exists) {
+        return mongoose.connection.db.collection('transactions').dropIndex('transactionId_1')
+          .then(() => console.log('✅ Index transactionId_1 supprimé'))
+          .catch(err => console.warn('Drop index err:', err.message));
+      }
+    }).catch(() => {});
+
+  const webhookQueue = require('./services/webhookQueue');
+  const paymentMonitor = require('./services/paymentMonitor');
+  console.log('🔄 Services background initialisés');
+
+  const { setupSubscriptionCrons } = require('./utils/subscriptionChecker');
+  setupSubscriptionCrons();
+
+  const cronJobs = require('./cronJobs');
+  cronJobs.startAllJobs();
+  console.log('⏰ Tâches automatiques (cron jobs) démarrées');
+
+  const authRoutes = require('./routes/auth');
+  const quizRoutes = require('./routes/quiz');
+  const paymentRoutes = require('./routes/payment');
+  const userRoutes = require('./routes/user');
+  const accessCodeRoutes = require('./routes/accessCode');
+  const tokenRoutes = require('./routes/token');
+  const webhookRoutes = require('./routes/webhook');
+  const statsRoutes = require('./routes/stats');
+  const notificationRoutes = require('./routes/notificationRoutes');
+
+  const app = express();
+
+  app.use(productionMonitor);
+
+  app.use(cors({
+    origin: [
+      'https://quiz-de-carabin.com',
+      'https://www.quiz-de-carabin.com',
+      'https://quiz-de-carabin.netlify.app',
+      'http://localhost:3000'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-API-KEY', 'X-Kkiapay-Signature', 'X-FedaPay-Signature'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+    maxAge: 86400
+  }));
+
+  app.options('*', cors());
+
+  app.use(express.json({
+    limit: '10mb',
+    verify: (req, res, buf) => { req.rawBody = buf; }
+  }));
+
+  app.use(express.urlencoded({ extended: true, limit: '10mb', parameterLimit: 1000 }));
+
+  app.use(deviceDetection);
+
+  // ===== ROUTES PUBLIQUES (AVANT AUTH) =====
+
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({
+      success: true,
+      message: 'Server is running correctly - PRODUCTION MODE',
+      timestamp: new Date().toISOString(),
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      environment: process.env.NODE_ENV,
+      version: '2.1.0',
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      fedapayMode: process.env.FEDAPAY_ENVIRONMENT
+    });
+  });
+
+  app.get('/api/diagnostics', (req, res) => {
+    res.status(200).json({
+      success: true,
+      diagnostics: {
+        system: { nodeVersion: process.version, uptime: process.uptime(), memory: process.memoryUsage() },
+        database: { status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected', name: mongoose.connection.name },
+        environment: { NODE_ENV: process.env.NODE_ENV, FEDAPAY_ENVIRONMENT: process.env.FEDAPAY_ENVIRONMENT },
+        services: {
+          email: process.env.EMAIL_USER ? 'configured' : 'not configured',
+          fedapay: process.env.FEDAPAY_SECRET_KEY ? 'configured' : 'not configured'
+        }
+      },
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  app.get('/api/debug/payment-test', (req, res) => {
+    res.json({ success: true, message: 'Route debug accessible', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/api/debug/payment-test-protected', auth, (req, res) => {
+    res.json({ success: true, user: req.user ? req.user.email : 'no user', timestamp: new Date().toISOString() });
+  });
+
+  // Auth publique
+  app.use('/api/auth', authRoutes);
+
+  // Webhooks KkiaPay public
+  app.use('/api/webhook', webhookRoutes);
+
+  // ✅ WEBHOOK FEDAPAY PUBLIC — DOIT ÊTRE AVANT app.use(auth)
+  app.post('/api/payment/fedapay/webhooks/fedapay', async (req, res) => {
     try {
-        const { plan, customerInfo } = req.body;
-        const userId = req.user._id;
-
-        const selectedPlan = PLANS[plan];
-        if (!selectedPlan) {
-            return res.status(400).json({
-                success: false,
-                message: `Plan invalide: "${plan}". Plans acceptés: 1month, 3months, 10months`
-            });
-        }
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
-        }
-
-        // Créer la transaction avec tous les champs requis
-        const transaction = new Transaction({
-            userId:           userId,
-            amount:           selectedPlan.amount,
-            currency:         'XOF',
-            status:           'pending',
-            plan:             plan,
-            durationInMonths: selectedPlan.durationInMonths,
-            paymentMethod:    'fedapay',
-            provider:         'fedapay'
-        });
-
-        await transaction.save();
-        console.log(`✅ Transaction créée en DB: ${transaction._id} - Plan: ${plan}`);
-
-        // Préparer les infos client
-        const nameParts = (user.name || '').split(' ');
-        const firstname = (customerInfo && customerInfo.firstname) || nameParts[0] || 'Client';
-        const lastname  = (customerInfo && customerInfo.lastname)  || nameParts[1] || 'Quiz';
-        const phone     = (customerInfo && customerInfo.phone)     || user.phone   || '';
-
-        // Créer la transaction FedaPay
-        const fedapayResult = await fedapayService.createTransaction({
-            amount:      selectedPlan.amount,
-            description: `Abonnement Premium ${selectedPlan.name} - Quiz de Carabin`,
-            customer:    { firstname, lastname, email: user.email, phone },
-            callbackUrl: `${process.env.FRONTEND_URL}/payment-callback.html?transaction_id=${transaction._id}`
-        });
-
-        if (!fedapayResult.success) {
-            transaction.status = 'failed';
-            await transaction.save();
-            console.error('❌ Échec FedaPay:', fedapayResult.error);
-            return res.status(500).json({
-                success: false,
-                message: 'Erreur lors de la création du paiement FedaPay',
-                error:   fedapayResult.error
-            });
-        }
-
-        transaction.transactionId = String(fedapayResult.transactionId);
-        await transaction.save();
-        console.log(`✅ ID FedaPay sauvegardé: ${fedapayResult.transactionId}`);
-
-        return res.json({
-            success:       true,
-            paymentUrl:    fedapayResult.paymentUrl,
-            transactionId: transaction._id
-        });
-
-    } catch (error) {
-        console.error('❌ Erreur createPayment:', error.message);
-        return res.status(500).json({
-            success: false,
-            message: 'Erreur serveur',
-            error:   error.message
-        });
+      const fedapayCtrl = require('./controllers/fedapayController');
+      await fedapayCtrl.handleWebhook(req, res);
+    } catch (err) {
+      console.error('❌ Webhook FedaPay erreur:', err.message);
+      res.status(500).json({ success: false, message: 'Erreur webhook' });
     }
-};
+  });
 
-/**
- * Webhook FedaPay
- */
-exports.handleWebhook = async (req, res) => {
-    try {
-        const signature = req.headers['x-fedapay-signature'];
-        const payload   = req.body;
+  // ===== MIDDLEWARE AUTH GLOBAL =====
+  app.use(auth);
+  app.use(checkPremiumStatus);
+  app.use(sessionCheck);
 
-        console.log('🔔 Webhook FedaPay reçu:', JSON.stringify(payload).substring(0, 200));
+  // ===== ROUTES PROTÉGÉES =====
+  const adminRoutes = require('./routes/admin');
+  app.use('/api/admin', adminRoutes);
 
-        if (signature && !fedapayService.validateWebhook(signature, payload)) {
-            console.error('❌ Signature webhook invalide');
-            return res.status(401).json({ success: false, message: 'Signature invalide' });
-        }
+  // ⚠️ fedapay AVANT /api/payment (route plus spécifique d'abord)
+  app.use('/api/payment/fedapay', require('./routes/fedapayRoutes'));
+  app.use('/api/payment', paymentRoutes);
 
-        const event  = payload.event  || payload.name;
-        const entity = payload.entity || payload.data;
+  app.use('/api/quiz', quizRoutes);
+  app.use('/api/user', userRoutes);
+  app.use('/api/access-code', accessCodeRoutes);
+  app.use('/api/auth', tokenRoutes);
+  app.use('/api/stats', statsRoutes);
+  app.use('/api/premium', require('./routes/premiumActivationRoutes'));
+  app.use('/api/notifications', notificationRoutes);
+  app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
-        console.log(`📦 Événement FedaPay: ${event}`);
+  app.use(handleDatabaseError);
 
-        if (event === 'transaction.approved' || event === 'transaction.approved.live') {
-            const fedapayTransactionId = String(entity.id);
+  app.use('*', (req, res) => {
+    console.log(`❌ Route non trouvée: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({ success: false, message: 'Route not found', path: req.originalUrl, method: req.method });
+  });
 
-            const transaction = await Transaction.findOne({
-                transactionId: fedapayTransactionId
-            }).populate('userId');
+  app.use((err, req, res, next) => {
+    console.error('❌ ERROR:', { message: err.message, url: req.originalUrl, method: req.method });
+    res.status(500).json({ success: false, message: 'Internal server error', errorId: `ERR_${Date.now()}` });
+  });
 
-            if (!transaction) {
-                console.error('❌ Transaction non trouvée:', fedapayTransactionId);
-                return res.status(404).json({ success: false, message: 'Transaction non trouvée' });
-            }
+  const PORT = process.env.PORT || 5000;
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT} - PRODUCTION MODE`);
+    console.log('🌍 Environment:', process.env.NODE_ENV);
+    console.log('📡 URL: https://quiz-de-carabin-backend.onrender.com');
+    console.log('   - FedaPay Mode:', process.env.FEDAPAY_ENVIRONMENT);
+    console.log('   - Email:', process.env.EMAIL_USER ? '✅' : '❌');
+    console.log('   - Cron Jobs: ✅ Active');
+    console.log('📋 Routes clés:');
+    console.log('   - POST /api/payment/fedapay/create (protégée)');
+    console.log('   - POST /api/payment/fedapay/webhooks/fedapay (PUBLIQUE)');
+    console.log('================================');
+  });
 
-            if (transaction.status === 'completed') {
-                return res.json({ success: true, message: 'Transaction déjà traitée' });
-            }
+  process.on('SIGINT', () => {
+    server.close(() => {
+      mongoose.connection.close(false, () => process.exit(0));
+    });
+  });
 
-            // Générer le code d'activation
-            transaction.generateActivationCode();
-            transaction.status      = 'completed';
-            transaction.completedAt = new Date();
-            await transaction.save();
-            console.log(`✅ Transaction complétée: ${transaction._id}`);
+  process.on('SIGTERM', () => {
+    server.close(() => {
+      mongoose.connection.close(false, () => process.exit(0));
+    });
+  });
 
-            if (transaction.userId) {
-                try {
-                    await emailService.sendPremiumActivationCodeEmail(transaction.userId, transaction);
-                    console.log(`📧 Email envoyé à: ${transaction.userId.email}`);
-                } catch (emailError) {
-                    console.error('❌ Erreur email (non bloquant):', emailError.message);
-                }
-            }
-        }
+  process.on('uncaughtException', (error) => {
+    console.error('💥 UNCAUGHT EXCEPTION:', error);
+    process.exit(1);
+  });
 
-        return res.json({ success: true });
+  process.on('unhandledRejection', (reason) => {
+    console.error('💥 UNHANDLED REJECTION:', reason);
+    process.exit(1);
+  });
 
-    } catch (error) {
-        console.error('❌ Erreur webhook FedaPay:', error);
-        return res.status(500).json({ success: false, message: 'Erreur webhook', error: error.message });
-    }
-};
+  // Vérification config
+  const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET', 'EMAIL_USER', 'EMAIL_PASS', 'FEDAPAY_SECRET_KEY', 'FEDAPAY_PUBLIC_KEY', 'ENCRYPTION_KEY'];
+  const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+  if (missingVars.length > 0) {
+    console.error('❌ VARIABLES MANQUANTES:', missingVars);
+  } else {
+    console.log('✅ Toutes les variables d\'environnement requises sont configurées');
+  }
 
-/**
- * Vérifier statut transaction
- */
-exports.checkPaymentStatus = async (req, res) => {
-    try {
-        const { transactionId } = req.params;
-        const transaction = await Transaction.findById(transactionId);
+  if (process.env.FEDAPAY_SECRET_KEY && process.env.FEDAPAY_ENVIRONMENT === 'live') {
+    console.log('✅ FedaPay configuré en mode PRODUCTION');
+  }
 
-        if (!transaction) {
-            return res.status(404).json({ success: false, message: 'Transaction non trouvée' });
-        }
+})
+.catch(err => {
+  console.error('❌ Could not connect to MongoDB - PRODUCTION', err);
+  process.exit(1);
+});
 
-        if (transaction.status === 'pending' && transaction.transactionId) {
-            const liveStatus = await fedapayService.getTransactionStatus(transaction.transactionId);
-            if (liveStatus.success && liveStatus.status === 'approved') {
-                transaction.generateActivationCode();
-                transaction.status      = 'completed';
-                transaction.completedAt = new Date();
-                await transaction.save();
-            }
-        }
-
-        return res.json({
-            success:      true,
-            status:       transaction.status,
-            amount:       transaction.amount,
-            plan:         transaction.plan,
-            codeExpiry:   transaction.codeExpiresAt
-        });
-
-    } catch (error) {
-        console.error('❌ Erreur checkPaymentStatus:', error);
-        return res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
-    }
-};
-
-module.exports = exports;
+module.exports = mongoose;
