@@ -1,13 +1,5 @@
-/**
- * ================================================================
- * CRON JOBS - QUIZ DE CARABIN
- * ================================================================
- * Tâches automatiques planifiées
- * ================================================================
- */
-
 const cron = require('node-cron');
-const notificationService = require('../services/notificationService');
+const notificationService = require('./services/notificationService');
 const User = require('../models/User');
 
 /**
