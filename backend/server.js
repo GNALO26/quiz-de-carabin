@@ -210,7 +210,7 @@ console.log('🔄 Services background initialisés');
   app.use('/api/access-code', accessCodeRoutes);
   app.use('/api/auth', tokenRoutes);
   app.use('/api/stats', statsRoutes);
-  app.use('/api/notifications', require('./routes/notificationRoutes'));
+  
 app.use('/api/premium', require('./routes/premiumActivationRoutes'));
   // ✨ NOUVEAU : Route notifications (protégée - admin only)
   app.use('/api/notifications', notificationRoutes);
