@@ -4,41 +4,9 @@ import { Auth } from './auth.js';
 export class Payment {
     constructor() {
         this.auth = new Auth();
-        this.kkiapayLoaded = false;
-        this.loadKkiapayScript();
         this.setupEventListeners();
         this.checkPaymentReturn();
         this.displaySubscriptionInfo();
-    }
-
-    loadKkiapayScript() {
-        return new Promise((resolve, reject) => {
-            if (typeof openKkiapayWidget !== 'undefined') {
-                console.log('✅ KkiaPay déjà chargé');
-                this.kkiapayLoaded = true;
-                resolve();
-                return;
-            }
-
-            console.log('📥 Chargement du script KkiaPay...');
-            const script = document.createElement('script');
-            script.src = 'https://cdn.kkiapay.me/k.js';
-            script.async = true;
-            
-            script.onload = () => {
-                console.log('✅ Script KkiaPay chargé avec succès');
-                this.kkiapayLoaded = true;
-                resolve();
-            };
-            
-            script.onerror = () => {
-                console.error('❌ Erreur chargement script KkiaPay');
-                this.kkiapayLoaded = false;
-                reject(new Error('Impossible de charger KkiaPay'));
-            };
-            
-            document.head.appendChild(script);
-        });
     }
 
     async getActiveAPIUrl() {
@@ -64,6 +32,19 @@ export class Payment {
         return CONFIG.API_BACKUP_URL;
     }
 
+    // Normalise les plan IDs (ex: "1-month" → "1month")
+    normalizePlanId(planId) {
+        const mapping = {
+            '1-month':   '1month',
+            '3-months':  '3months',
+            '10-months': '10months',
+            '1month':    '1month',
+            '3months':   '3months',
+            '10months':  '10months'
+        };
+        return mapping[planId] || planId;
+    }
+
     setupEventListeners() {
         console.log('🎯 Initialisation des écouteurs de paiement');
         
@@ -78,7 +59,7 @@ export class Payment {
                 
                 console.log(`🖱 Clic paiement: ${planId} - ${amount} FCFA`);
                 this.initiatePayment(planId, amount);
-            }, { once: true });
+            });
         });
         
         document.getElementById('validate-code')?.addEventListener('click', () => {
@@ -87,40 +68,6 @@ export class Payment {
         
         document.getElementById('resend-code')?.addEventListener('click', () => {
             this.resendAccessCode();
-        });
-        
-        // ✅ ÉCOUTER LES ÉVÉNEMENTS GLOBAUX DE KKIAPAY
-        this.setupKkiapayListeners();
-    }
-    
-    setupKkiapayListeners() {
-        // KkiaPay déclenche des événements personnalisés sur window
-        window.addEventListener('message', (event) => {
-            // Vérifier l'origine pour la sécurité
-            if (event.origin !== 'https://widget.kkiapay.me') {
-                return;
-            }
-            
-            console.log('📨 Message KkiaPay reçu:', event.data);
-            
-            // Gérer les différents types de messages
-            if (event.data && event.data.status) {
-                if (event.data.status === 'success') {
-                    console.log('✅ Paiement réussi (via message)');
-                    // La redirection se fera automatiquement via callback URL
-                } else if (event.data.status === 'failed') {
-                    console.error('❌ Paiement échoué (via message)');
-                    this.showAlert('Le paiement a échoué. Veuillez réessayer.', 'danger');
-                    
-                    // Réactiver le bouton
-                    document.querySelectorAll('.subscribe-btn, .subscribe-btn-direct').forEach(btn => {
-                        if (btn.disabled) {
-                            btn.innerHTML = 'S\'abonner';
-                            btn.disabled = false;
-                        }
-                    });
-                }
-            }
         });
     }
 
@@ -133,10 +80,12 @@ export class Payment {
         }
     }
 
-    // ✅ PAIEMENT AVEC WIDGET KKIAPAY - VERSION CORRIGÉE
+    // ✅ PAIEMENT FEDAPAY - Crée transaction puis redirige vers URL FedaPay
     async initiatePayment(planId, amount) {
+        const normalizedPlan = this.normalizePlanId(planId);
+        
         try {
-            console.log(`💰 Initialisation paiement: ${planId} - ${amount} FCFA`);
+            console.log(`💰 Initialisation paiement FedaPay: ${normalizedPlan} - ${amount} FCFA`);
             
             if (!this.auth.isAuthenticated()) {
                 this.auth.showLoginModal();
@@ -147,88 +96,68 @@ export class Payment {
             const user = this.auth.getUser();
             const token = this.auth.getToken();
             const API_BASE_URL = await this.getActiveAPIUrl();
-            
-            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"], [data-plan-key="${planId}"]`);
+
+            // Désactiver le bouton
+            const subscribeBtn = document.querySelector(
+                `[data-plan-id="${planId}"], [data-plan-key="${planId}"]`
+            );
             if (subscribeBtn) {
                 subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Préparation...';
                 subscribeBtn.disabled = true;
             }
 
-            if (!this.kkiapayLoaded) {
-                console.log('⏳ Attente chargement KkiaPay...');
-                try {
-                    await this.loadKkiapayScript();
-                } catch (error) {
-                    throw new Error('Impossible de charger le système de paiement. Veuillez rafraîchir la page.');
-                }
-            }
+            console.log('📤 Création transaction FedaPay...');
 
-            if (typeof openKkiapayWidget === 'undefined') {
-                throw new Error('Le système de paiement n\'est pas disponible. Veuillez rafraîchir la page et réessayer.');
-            }
-
-            console.log('📤 Création transaction...');
-            const response = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
+            const response = await fetch(`${API_BASE_URL}/api/payment/fedapay/create`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ 
-                    planId, 
-                    amount: parseInt(amount)
+                body: JSON.stringify({
+                    plan: normalizedPlan,
+                    customerInfo: {
+                        firstname: user?.name?.split(' ')[0] || '',
+                        lastname: user?.name?.split(' ')[1] || '',
+                        phone: user?.phone || ''
+                    }
                 })
             });
 
             if (!response.ok) {
-                throw new Error(`Erreur HTTP ${response.status}`);
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.message || `Erreur HTTP ${response.status}`);
             }
 
             const data = await response.json();
-            console.log('📨 Réponse serveur:', data);
+            console.log('📨 Réponse serveur FedaPay:', data);
 
-            if (data.success && data.transactionId) {
-                localStorage.setItem('pendingTransaction', data.transactionId);
+            if (data.success && data.paymentUrl) {
+                // Sauvegarder l'ID transaction pour suivi
+                localStorage.setItem('pendingFedaPayTransaction', data.transactionId);
                 
-                console.log('🎯 Ouverture widget KkiaPay...');
+                console.log('🎯 Redirection vers FedaPay:', data.paymentUrl);
+                this.showAlert('Redirection vers la page de paiement...', 'info');
                 
-                // ✅ SOLUTION DÉFINITIVE: Pas de callbacks du tout!
-                // KkiaPay gère la redirection automatiquement via le paramètre 'callback'
-                const callbackUrl = data.callback;
-                
-                console.log('📋 Configuration widget:', {
-                    amount: data.amount,
-                    email: data.email,
-                    callback: callbackUrl
-                });
-                
-                // ✅ Configurer le widget SANS callbacks JavaScript
-                // KkiaPay redirigera automatiquement vers l'URL callback
-                openKkiapayWidget({
-                    amount: data.amount,
-                    api_key: data.publicKey,
-                    sandbox: false,
-                    phone: data.phone || '',
-                    email: data.email,
-                    theme: "#13a718",
-                    name: "Quiz de Carabin",
-                    // ✅ L'URL callback - KkiaPay y ajoute automatiquement ?transactionId=XXX
-                    callback: callbackUrl
-                });
-                
-                console.log('✅ Widget KkiaPay ouvert');
+                // Redirection vers la page de paiement FedaPay
+                setTimeout(() => {
+                    window.location.href = data.paymentUrl;
+                }, 800);
                 
             } else {
-                throw new Error(data.message || 'Erreur création transaction');
+                throw new Error(data.message || 'Erreur création transaction FedaPay');
             }
             
         } catch (error) {
             console.error('💥 Erreur paiement:', error);
-            this.showAlert(error.message || 'Erreur de connexion', 'danger');
+            this.showAlert(error.message || 'Erreur de connexion au système de paiement', 'danger');
             
-            const subscribeBtn = document.querySelector(`[data-plan-id="${planId}"], [data-plan-key="${planId}"]`);
+            // Réactiver le bouton
+            const subscribeBtn = document.querySelector(
+                `[data-plan-id="${planId}"], [data-plan-key="${planId}"]`
+            );
             if (subscribeBtn) {
-                subscribeBtn.innerHTML = 'S\'abonner';
+                subscribeBtn.innerHTML = "S'abonner";
                 subscribeBtn.disabled = false;
             }
         }
@@ -298,7 +227,8 @@ export class Payment {
                     if (codeModal) {
                         codeModal.hide();
                     }
-                    if (window.location.pathname.includes('index.html')) {
+                    if (window.location.pathname.includes('index.html') || 
+                        window.location.pathname === '/') {
                         window.location.reload();
                     }
                 }, 2000);
@@ -313,7 +243,7 @@ export class Payment {
 
     async resendAccessCode() {
         try {
-            console.log('🔄 Renvoi du code d\'accès...');
+            console.log("🔄 Renvoi du code d'accès...");
             
             const API_BASE_URL = await this.getActiveAPIUrl();
             const token = this.auth.getToken();
@@ -382,7 +312,6 @@ export class Payment {
                     const card = btn.closest('.card');
                     if (card) {
                         btn.style.display = 'none';
-                        
                         let activeBadge = card.querySelector('.active-subscription-badge');
                         if (!activeBadge) {
                             activeBadge = document.createElement('div');
@@ -422,13 +351,10 @@ export class Payment {
                 
                 document.querySelectorAll('.subscribe-btn-direct, .subscribe-btn').forEach(btn => {
                     btn.style.display = 'inline-block';
-                    
                     const card = btn.closest('.card');
                     if (card) {
                         const activeBadge = card.querySelector('.active-subscription-badge');
-                        if (activeBadge) {
-                            activeBadge.remove();
-                        }
+                        if (activeBadge) activeBadge.remove();
                     }
                 });
                 
@@ -490,9 +416,9 @@ export class Payment {
         let icon = '';
         switch(type) {
             case 'success': icon = '<i class="fas fa-check-circle me-2"></i>'; break;
-            case 'danger': icon = '<i class="fas fa-times-circle me-2"></i>'; break;
+            case 'danger':  icon = '<i class="fas fa-times-circle me-2"></i>'; break;
             case 'warning': icon = '<i class="fas fa-exclamation-triangle me-2"></i>'; break;
-            case 'info': icon = '<i class="fas fa-info-circle me-2"></i>'; break;
+            case 'info':    icon = '<i class="fas fa-info-circle me-2"></i>'; break;
         }
         
         alertDiv.innerHTML = `
