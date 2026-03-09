@@ -1,6 +1,5 @@
 const fedapayModule = require('fedapay');
 
-// Diagnostic complet
 console.log('🔍 FedaPay module keys:', Object.keys(fedapayModule));
 
 let FedaPay;
@@ -21,7 +20,6 @@ if (fedapayModule.FedaPay) {
 }
 
 console.log('🔍 Transaction type:', typeof Transaction);
-console.log('🔍 FedaPay keys:', FedaPay ? Object.keys(FedaPay).slice(0, 15).join(', ') : 'null');
 
 const environment = process.env.FEDAPAY_ENVIRONMENT || 'live';
 const secretKey   = process.env.FEDAPAY_SECRET_KEY;
@@ -48,17 +46,22 @@ class FedaPayService {
                 throw new Error(`FedaPay.Transaction indisponible. Keys: ${Object.keys(FedaPay || {}).join(', ')}`);
             }
 
+            // Construire customer — phone_number seulement si valide
             const customerObj = {
                 firstname: customer.firstname || 'Client',
                 lastname:  customer.lastname  || 'Quiz',
-                email:     customer.email,
-                phone_number: {
-                    number:  customer.phone || '22900000000',
-                    country: 'BJ'
-                }
+                email:     customer.email
             };
 
+            if (customer.phone && customer.phone.trim().length >= 8) {
+                customerObj.phone_number = {
+                    number:  customer.phone.trim(),
+                    country: 'BJ'
+                };
+            }
+
             console.log('📤 FedaPay.Transaction.create...');
+            console.log('👤 Customer:', JSON.stringify(customerObj));
 
             const transaction = await T.create({
                 description:  description,
