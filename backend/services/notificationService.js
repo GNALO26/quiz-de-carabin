@@ -7,7 +7,7 @@
  */
 
 const emailService = require('./emailService');
-const Notification = require('../models/Notification');
+const Notification = require('./models/Notification');
 const User = require('../models/User');
 const Quiz = require('../models/Quiz');
 
