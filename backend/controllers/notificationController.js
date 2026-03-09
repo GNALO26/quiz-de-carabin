@@ -16,7 +16,7 @@ const Quiz = require('../models/Quiz');
  * Envoyer notification pour un nouveau quiz
  * ================================================================
  */
-exports.sendNewQuizNotification = async (req, res) => {
+const sendNewQuizNotification = async (req, res) => {
   try {
     const { quizId } = req.params;
 
@@ -67,7 +67,7 @@ exports.sendNewQuizNotification = async (req, res) => {
  * Envoyer le digest hebdomadaire
  * ================================================================
  */
-exports.sendWeeklyDigest = async (req, res) => {
+const sendWeeklyDigest = async (req, res) => {
   try {
     const result = await notificationService.sendWeeklyDigest();
 
@@ -99,7 +99,7 @@ exports.sendWeeklyDigest = async (req, res) => {
  * Envoyer rappels expiration Premium
  * ================================================================
  */
-exports.sendPremiumExpiringNotifications = async (req, res) => {
+const sendPremiumExpiringNotifications = async (req, res) => {
   try {
     const result = await notificationService.notifyPremiumExpiring();
 
@@ -131,7 +131,7 @@ exports.sendPremiumExpiringNotifications = async (req, res) => {
  * Historique des notifications envoyées
  * ================================================================
  */
-exports.getNotificationHistory = async (req, res) => {
+const getNotificationHistory = async (req, res) => {
   try {
     const { page = 1, limit = 20, type } = req.query;
 
@@ -172,7 +172,7 @@ exports.getNotificationHistory = async (req, res) => {
  * Statistiques des notifications
  * ================================================================
  */
-exports.getNotificationStats = async (req, res) => {
+const getNotificationStats = async (req, res) => {
   try {
     const { period = 30 } = req.query;
 
@@ -199,7 +199,7 @@ exports.getNotificationStats = async (req, res) => {
  * Détails d'une notification
  * ================================================================
  */
-exports.getNotificationDetails = async (req, res) => {
+const getNotificationDetails = async (req, res) => {
   try {
     const { id } = req.params;
 
