@@ -1,6 +1,22 @@
-const FedaPay = require('fedapay');
+const fedapayModule = require('fedapay');
 
-// Configuration FedaPay
+// Gestion des différents formats d'export (ES module default, CommonJS, etc.)
+let FedaPay;
+if (fedapayModule.default && typeof fedapayModule.default.setApiKey === 'function') {
+    // Cas où le module exporte par défaut (ES Module)
+    FedaPay = fedapayModule.default;
+} else if (fedapayModule.FedaPay && typeof fedapayModule.FedaPay.setApiKey === 'function') {
+    // Cas où le module exporte un objet contenant FedaPay
+    FedaPay = fedapayModule.FedaPay;
+} else if (typeof fedapayModule.setApiKey === 'function') {
+    // Cas standard CommonJS
+    FedaPay = fedapayModule;
+} else {
+    console.error('❌ Format FedaPay non reconnu. Clés disponibles:', Object.keys(fedapayModule));
+    process.exit(1);
+}
+
+// Configuration de l'API
 FedaPay.setApiKey(process.env.FEDAPAY_SECRET_KEY);
 FedaPay.setEnvironment(process.env.FEDAPAY_ENVIRONMENT || 'live');
 
