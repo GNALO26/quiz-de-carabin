@@ -37,6 +37,11 @@ console.log('🔄 Services background initialisés');
   const { setupSubscriptionCrons } = require('./utils/subscriptionChecker');
   setupSubscriptionCrons();
   
+  // ✨ NOUVEAU : Démarrer les tâches automatiques (cron jobs)
+  const cronJobs = require('./cronJobs');
+  cronJobs.startAllJobs();
+  console.log('⏰ Tâches automatiques (cron jobs) démarrées');
+  
   // Import des routes
   const authRoutes = require('./routes/auth');
   const quizRoutes = require('./routes/quiz');
@@ -46,6 +51,8 @@ console.log('🔄 Services background initialisés');
   const tokenRoutes = require('./routes/token');
   const webhookRoutes = require('./routes/webhook');
   const statsRoutes = require('./routes/stats');
+  // ✨ NOUVEAU : Routes notifications
+  const notificationRoutes = require('./routes/notificationroutes');
 
   const app = express();
   
@@ -109,10 +116,11 @@ console.log('🔄 Services background initialisés');
       timestamp: new Date().toISOString(),
       database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
       environment: process.env.NODE_ENV,
-      version: '1.0.0',
+      version: '2.0.0', // ✨ Mise à jour version
       uptime: process.uptime(),
       memory: process.memoryUsage(),
-      kkiapayMode: process.env.KKIAPAY_MODE
+      kkiapayMode: process.env.KKIAPAY_MODE,
+      fedapayMode: process.env.FEDAPAY_ENVIRONMENT // ✨ NOUVEAU
     });
   });
 
@@ -136,11 +144,13 @@ console.log('🔄 Services background initialisés');
       environment: {
         NODE_ENV: process.env.NODE_ENV,
         PORT: process.env.PORT,
-        KKIAPAY_MODE: process.env.KKIAPAY_MODE
+        KKIAPAY_MODE: process.env.KKIAPAY_MODE,
+        FEDAPAY_ENVIRONMENT: process.env.FEDAPAY_ENVIRONMENT // ✨ NOUVEAU
       },
       services: {
         email: process.env.EMAIL_USER ? 'configured' : 'not configured',
-        kkiapay: process.env.KKIAPAY_PUBLIC_KEY ? 'configured' : 'not configured'
+        kkiapay: process.env.KKIAPAY_PUBLIC_KEY ? 'configured' : 'not configured',
+        fedapay: process.env.FEDAPAY_SECRET_KEY ? 'configured' : 'not configured' // ✨ NOUVEAU
       }
     };
     
@@ -186,16 +196,23 @@ console.log('🔄 Services background initialisés');
   app.use(sessionCheck);
 
   // Routes d'administration (APRÈS l'authentification)
-const adminRoutes = require('./routes/admin');
-app.use('/api/admin', adminRoutes);
+  const adminRoutes = require('./routes/admin');
+  app.use('/api/admin', adminRoutes);
 
   // ✅ ROUTES PROTÉGÉES - PRODUCTION
   app.use('/api/payment', paymentRoutes);
+  
+  // ✨ NOUVEAU : Route FedaPay (protégée)
+  app.use('/api/payment/fedapay', require('./routes/fedapayRoutes'));
+  
   app.use('/api/quiz', quizRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/access-code', accessCodeRoutes);
   app.use('/api/auth', tokenRoutes);
   app.use('/api/stats', statsRoutes);
+  
+  // ✨ NOUVEAU : Route notifications (protégée - admin only)
+  app.use('/api/notifications', notificationRoutes);
 
   // ✅ SERVIR LES FICHIERS STATIQUES POUR LES UPLOADS
   app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -254,7 +271,9 @@ app.use('/api/admin', adminRoutes);
     console.log('🔧 Configuration chargée:');
     console.log('   - MongoDB:', mongoose.connection.readyState === 1 ? '✅ Connected' : '❌ Disconnected');
     console.log('   - KkiaPay Mode:', process.env.KKIAPAY_MODE);
+    console.log('   - FedaPay Mode:', process.env.FEDAPAY_ENVIRONMENT); // ✨ NOUVEAU
     console.log('   - Email:', process.env.EMAIL_USER ? '✅ Configured' : '❌ Not configured');
+    console.log('   - Cron Jobs:', '✅ Active'); // ✨ NOUVEAU
     console.log('📋 Routes montées:');
     console.log('   - GET  /api/health');
     console.log('   - GET  /api/diagnostics');
@@ -262,8 +281,11 @@ app.use('/api/admin', adminRoutes);
     console.log('   - GET  /api/debug/payment-test-protected (protected)');
     console.log('   - POST /api/payment/initiate (protected)');
     console.log('   - POST /api/payment/direct/initiate (protected)');
+    console.log('   - POST /api/payment/fedapay/create (protected)'); // ✨ NOUVEAU
+    console.log('   - POST /api/payment/fedapay/webhooks/fedapay (public)'); // ✨ NOUVEAU
     console.log('   - POST /api/payment/process-return (protected)');
     console.log('   - POST /api/webhook/kkiapay (public)');
+    console.log('   - POST /api/notifications/* (protected)'); // ✨ NOUVEAU
     console.log('   - ALL  /api/auth');
     console.log('   - GET  /api/uploads/* (public)');
     console.log('🔒 Middlewares actifs:');
@@ -318,7 +340,10 @@ app.use('/api/admin', adminRoutes);
     'KKIAPAY_PUBLIC_KEY',
     'KKIAPAY_SECRET_KEY',
     'EMAIL_USER',
-    'EMAIL_PASS'
+    'EMAIL_PASS',
+    'FEDAPAY_SECRET_KEY', // ✨ NOUVEAU
+    'FEDAPAY_PUBLIC_KEY', // ✨ NOUVEAU
+    'ENCRYPTION_KEY' // ✨ NOUVEAU
   ];
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -337,6 +362,15 @@ app.use('/api/admin', adminRoutes);
     console.warn('⚠  KkiaPay configuré mais pas en mode LIVE');
   } else {
     console.error('❌ KkiaPay non configuré');
+  }
+  
+  // ✨ NOUVEAU : VÉRIFICATION DE LA CONNEXION FedaPay
+  if (process.env.FEDAPAY_SECRET_KEY && process.env.FEDAPAY_ENVIRONMENT === 'live') {
+    console.log('✅ FedaPay configuré en mode PRODUCTION');
+  } else if (process.env.FEDAPAY_SECRET_KEY) {
+    console.warn('⚠  FedaPay configuré mais pas en mode LIVE');
+  } else {
+    console.error('❌ FedaPay non configuré');
   }
 
 })
