@@ -5,7 +5,7 @@ const emailService = require('../services/emailService');
 
 // Plans disponibles — source unique de vérité
 const PLANS = {
-    '1month':   { amount: 5000,  durationInMonths: 1,  name: '1 mois' },
+    '1month':   { amount: 5000,  durationInMonths: 2,  name: '1 mois' },
     '3months':  { amount: 12000, durationInMonths: 3,  name: '3 mois' },
     '10months': { amount: 25000, durationInMonths: 10, name: '10 mois' }
 };
