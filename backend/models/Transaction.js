@@ -1,11 +1,3 @@
-/**
- * ================================================================
- * TRANSACTION MODEL - QUIZ DE CARABIN
- * ================================================================
- * Modèle pour les transactions avec système de code d'activation
- * ================================================================
- */
-
 const mongoose = require('mongoose');
 
 const TransactionSchema = new mongoose.Schema({
@@ -17,11 +9,12 @@ const TransactionSchema = new mongoose.Schema({
     index: true
   },
 
-  // ID de la transaction (FedaPay ou KKiaPay)
+  // ID de la transaction chez le provider (FedaPay / KkiaPay)
+  // Non requis à la création — rempli après réponse du provider
   transactionId: {
     type: String,
-    required: true,
     unique: true,
+    sparse: true, // permet plusieurs documents sans ce champ
     index: true
   },
 
@@ -31,14 +24,14 @@ const TransactionSchema = new mongoose.Schema({
     required: true
   },
 
-  // Plan acheté
+  // Plan acheté — unifié sans tirets
   plan: {
     type: String,
-    enum: ['monthly', 'quarterly', 'annual', '1-month', '3-months', '12-months'],
+    enum: ['1month', '3months', '10months', 'monthly', 'quarterly', 'annual', '1-month', '3-months', '12-months'],
     required: true
   },
 
-  // Durée en mois
+  // Durée en mois (calculée automatiquement selon le plan)
   durationInMonths: {
     type: Number,
     required: true
@@ -47,55 +40,64 @@ const TransactionSchema = new mongoose.Schema({
   // Statut du paiement
   status: {
     type: String,
-    enum: ['pending', 'approved', 'declined', 'canceled', 'refunded'],
+    enum: ['pending', 'approved', 'completed', 'declined', 'canceled', 'refunded', 'failed'],
     default: 'pending',
     index: true
   },
 
-  // Provider (fedapay ou kkiapay)
+  // Provider
   provider: {
     type: String,
     enum: ['fedapay', 'kkiapay', 'kkiapay_widget'],
-    default: 'kkiapay'
+    default: 'fedapay'
+  },
+
+  // Pour compatibilité avec l'ancien code
+  paymentMethod: {
+    type: String
+  },
+
+  // Durée en jours (ancien champ)
+  planDuration: {
+    type: Number
+  },
+
+  currency: {
+    type: String,
+    default: 'XOF'
   },
 
   // ===========================
   // SYSTÈME DE CODE D'ACTIVATION
   // ===========================
-  
-  // Code d'activation à 6 chiffres
+
   activationCode: {
     type: String,
-    required: true,
-    index: true
+    index: true,
+    sparse: true // pas requis à la création
   },
 
-  // Code utilisé ou non
   codeUsed: {
     type: Boolean,
     default: false,
     index: true
   },
 
-  // Date d'utilisation du code
   codeUsedAt: {
     type: Date
   },
 
-  // Expiration du code (24h après génération)
+  // Expiration du code (remplie après génération)
   codeExpiresAt: {
     type: Date,
-    required: true,
     index: true
   },
 
-  // Email de code envoyé
   codeEmailSent: {
     type: Boolean,
     default: false
   },
 
-  // Date d'envoi de l'email
   codeEmailSentAt: {
     type: Date
   },
@@ -103,34 +105,34 @@ const TransactionSchema = new mongoose.Schema({
   // ===========================
   // ACTIVATION PREMIUM
   // ===========================
-  
-  // Premium activé ou non
+
   premiumActivated: {
     type: Boolean,
     default: false,
     index: true
   },
 
-  // Date d'activation Premium
   premiumActivatedAt: {
     type: Date
   },
 
-  // Date d'expiration Premium
   premiumExpiresAt: {
     type: Date
   },
 
-  // Email de bienvenue Premium envoyé
   welcomeEmailSent: {
     type: Boolean,
     default: false
   },
 
+  completedAt: {
+    type: Date
+  },
+
   // ===========================
   // MÉTADONNÉES
   // ===========================
-  
+
   description: {
     type: String
   },
@@ -140,7 +142,6 @@ const TransactionSchema = new mongoose.Schema({
     default: {}
   },
 
-  // Dates
   createdAt: {
     type: Date,
     default: Date.now,
@@ -159,6 +160,23 @@ const TransactionSchema = new mongoose.Schema({
 
 TransactionSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
+
+  // Calculer durationInMonths automatiquement si pas défini
+  if (!this.durationInMonths) {
+    const durationMap = {
+      '1month':   1,
+      '3months':  3,
+      '10months': 10,
+      '1-month':  1,
+      '3-months': 3,
+      '12-months': 12,
+      'monthly':  1,
+      'quarterly': 3,
+      'annual':   12
+    };
+    this.durationInMonths = durationMap[this.plan] || 1;
+  }
+
   next();
 });
 
@@ -166,63 +184,40 @@ TransactionSchema.pre('save', function(next) {
 // MÉTHODES D'INSTANCE
 // ===========================
 
-/**
- * Générer un code d'activation à 6 chiffres
- */
 TransactionSchema.methods.generateActivationCode = function() {
-  // Générer code aléatoire 6 chiffres
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  
   this.activationCode = code;
   this.codeUsed = false;
   this.codeExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // +24h
-  
   return code;
 };
 
-/**
- * Vérifier si le code est valide
- */
 TransactionSchema.methods.isCodeValid = function(inputCode) {
-  // Vérifier si code correspond
   if (this.activationCode !== inputCode) {
     return { valid: false, reason: 'Code incorrect' };
   }
-
-  // Vérifier si code déjà utilisé
   if (this.codeUsed) {
     return { valid: false, reason: 'Code déjà utilisé' };
   }
-
-  // Vérifier si code expiré
-  if (new Date() > this.codeExpiresAt) {
+  if (this.codeExpiresAt && new Date() > this.codeExpiresAt) {
     return { valid: false, reason: 'Code expiré' };
   }
-
-  // Vérifier si paiement approuvé
-  if (this.status !== 'approved') {
+  if (!['approved', 'completed'].includes(this.status)) {
     return { valid: false, reason: 'Paiement non validé' };
   }
-
   return { valid: true };
 };
 
-/**
- * Marquer le code comme utilisé
- */
 TransactionSchema.methods.markCodeAsUsed = function() {
   this.codeUsed = true;
   this.codeUsedAt = new Date();
   return this.save();
 };
 
-/**
- * Activer Premium
- */
 TransactionSchema.methods.activatePremium = function() {
   const now = new Date();
   const expiryDate = new Date(now);
-  expiryDate.setMonth(expiryDate.getMonth() + this.durationInMonths);
+  expiryDate.setMonth(expiryDate.getMonth() + (this.durationInMonths || 1));
 
   this.premiumActivated = true;
   this.premiumActivatedAt = now;
@@ -235,24 +230,18 @@ TransactionSchema.methods.activatePremium = function() {
 // MÉTHODES STATIQUES
 // ===========================
 
-/**
- * Trouver une transaction par code d'activation
- */
 TransactionSchema.statics.findByActivationCode = function(code) {
-  return this.findOne({ 
+  return this.findOne({
     activationCode: code,
-    status: 'approved'
+    status: { $in: ['approved', 'completed'] }
   }).populate('userId', 'name email');
 };
 
-/**
- * Trouver les codes expirés non utilisés
- */
 TransactionSchema.statics.findExpiredCodes = function() {
   return this.find({
     codeUsed: false,
     codeExpiresAt: { $lt: new Date() },
-    status: 'approved'
+    status: { $in: ['approved', 'completed'] }
   });
 };
 
