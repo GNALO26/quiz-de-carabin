@@ -16,7 +16,7 @@ const emailService = require('../services/emailService');
  * Valider un code d'activation Premium
  * ================================================================
  */
-exports.validateActivationCode = async (req, res) => {
+const validateActivationCode = async (req, res) => {
   try {
     const { code } = req.body;
     const userId = req.user._id;
@@ -116,7 +116,7 @@ exports.validateActivationCode = async (req, res) => {
  * Renvoyer le code d'activation
  * ================================================================
  */
-exports.resendActivationCode = async (req, res) => {
+const resendActivationCode = async (req, res) => {
   try {
     const { transactionId } = req.body;
     const userId = req.user._id;
@@ -170,7 +170,7 @@ exports.resendActivationCode = async (req, res) => {
  * Vérifier un code sans l'activer (preview)
  * ================================================================
  */
-exports.checkCode = async (req, res) => {
+const checkCode = async (req, res) => {
   try {
     const { code } = req.params;
     const userId = req.user._id;
@@ -224,7 +224,7 @@ exports.checkCode = async (req, res) => {
  * Liste des transactions en attente d'activation
  * ================================================================
  */
-exports.getPendingActivations = async (req, res) => {
+const getPendingActivations = async (req, res) => {
   try {
     const userId = req.user._id;
 
