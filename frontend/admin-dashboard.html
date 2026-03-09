@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Quiz de Carabin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin-dashboard.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-shield-alt me-2"></i>
+            <span>Admin Panel</span>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-section="dashboard">
+                <i class="fas fa-tachometer-alt"></i>Dashboard
+            </a>
+            <a href="#" class="nav-item" data-section="users">
+                <i class="fas fa-users"></i>Utilisateurs
+            </a>
+            <a href="#" class="nav-item" data-section="quizzes">
+                <i class="fas fa-gamepad"></i>Quiz
+            </a>
+            <a href="#" class="nav-item" data-section="notifications">
+                <i class="fas fa-bell"></i>Notifications
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main -->
+    <div class="main-content">
+        <div class="topbar">
+            <h2 id="pageTitle">Dashboard</h2>
+            <div class="admin-info">
+                <span id="adminName">Admin</span>
+                <i class="fas fa-user-shield"></i>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div class="content-section active" id="dashboard-section">
+            <div class="stats-grid">
+                <div class="stat-card bg-primary">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-details">
+                        <div class="stat-value" id="totalUsers">0</div>
+                        <div class="stat-label">Utilisateurs</div>
+                    </div>
+                </div>
+
+                <div class="stat-card bg-success">
+                    <div class="stat-icon"><i class="fas fa-crown"></i></div>
+                    <div class="stat-details">
+                        <div class="stat-value" id="premiumUsers">0</div>
+                        <div class="stat-label">Premium</div>
+                    </div>
+                </div>
+
+                <div class="stat-card bg-warning">
+                    <div class="stat-icon"><i class="fas fa-gamepad"></i></div>
+                    <div class="stat-details">
+                        <div class="stat-value" id="totalQuizzes">0</div>
+                        <div class="stat-label">Quiz</div>
+                    </div>
+                </div>
+
+                <div class="stat-card bg-info">
+                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-details">
+                        <div class="stat-value" id="totalRevenue">0 XOF</div>
+                        <div class="stat-label">Revenus</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mt-3">
+                <div class="col-lg-8">
+                    <div class="card-modern">
+                        <div class="card-header">
+                            <h5>Inscriptions</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="usersChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card-modern">
+                        <div class="card-header">
+                            <h5>Premium</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="premiumChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Section -->
+        <div class="content-section" id="users-section">
+            <div class="card-modern">
+                <div class="card-header">
+                    <h5>Liste des utilisateurs</h5>
+                    <input type="text" class="form-control w-50" placeholder="Rechercher..." id="userSearch">
+                </div>
+                <div class="table-responsive">
+                    <table class="table-modern">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Email</th>
+                                <th>Statut</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <tr><td colspan="4" class="text-center">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Section -->
+        <div class="content-section" id="notifications-section">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card-modern">
+                        <div class="card-header">
+                            <h5>Nouveau quiz</h5>
+                        </div>
+                        <div class="card-body">
+                            <select class="form-select mb-3" id="quizSelect">
+                                <option>Sélectionner un quiz...</option>
+                            </select>
+                            <button class="btn btn-primary w-100" id="sendQuizNotif">
+                                <i class="fas fa-paper-plane me-2"></i>Envoyer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card-modern">
+                        <div class="card-header">
+                            <h5>Digest hebdomadaire</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Résumé hebdomadaire aux utilisateurs actifs</p>
+                            <button class="btn btn-success w-100" id="sendDigest">
+                                <i class="fas fa-envelope me-2"></i>Envoyer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script type="module" src="js/admin-dashboard.js"></script>
+</body>
+</html>

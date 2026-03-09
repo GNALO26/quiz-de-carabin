@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Quiz de Carabin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard-modern.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-brain me-2"></i> Quiz de Carabin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="dashboard-modern.html">
+                            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="quiz.html">
+                            <i class="fas fa-gamepad me-1"></i> Quiz
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="stats.html">
+                            <i class="fas fa-chart-line me-1"></i> Stats
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div class="welcome-section">
+                <h1>Bonjour, <span id="userName">Étudiant</span> ! 👋</h1>
+                <p>Prêt à améliorer vos connaissances aujourd'hui ?</p>
+            </div>
+            <div class="premium-badge" id="premiumBadge" style="display: none;">
+                <i class="fas fa-crown me-2"></i>
+                <div>
+                    <div class="premium-title">Premium</div>
+                    <div class="premium-expires" id="premiumExpires">--/--/----</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats rapides -->
+        <div class="quick-stats">
+            <div class="stat-card stat-primary">
+                <div class="stat-icon"><i class="fas fa-graduation-cap"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalQuizzes">0</div>
+                    <div class="stat-label">Quiz complétés</div>
+                </div>
+            </div>
+
+            <div class="stat-card stat-success">
+                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" id="averageScore">0%</div>
+                    <div class="stat-label">Score moyen</div>
+                </div>
+            </div>
+
+            <div class="stat-card stat-warning">
+                <div class="stat-icon"><i class="fas fa-fire"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" id="streak">0</div>
+                    <div class="stat-label">Jours de suite</div>
+                </div>
+            </div>
+
+            <div class="stat-card stat-info">
+                <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" id="level">1</div>
+                    <div class="stat-label">Niveau</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Gauche -->
+            <div class="col-lg-8">
+                <div class="card-modern">
+                    <div class="card-header-modern">
+                        <h3><i class="fas fa-chart-area me-2"></i>Progression</h3>
+                    </div>
+                    <div class="card-body-modern">
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card-modern mt-4">
+                    <div class="card-header-modern">
+                        <h3><i class="fas fa-book me-2"></i>Par matière</h3>
+                    </div>
+                    <div class="card-body-modern">
+                        <canvas id="subjectChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Droite -->
+            <div class="col-lg-4">
+                <div class="card-modern">
+                    <div class="card-header-modern">
+                        <h3><i class="fas fa-star me-2"></i>Niveau</h3>
+                    </div>
+                    <div class="card-body-modern">
+                        <div class="xp-display">
+                            <div class="xp-circle">
+                                <svg width="150" height="150">
+                                    <circle class="xp-bg" cx="75" cy="75" r="65"></circle>
+                                    <circle class="xp-progress" id="xpCircle" cx="75" cy="75" r="65"></circle>
+                                </svg>
+                                <div class="xp-center">
+                                    <div class="xp-level" id="currentLevel">1</div>
+                                    <div class="xp-label">Niveau</div>
+                                </div>
+                            </div>
+                            <div class="xp-info">
+                                <div class="xp-bar-container">
+                                    <div class="xp-bar" id="xpBar"></div>
+                                </div>
+                                <div class="xp-text">
+                                    <span id="currentXP">0</span> / <span id="nextLevelXP">100</span> XP
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-modern mt-4">
+                    <div class="card-header-modern">
+                        <h3><i class="fas fa-award me-2"></i>Badges</h3>
+                    </div>
+                    <div class="card-body-modern">
+                        <div class="badges-grid" id="badgesContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script type="module" src="js/dashboard-modern.js"></script>
+</body>
+</html>

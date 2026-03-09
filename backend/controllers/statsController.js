@@ -1,123 +1,86 @@
+/**
+ * ================================================================
+ * STATISTICS CONTROLLER - QUIZ DE CARABIN
+ * ================================================================
+ * Controller pour les statistiques détaillées et graphiques
+ * ================================================================
+ */
+
+const User = require('../models/User');
 const UserProgress = require('../models/UserProgress');
-const Quiz = require('../models/Quiz');
-const mongoose = require('mongoose');
+const Result = require('../models/Result');
 
 /**
  * ================================================================
  * GET /api/stats/dashboard
- * Obtenir toutes les stats du dashboard
+ * Récupérer les stats du dashboard principal
  * ================================================================
  */
-exports.getDashboard = async (req, res) => {
+exports.getDashboardStats = async (req, res) => {
   try {
     const userId = req.user._id;
-    
-    // 1. Statistiques globales
-    const globalStats = await UserProgress.getUserGlobalStats(userId);
-    
-    // 2. Progression par matière
-    const progressBySubject = await UserProgress.getStatsBySubject(userId);
-    
-    // 3. Quiz à réviser (urgents)
-    const quizzesToReview = await UserProgress.getQuizzesToReview(userId, 10);
-    
-    // 4. Activité récente (7 derniers jours)
+
+    // Récupérer l'utilisateur
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    // Stats globales de l'utilisateur
+    const globalStats = {
+      totalQuizzes: user.stats.totalQuizzes || 0,
+      totalQuestions: user.stats.totalQuestions || 0,
+      correctAnswers: user.stats.correctAnswers || 0,
+      averageScore: user.stats.averageScore || 0,
+      timeSpent: user.stats.timeSpent || 0,
+      streak: user.stats.streak || 0,
+      level: user.level || 1,
+      xp: user.xp || 0,
+      badges: user.badges || []
+    };
+
+    // Progression par matière
+    const progressBySubject = await UserProgress.find({ userId })
+      .select('subject averageScore totalQuizzes level rank lastActivityDate')
+      .sort({ averageScore: -1 });
+
+    // Activité récente (7 derniers jours)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const recentActivity = await UserProgress.find({
-      userId,
-      lastAttemptDate: { $gte: sevenDaysAgo }
-    })
-    .populate('quizId', 'title subject category')
-    .sort({ lastAttemptDate: -1 })
-    .limit(10);
-    
-    // 5. Meilleurs scores récents
-    const topScores = await UserProgress.find({
-      userId,
-      bestScore: { $gte: 80 }
-    })
-    .populate('quizId', 'title subject')
-    .sort({ bestScore: -1 })
-    .limit(5);
-    
-    // 6. Points faibles (quiz avec faible maîtrise)
-    const weaknesses = await UserProgress.find({
-      userId,
-      mastery: { $lt: 50 },
-      totalAttempts: { $gte: 1 }
-    })
-    .populate('quizId', 'title subject category')
-    .sort({ mastery: 1 })
-    .limit(5);
-    
-    // Formatter la réponse
+
+    const recentResults = await Result.find({
+      userId: userId,
+      createdAt: { $gte: sevenDaysAgo }
+    }).select('score createdAt timeSpent');
+
+    // Statistiques Premium
+    const premiumInfo = {
+      isPremium: user.isPremium,
+      isActive: user.isPremiumActive(),
+      plan: user.premiumPlan,
+      expiresAt: user.premiumUntil,
+      daysLeft: user.getPremiumDaysLeft()
+    };
+
     res.json({
       success: true,
-      data: {
-        global: {
-          ...globalStats,
-          progressPercentage: globalStats.totalQuizzes > 0 
-            ? Math.round((globalStats.masteredQuizzes / globalStats.totalQuizzes) * 100)
-            : 0
-        },
-        
+      stats: {
+        global: globalStats,
         bySubject: progressBySubject,
-        
-        toReview: quizzesToReview.map(progress => {
-          const daysOverdue = progress.nextReviewDate 
-            ? Math.floor((new Date() - progress.nextReviewDate) / (1000 * 60 * 60 * 24))
-            : 0;
-          
-          return {
-            quizId: progress.quizId._id,
-            title: progress.quizId.title,
-            subject: progress.quizId.subject,
-            category: progress.quizId.category,
-            mastery: progress.mastery,
-            masteryLevel: progress.getMasteryLevel(),
-            nextReviewDate: progress.nextReviewDate,
-            daysOverdue: daysOverdue > 0 ? daysOverdue : 0,
-            isUrgent: daysOverdue > 2
-          };
-        }),
-        
-        recentActivity: recentActivity.map(progress => ({
-          quizId: progress.quizId._id,
-          title: progress.quizId.title,
-          subject: progress.quizId.subject,
-          lastScore: progress.attempts[progress.attempts.length - 1]?.score || 0,
-          mastery: progress.mastery,
-          date: progress.lastAttemptDate,
-          totalAttempts: progress.totalAttempts
-        })),
-        
-        topScores: topScores.map(progress => ({
-          quizId: progress.quizId._id,
-          title: progress.quizId.title,
-          subject: progress.quizId.subject,
-          bestScore: progress.bestScore,
-          mastery: progress.mastery
-        })),
-        
-        weaknesses: weaknesses.map(progress => ({
-          quizId: progress.quizId._id,
-          title: progress.quizId.title,
-          subject: progress.quizId.subject,
-          category: progress.quizId.category,
-          mastery: progress.mastery,
-          attempts: progress.totalAttempts,
-          needsWork: true
-        }))
+        recentActivity: recentResults,
+        premium: premiumInfo
       }
     });
-    
+
   } catch (error) {
-    console.error('❌ Erreur getDashboard:', error);
+    console.error('❌ Erreur getDashboardStats:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la récupération du dashboard'
+      message: 'Erreur lors de la récupération des stats'
     });
   }
 };
@@ -125,376 +88,332 @@ exports.getDashboard = async (req, res) => {
 /**
  * ================================================================
  * GET /api/stats/subject/:subject
- * Obtenir les stats d'une matière spécifique
+ * Statistiques détaillées par matière
  * ================================================================
  */
 exports.getSubjectStats = async (req, res) => {
   try {
     const userId = req.user._id;
     const { subject } = req.params;
-    
-    // Récupérer tous les quiz de cette matière
-    const allQuizzes = await Quiz.find({ subject }).select('_id title category');
-    
-    // Récupérer la progression de l'utilisateur pour cette matière
-    const userProgress = await UserProgress.find({
-      userId,
-      subject
-    }).populate('quizId', 'title category');
-    
-    // Calculer les stats
-    const completed = userProgress.filter(p => p.mastery >= 50).length;
-    const mastered = userProgress.filter(p => p.mastery >= 75).length;
-    const averageMastery = userProgress.length > 0
-      ? Math.round(userProgress.reduce((sum, p) => sum + p.mastery, 0) / userProgress.length)
-      : 0;
-    
-    // Identifier les quiz non commencés
-    const attemptedQuizIds = userProgress.map(p => p.quizId._id.toString());
-    const notStarted = allQuizzes.filter(q => !attemptedQuizIds.includes(q._id.toString()));
-    
+
+    // Récupérer la progression dans cette matière
+    const progress = await UserProgress.findOne({ userId, subject });
+
+    if (!progress) {
+      return res.status(404).json({
+        success: false,
+        message: 'Aucune progression trouvée pour cette matière'
+      });
+    }
+
+    // Obtenir le classement
+    const ranking = await UserProgress.getUserRanking(userId, subject);
+
+    // Obtenir la tendance
+    const trend = progress.getTrend();
+
+    // Données pour graphiques
+    const chartData = progress.getChartData();
+
     res.json({
       success: true,
-      data: {
-        subject,
-        totalQuizzes: allQuizzes.length,
-        attempted: userProgress.length,
-        completed,
-        mastered,
-        notStarted: notStarted.length,
-        averageMastery,
-        progressPercentage: Math.round((completed / allQuizzes.length) * 100),
-        
-        quizzes: userProgress.map(p => ({
-          quizId: p.quizId._id,
-          title: p.quizId.title,
-          category: p.quizId.category,
-          mastery: p.mastery,
-          masteryLevel: p.getMasteryLevel(),
-          bestScore: p.bestScore,
-          averageScore: p.averageScore,
-          attempts: p.totalAttempts,
-          lastAttempt: p.lastAttemptDate,
-          needsReview: p.shouldReview()
-        })).sort((a, b) => b.mastery - a.mastery),
-        
-        notStartedQuizzes: notStarted.map(q => ({
-          quizId: q._id,
-          title: q.title,
-          category: q.category
-        }))
+      stats: {
+        subject: subject,
+        totalQuizzes: progress.totalQuizzes,
+        totalQuestions: progress.totalQuestions,
+        correctAnswers: progress.correctAnswers,
+        incorrectAnswers: progress.incorrectAnswers,
+        averageScore: progress.averageScore,
+        bestScore: progress.bestScore,
+        lastScore: progress.lastScore,
+        totalTimeSpent: progress.totalTimeSpent,
+        averageTimePerQuiz: progress.averageTimePerQuiz,
+        level: progress.level,
+        rank: progress.rank,
+        xp: progress.xp,
+        ranking: ranking,
+        trend: trend,
+        chartData: chartData,
+        strongCategories: progress.strongCategories,
+        weakCategories: progress.weakCategories,
+        lastActivityDate: progress.lastActivityDate
       }
     });
-    
+
   } catch (error) {
     console.error('❌ Erreur getSubjectStats:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la récupération des stats de matière'
+      message: 'Erreur lors de la récupération des stats'
     });
   }
 };
 
 /**
  * ================================================================
- * GET /api/stats/quiz/:quizId
- * Obtenir l'historique détaillé d'un quiz
+ * GET /api/stats/progress-chart
+ * Données pour graphique de progression globale
  * ================================================================
  */
-exports.getQuizHistory = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const { quizId } = req.params;
-    
-    const progress = await UserProgress.findOne({
-      userId,
-      quizId
-    }).populate('quizId', 'title subject category questions');
-    
-    if (!progress) {
-      return res.json({
-        success: true,
-        data: {
-          hasAttempts: false,
-          quiz: await Quiz.findById(quizId).select('title subject category')
-        }
-      });
-    }
-    
-    // Analyser les performances par question
-    const questionAnalysis = [];
-    const totalQuestions = progress.quizId.questions.length;
-    
-    for (let i = 0; i < totalQuestions; i++) {
-      const correctCount = progress.attempts.reduce((count, attempt) => {
-        const userAnswer = attempt.answers[i];
-        const correctAnswer = progress.quizId.questions[i].correctAnswers;
-        const isCorrect = JSON.stringify(userAnswer?.sort()) === JSON.stringify(correctAnswer.sort());
-        return count + (isCorrect ? 1 : 0);
-      }, 0);
-      
-      questionAnalysis.push({
-        questionIndex: i,
-        questionText: progress.quizId.questions[i].text.substring(0, 100) + '...',
-        successRate: Math.round((correctCount / progress.totalAttempts) * 100),
-        correctCount,
-        totalAttempts: progress.totalAttempts
-      });
-    }
-    
-    res.json({
-      success: true,
-      data: {
-        hasAttempts: true,
-        quiz: {
-          id: progress.quizId._id,
-          title: progress.quizId.title,
-          subject: progress.quizId.subject,
-          category: progress.quizId.category
-        },
-        summary: {
-          mastery: progress.mastery,
-          masteryLevel: progress.getMasteryLevel(),
-          bestScore: progress.bestScore,
-          averageScore: progress.averageScore,
-          totalAttempts: progress.totalAttempts,
-          lastAttempt: progress.lastAttemptDate,
-          nextReview: progress.nextReviewDate,
-          needsReview: progress.shouldReview()
-        },
-        attempts: progress.attempts.map((attempt, index) => ({
-          attemptNumber: index + 1,
-          score: attempt.score,
-          correctCount: attempt.correctCount,
-          totalQuestions: attempt.totalQuestions,
-          date: attempt.completedAt,
-          timeSpent: attempt.timeSpent
-        })).reverse(), // Plus récent en premier
-        
-        questionAnalysis: questionAnalysis.sort((a, b) => a.successRate - b.successRate),
-        
-        achievements: progress.achievements
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Erreur getQuizHistory:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la récupération de l\'historique'
-    });
-  }
-};
-
-/**
- * ================================================================
- * GET /api/stats/recommendations
- * Obtenir des recommandations personnalisées
- * ================================================================
- */
-exports.getRecommendations = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    
-    const recommendations = [];
-    
-    // 1. Quiz urgents à réviser
-    const urgentReviews = await UserProgress.find({
-      userId,
-      needsReview: true,
-      mastery: { $lt: 75 }
-    })
-    .populate('quizId', 'title subject')
-    .sort({ nextReviewDate: 1 })
-    .limit(3);
-    
-    urgentReviews.forEach(progress => {
-      recommendations.push({
-        type: 'urgent_review',
-        priority: 'high',
-        title: `Réviser "${progress.quizId.title}"`,
-        description: `Votre maîtrise (${progress.mastery}%) nécessite une révision`,
-        action: {
-          type: 'start_quiz',
-          quizId: progress.quizId._id
-        },
-        metadata: {
-          subject: progress.quizId.subject,
-          mastery: progress.mastery
-        }
-      });
-    });
-    
-    // 2. Points faibles à améliorer
-    const weaknesses = await UserProgress.find({
-      userId,
-      mastery: { $lt: 40 },
-      totalAttempts: { $gte: 2 }
-    })
-    .populate('quizId', 'title subject')
-    .sort({ mastery: 1 })
-    .limit(2);
-    
-    weaknesses.forEach(progress => {
-      recommendations.push({
-        type: 'improve_weakness',
-        priority: 'medium',
-        title: `Renforcer "${progress.quizId.title}"`,
-        description: `${progress.totalAttempts} tentatives mais maîtrise faible (${progress.mastery}%)`,
-        action: {
-          type: 'practice_quiz',
-          quizId: progress.quizId._id
-        },
-        metadata: {
-          subject: progress.quizId.subject,
-          attempts: progress.totalAttempts
-        }
-      });
-    });
-    
-    // 3. Nouveaux quiz à essayer (matières déjà commencées)
-    const startedSubjects = await UserProgress.distinct('subject', { userId });
-    
-    for (const subject of startedSubjects.slice(0, 2)) {
-      const attemptedQuizIds = await UserProgress.find({ userId, subject }).distinct('quizId');
-      
-      const newQuiz = await Quiz.findOne({
-        subject,
-        _id: { $nin: attemptedQuizIds }
-      }).select('title subject category');
-      
-      if (newQuiz) {
-        recommendations.push({
-          type: 'new_quiz',
-          priority: 'low',
-          title: `Nouveau quiz disponible: "${newQuiz.title}"`,
-          description: `Continuez votre progression en ${subject}`,
-          action: {
-            type: 'discover_quiz',
-            quizId: newQuiz._id
-          },
-          metadata: {
-            subject: newQuiz.subject,
-            category: newQuiz.category
-          }
-        });
-      }
-    }
-    
-    // 4. Streak à maintenir (si activité récente)
-    const recentActivity = await UserProgress.countDocuments({
-      userId,
-      lastAttemptDate: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
-    });
-    
-    if (recentActivity > 0) {
-      recommendations.push({
-        type: 'maintain_streak',
-        priority: 'low',
-        title: '🔥 Maintenez votre rythme !',
-        description: `Vous avez fait ${recentActivity} quiz aujourd'hui. Excellent !`,
-        action: {
-          type: 'continue_learning',
-          url: '/quiz.html'
-        }
-      });
-    }
-    
-    // Trier par priorité
-    const priorityOrder = { high: 1, medium: 2, low: 3 };
-    recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-    
-    res.json({
-      success: true,
-      data: {
-        count: recommendations.length,
-        recommendations: recommendations.slice(0, 5) // Max 5 recommandations
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Erreur getRecommendations:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la génération des recommandations'
-    });
-  }
-};
-
-/**
- * ================================================================
- * GET /api/stats/performance-chart
- * Obtenir les données pour le graphique de performance
- * ================================================================
- */
-exports.getPerformanceChart = async (req, res) => {
+exports.getProgressChart = async (req, res) => {
   try {
     const userId = req.user._id;
     const { period = '30' } = req.query; // 7, 30, 90 jours
-    
+
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - parseInt(period));
-    
-    const progress = await UserProgress.find({
-      userId,
-      lastAttemptDate: { $gte: daysAgo }
-    }).sort({ lastAttemptDate: 1 });
-    
-    // Créer un graphique jour par jour
-    const chartData = [];
-    const dateMap = new Map();
-    
-    progress.forEach(p => {
-      p.attempts.forEach(attempt => {
-        if (attempt.completedAt >= daysAgo) {
-          const dateKey = attempt.completedAt.toISOString().split('T')[0];
-          
-          if (!dateMap.has(dateKey)) {
-            dateMap.set(dateKey, {
-              date: dateKey,
-              totalScore: 0,
-              count: 0,
-              quizzes: []
-            });
-          }
-          
-          const dayData = dateMap.get(dateKey);
-          dayData.totalScore += attempt.score;
-          dayData.count += 1;
-          dayData.quizzes.push({
-            score: attempt.score,
-            timeSpent: attempt.timeSpent
-          });
-        }
-      });
+
+    // Récupérer tous les résultats dans la période
+    const results = await Result.find({
+      userId: userId,
+      createdAt: { $gte: daysAgo }
+    })
+    .select('score subject createdAt timeSpent')
+    .sort({ createdAt: 1 })
+    .populate('quizId', 'title subject');
+
+    // Grouper par jour
+    const dailyStats = {};
+
+    results.forEach(result => {
+      const date = result.createdAt.toISOString().split('T')[0];
+      
+      if (!dailyStats[date]) {
+        dailyStats[date] = {
+          date: date,
+          totalQuizzes: 0,
+          totalScore: 0,
+          totalTime: 0,
+          subjects: {}
+        };
+      }
+
+      dailyStats[date].totalQuizzes += 1;
+      dailyStats[date].totalScore += result.score;
+      dailyStats[date].totalTime += result.timeSpent || 0;
+
+      // Par matière
+      const subject = result.subject || 'Autre';
+      if (!dailyStats[date].subjects[subject]) {
+        dailyStats[date].subjects[subject] = 0;
+      }
+      dailyStats[date].subjects[subject] += 1;
     });
-    
-    // Convertir en tableau et calculer moyennes
-    dateMap.forEach((value, key) => {
-      chartData.push({
-        date: key,
-        averageScore: Math.round(value.totalScore / value.count),
-        quizzesCompleted: value.count
-      });
-    });
-    
-    chartData.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+
+    // Calculer moyennes
+    const chartData = Object.values(dailyStats).map(day => ({
+      date: new Date(day.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+      averageScore: Math.round(day.totalScore / day.totalQuizzes),
+      quizCount: day.totalQuizzes,
+      timeSpent: Math.round(day.totalTime / 60), // en minutes
+      subjects: day.subjects
+    }));
+
     res.json({
       success: true,
-      data: {
-        period: parseInt(period),
-        chartData
-      }
+      period: parseInt(period),
+      data: chartData
     });
-    
+
   } catch (error) {
-    console.error('❌ Erreur getPerformanceChart:', error);
+    console.error('❌ Erreur getProgressChart:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la génération du graphique'
+      message: 'Erreur lors de la récupération du graphique'
     });
   }
 };
 
-// ✅ PAS DE module.exports ICI - Déjà fait avec exports.xxx plus haut
+/**
+ * ================================================================
+ * GET /api/stats/time-by-subject
+ * Temps passé par matière (pour graphique camembert)
+ * ================================================================
+ */
+exports.getTimeBySubject = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Récupérer toutes les progressions
+    const progresses = await UserProgress.find({ userId })
+      .select('subject totalTimeSpent totalQuizzes');
+
+    // Formater pour graphique
+    const data = progresses.map(p => ({
+      subject: p.subject,
+      timeSpent: Math.round(p.totalTimeSpent / 60), // minutes
+      percentage: 0, // calculé après
+      quizCount: p.totalQuizzes
+    }));
+
+    // Calculer le total
+    const totalTime = data.reduce((sum, item) => sum + item.timeSpent, 0);
+
+    // Calculer les pourcentages
+    data.forEach(item => {
+      item.percentage = totalTime > 0 
+        ? Math.round((item.timeSpent / totalTime) * 100)
+        : 0;
+    });
+
+    // Trier par temps décroissant
+    data.sort((a, b) => b.timeSpent - a.timeSpent);
+
+    res.json({
+      success: true,
+      totalTime: totalTime,
+      data: data
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur getTimeBySubject:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des données'
+    });
+  }
+};
+
+/**
+ * ================================================================
+ * GET /api/stats/performance-by-subject
+ * Performance (score moyen) par matière
+ * ================================================================
+ */
+exports.getPerformanceBySubject = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Récupérer toutes les progressions
+    const progresses = await UserProgress.find({ userId })
+      .select('subject averageScore bestScore totalQuizzes level rank')
+      .sort({ averageScore: -1 });
+
+    const data = progresses.map(p => ({
+      subject: p.subject,
+      averageScore: p.averageScore,
+      bestScore: p.bestScore,
+      quizCount: p.totalQuizzes,
+      level: p.level,
+      rank: p.rank
+    }));
+
+    res.json({
+      success: true,
+      data: data
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur getPerformanceBySubject:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des données'
+    });
+  }
+};
+
+/**
+ * ================================================================
+ * GET /api/stats/leaderboard/:subject
+ * Classement dans une matière
+ * ================================================================
+ */
+exports.getLeaderboard = async (req, res) => {
+  try {
+    const { subject } = req.params;
+    const { limit = 10 } = req.query;
+
+    // Récupérer le top
+    const leaderboard = await UserProgress.find({ subject })
+      .populate('userId', 'name university studyYear avatar')
+      .select('userId averageScore totalQuizzes level rank')
+      .sort({ averageScore: -1, totalQuizzes: -1 })
+      .limit(parseInt(limit));
+
+    const data = leaderboard.map((entry, index) => ({
+      rank: index + 1,
+      user: {
+        name: entry.userId.name,
+        university: entry.userId.university,
+        studyYear: entry.userId.studyYear,
+        avatar: entry.userId.avatar
+      },
+      averageScore: entry.averageScore,
+      quizCount: entry.totalQuizzes,
+      level: entry.level,
+      rankTitle: entry.rank
+    }));
+
+    res.json({
+      success: true,
+      subject: subject,
+      leaderboard: data
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur getLeaderboard:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération du classement'
+    });
+  }
+};
+
+/**
+ * ================================================================
+ * POST /api/stats/record-quiz
+ * Enregistrer les résultats d'un quiz
+ * ================================================================
+ */
+exports.recordQuizResult = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { quizId, subject, totalQuestions, correctAnswers, timeSpent } = req.body;
+
+    // Mettre à jour stats globales
+    const user = await User.findById(userId);
+    await user.updateStats({
+      totalQuestions,
+      correctAnswers,
+      timeSpent: timeSpent || 0
+    });
+
+    // Mettre à jour progression par matière
+    const progress = await UserProgress.getOrCreate(userId, subject);
+    await progress.recordQuiz({
+      quizId,
+      totalQuestions,
+      correctAnswers,
+      incorrectAnswers: totalQuestions - correctAnswers,
+      timeSpent: timeSpent || 0
+    });
+
+    // Calculer XP gagné
+    const xpGained = Math.round((correctAnswers / totalQuestions) * 100);
+    await user.gainXP(xpGained);
+
+    res.json({
+      success: true,
+      message: 'Résultats enregistrés',
+      xpGained: xpGained,
+      newLevel: user.level
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur recordQuizResult:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'enregistrement'
+    });
+  }
+};
+
+module.exports = {
+  getDashboardStats,
+  getSubjectStats,
+  getProgressChart,
+  getTimeBySubject,
+  getPerformanceBySubject,
+  getLeaderboard,
+  recordQuizResult
+};
