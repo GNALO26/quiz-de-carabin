@@ -186,6 +186,9 @@ console.log('🔄 Services background initialisés');
   
   // ✅ WEBHOOKS (DOIVENT ÊTRE PUBLICS - SANS AUTH)
   app.use('/api/webhook', webhookRoutes);
+  
+  // ✅ WEBHOOK FEDAPAY PUBLIC (doit être avant le middleware auth global)
+  app.post('/api/payment/fedapay/webhooks/fedapay', require('./controllers/fedapayController').handleWebhook);
 
   // ✅ MIDDLEWARE D'AUTHENTIFICATION GLOBAL pour routes protégées
   app.use(auth);
@@ -200,10 +203,9 @@ console.log('🔄 Services background initialisés');
   app.use('/api/admin', adminRoutes);
 
   // ✅ ROUTES PROTÉGÉES - PRODUCTION
-  app.use('/api/payment', paymentRoutes);
-  
-  // ✨ NOUVEAU : Route FedaPay (protégée)
+  // ⚠️ IMPORTANT: fedapay DOIT être monté avant /api/payment (route plus spécifique d'abord)
   app.use('/api/payment/fedapay', require('./routes/fedapayRoutes'));
+  app.use('/api/payment', paymentRoutes);
   
   app.use('/api/quiz', quizRoutes);
   app.use('/api/user', userRoutes);
