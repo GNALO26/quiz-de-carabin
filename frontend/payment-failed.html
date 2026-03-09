@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paiement réussi - Quiz de Carabin</title>
+    <link rel="stylesheet" href="css/premium.css">
+    <style>
+        .success-container {
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            font-size: 50px;
+        }
+        
+        .success-title {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .success-message {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .code-box {
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .code-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .activation-code {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            letter-spacing: 8px;
+            font-family: monospace;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #667eea;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .steps {
+            text-align: left;
+            margin: 30px 0;
+        }
+        
+        .steps ol {
+            padding-left: 20px;
+        }
+        
+        .steps li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">🎉</div>
+        
+        <h1 class="success-title">Paiement réussi !</h1>
+        
+        <p class="success-message">
+            Votre paiement a été validé avec succès.<br>
+            Vous allez recevoir un email avec votre code d'activation.
+        </p>
+        
+        <div class="info-box">
+            <strong>⏱️ Temps de traitement :</strong> 2-5 minutes<br>
+            Vérifiez votre boîte email (et spam) dans quelques instants.
+        </div>
+        
+        <div class="steps">
+            <h3>📋 Prochaines étapes :</h3>
+            <ol>
+                <li>Attendez l'email avec votre code à 6 chiffres</li>
+                <li>Cliquez sur "Activer mon Premium" ci-dessous</li>
+                <li>Entrez votre code d'activation</li>
+                <li>Profitez de tous les quiz Premium ! 🚀</li>
+            </ol>
+        </div>
+        
+        <a href="/activate-premium.html" class="btn">Activer mon Premium</a>
+        <a href="/dashboard.html" class="btn btn-secondary">Retour au Dashboard</a>
+        
+        <p style="margin-top: 30px; font-size: 0.9rem; color: #999;">
+            Transaction ID: <span id="transactionId">Chargement...</span>
+        </p>
+    </div>
+    
+    <script>
+        // Récupérer transaction ID depuis URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const transactionId = urlParams.get('transaction_id') || 'Non disponible';
+        document.getElementById('transactionId').textContent = transactionId;
+        
+        // Vérifier le statut après 3 secondes
+        if (transactionId !== 'Non disponible') {
+            setTimeout(() => {
+                checkPaymentStatus(transactionId);
+            }, 3000);
+        }
+        
+        async function checkPaymentStatus(txId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`https://quiz-de-carabin-backend.onrender.com/api/payment/fedapay/status/${txId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.emailSent) {
+                    console.log('✅ Email de code envoyé');
+                }
+            } catch (error) {
+                console.error('Erreur vérification statut:', error);
+            }
+        }
+    </script>
+</body>
+</html>
