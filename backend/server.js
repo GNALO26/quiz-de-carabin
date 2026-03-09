@@ -188,7 +188,16 @@ console.log('🔄 Services background initialisés');
   app.use('/api/webhook', webhookRoutes);
   
   // ✅ WEBHOOK FEDAPAY PUBLIC (doit être avant le middleware auth global)
-  app.post('/api/payment/fedapay/webhooks/fedapay', require('./controllers/fedapayController').handleWebhook);
+  // Route directe sans passer par le router pour éviter tout conflit de module
+  app.post('/api/payment/fedapay/webhooks/fedapay', async (req, res) => {
+    try {
+      const fedapayCtrl = require('./controllers/fedapayController');
+      await fedapayCtrl.handleWebhook(req, res);
+    } catch (err) {
+      console.error('❌ Webhook FedaPay erreur:', err.message);
+      res.status(500).json({ success: false, message: 'Erreur webhook' });
+    }
+  });
 
   // ✅ MIDDLEWARE D'AUTHENTIFICATION GLOBAL pour routes protégées
   app.use(auth);
