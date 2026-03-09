@@ -27,6 +27,16 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   console.log('✅ Connected to MongoDB - PRODUCTION MODE');
   console.log('📊 Database:', mongoose.connection.name);
 
+  // FIX: Supprimer l'ancien index unique non-sparse sur transactionId
+  mongoose.connection.db.collection('transactions').indexExists('transactionId_1')
+    .then(exists => {
+      if (exists) {
+        return mongoose.connection.db.collection('transactions').dropIndex('transactionId_1')
+          .then(() => console.log('✅ Index transactionId_1 supprimé'))
+          .catch(err => console.warn('Drop index err:', err.message));
+      }
+    }).catch(() => {});
+
   // Après la connexion MongoDB
 const webhookQueue = require('./services/webhookQueue');
 const paymentMonitor = require('./services/paymentMonitor');
@@ -186,18 +196,6 @@ console.log('🔄 Services background initialisés');
   
   // ✅ WEBHOOKS (DOIVENT ÊTRE PUBLICS - SANS AUTH)
   app.use('/api/webhook', webhookRoutes);
-  
-  // ✅ WEBHOOK FEDAPAY PUBLIC (doit être avant le middleware auth global)
-  // Route directe sans passer par le router pour éviter tout conflit de module
-  app.post('/api/payment/fedapay/webhooks/fedapay', async (req, res) => {
-    try {
-      const fedapayCtrl = require('./controllers/fedapayController');
-      await fedapayCtrl.handleWebhook(req, res);
-    } catch (err) {
-      console.error('❌ Webhook FedaPay erreur:', err.message);
-      res.status(500).json({ success: false, message: 'Erreur webhook' });
-    }
-  });
 
   // ✅ MIDDLEWARE D'AUTHENTIFICATION GLOBAL pour routes protégées
   app.use(auth);
@@ -212,9 +210,10 @@ console.log('🔄 Services background initialisés');
   app.use('/api/admin', adminRoutes);
 
   // ✅ ROUTES PROTÉGÉES - PRODUCTION
-  // ⚠️ IMPORTANT: fedapay DOIT être monté avant /api/payment (route plus spécifique d'abord)
-  app.use('/api/payment/fedapay', require('./routes/fedapayRoutes'));
   app.use('/api/payment', paymentRoutes);
+  
+  // ✨ NOUVEAU : Route FedaPay (protégée)
+  app.use('/api/payment/fedapay', require('./routes/fedapayRoutes'));
   
   app.use('/api/quiz', quizRoutes);
   app.use('/api/user', userRoutes);

@@ -1,29 +1,27 @@
 const fedapayModule = require('fedapay');
 
-// Diagnostic complet du module
+// Diagnostic complet
 console.log('🔍 FedaPay module keys:', Object.keys(fedapayModule));
-console.log('🔍 FedaPay module type:', typeof fedapayModule);
 
-// Chercher Transaction dans toutes les possibilités
 let FedaPay;
 let Transaction;
 
 if (fedapayModule.FedaPay) {
     FedaPay = fedapayModule.FedaPay;
     Transaction = fedapayModule.FedaPay.Transaction || fedapayModule.Transaction;
-    console.log('📦 Export: fedapayModule.FedaPay');
+    console.log('📦 Export via: fedapayModule.FedaPay');
 } else if (fedapayModule.default) {
     FedaPay = fedapayModule.default;
     Transaction = fedapayModule.default.Transaction || fedapayModule.Transaction;
-    console.log('📦 Export: fedapayModule.default');
+    console.log('📦 Export via: fedapayModule.default');
 } else {
     FedaPay = fedapayModule;
     Transaction = fedapayModule.Transaction;
-    console.log('📦 Export: fedapayModule direct');
+    console.log('📦 Export via: fedapayModule direct');
 }
 
-console.log('🔍 Transaction disponible:', typeof Transaction);
-console.log('🔍 FedaPay keys:', FedaPay ? Object.keys(FedaPay).slice(0, 10) : 'null');
+console.log('🔍 Transaction type:', typeof Transaction);
+console.log('🔍 FedaPay keys:', FedaPay ? Object.keys(FedaPay).slice(0, 15).join(', ') : 'null');
 
 const environment = process.env.FEDAPAY_ENVIRONMENT || 'live';
 const secretKey   = process.env.FEDAPAY_SECRET_KEY;
@@ -36,7 +34,7 @@ if (typeof FedaPay.setApiKey === 'function') {
     FedaPay.setEnvironment(environment);
     console.log('✅ FedaPay configuré');
 } else {
-    console.error('❌ setApiKey non trouvé sur FedaPay');
+    console.error('❌ setApiKey non disponible');
 }
 
 class FedaPayService {
@@ -45,14 +43,10 @@ class FedaPayService {
         try {
             const { amount, description, customer, callbackUrl } = data;
 
-            // Résoudre Transaction au moment de l'appel (pas au chargement)
             const T = Transaction || FedaPay.Transaction;
-            
             if (!T) {
-                throw new Error(`FedaPay.Transaction non disponible. FedaPay keys: ${Object.keys(FedaPay || {}).join(', ')}`);
+                throw new Error(`FedaPay.Transaction indisponible. Keys: ${Object.keys(FedaPay || {}).join(', ')}`);
             }
-
-            console.log('📤 Appel FedaPay.Transaction.create...');
 
             const customerObj = {
                 firstname: customer.firstname || 'Client',
@@ -64,6 +58,8 @@ class FedaPayService {
                 }
             };
 
+            console.log('📤 FedaPay.Transaction.create...');
+
             const transaction = await T.create({
                 description:  description,
                 amount:       amount,
@@ -72,10 +68,10 @@ class FedaPayService {
                 customer:     customerObj
             });
 
-            console.log('✅ Transaction FedaPay créée, ID:', transaction.id);
+            console.log('✅ Transaction créée, ID:', transaction.id);
 
             const token = await transaction.generateToken();
-            console.log('✅ Token généré, URL:', token.url);
+            console.log('✅ URL paiement:', token.url);
 
             return {
                 success:       true,
@@ -85,8 +81,7 @@ class FedaPayService {
             };
 
         } catch (error) {
-            console.error('❌ Erreur FedaPay createTransaction:');
-            console.error('   Message:', error.message);
+            console.error('❌ Erreur FedaPay:', error.message);
             if (error.status)   console.error('   Status:', error.status);
             if (error.errors)   console.error('   Errors:', JSON.stringify(error.errors));
             return { success: false, error: error.message };
@@ -105,7 +100,7 @@ class FedaPayService {
                 approved_at: transaction.approved_at
             };
         } catch (error) {
-            console.error('❌ Erreur getTransactionStatus:', error.message);
+            console.error('❌ getTransactionStatus:', error.message);
             return { success: false, error: error.message };
         }
     }
@@ -121,7 +116,6 @@ class FedaPayService {
                 .digest('hex');
             return signature === computed;
         } catch (error) {
-            console.error('❌ Erreur validateWebhook:', error.message);
             return false;
         }
     }
