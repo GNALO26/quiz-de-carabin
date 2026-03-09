@@ -52,7 +52,7 @@ console.log('🔄 Services background initialisés');
   const webhookRoutes = require('./routes/webhook');
   const statsRoutes = require('./routes/stats');
   // ✨ NOUVEAU : Routes notifications
-  const notificationRoutes = require('./routes/notificationroutes');
+  const notificationRoutes = require('./routes/notificationRoutes');
 
   const app = express();
   
