@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const notificationService = require('./services/notificationService');
-const User = require('../models/User');
+const User = require('./models/User');
 
 /**
  * ================================================================
