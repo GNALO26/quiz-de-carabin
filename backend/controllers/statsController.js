@@ -16,11 +16,22 @@ const Result = require('../models/Result');
  * Récupérer les stats du dashboard principal
  * ================================================================
  */
-exports.getDashboardStats = async (req, res) => {
+/**
+ * ================================================================
+ * STATISTICS CONTROLLER - QUIZ DE CARABIN
+ * ================================================================
+ */
+
+const User = require('../models/User');
+const UserProgress = require('../models/UserProgress');
+
+/**
+ * GET /api/stats/dashboard
+ * Stats dashboard principal
+ */
+exports.getDashboard = async (req, res) => {
   try {
     const userId = req.user._id;
-
-    // Récupérer l'utilisateur
     const user = await User.findById(userId);
 
     if (!user) {
@@ -30,61 +41,164 @@ exports.getDashboardStats = async (req, res) => {
       });
     }
 
-    // Stats globales de l'utilisateur
+    // Stats globales
     const globalStats = {
-      totalQuizzes: user.stats.totalQuizzes || 0,
-      totalQuestions: user.stats.totalQuestions || 0,
-      correctAnswers: user.stats.correctAnswers || 0,
-      averageScore: user.stats.averageScore || 0,
-      timeSpent: user.stats.timeSpent || 0,
-      streak: user.stats.streak || 0,
+      totalQuizzes: user.stats?.totalQuizzes || 0,
+      averageMastery: user.stats?.averageScore || 0,
+      streak: user.stats?.streak || 0,
       level: user.level || 1,
       xp: user.xp || 0,
+      nextLevelXP: 100 * (user.level || 1),
       badges: user.badges || []
     };
 
-    // Progression par matière
-    const progressBySubject = await UserProgress.find({ userId })
-      .select('subject averageScore totalQuizzes level rank lastActivityDate')
-      .sort({ averageScore: -1 });
+    // Par matière
+    const bySubject = await UserProgress.find({ userId })
+      .select('subject averageMastery totalQuizzes')
+      .sort({ averageMastery: -1 })
+      .limit(10);
 
-    // Activité récente (7 derniers jours)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const recentResults = await Result.find({
-      userId: userId,
-      createdAt: { $gte: sevenDaysAgo }
-    }).select('score createdAt timeSpent');
-
-    // Statistiques Premium
-    const premiumInfo = {
-      isPremium: user.isPremium,
-      isActive: user.isPremiumActive(),
-      plan: user.premiumPlan,
-      expiresAt: user.premiumUntil,
-      daysLeft: user.getPremiumDaysLeft()
-    };
+    // Activité récente
+    const recentActivity = user.quizHistory?.slice(-7) || [];
 
     res.json({
       success: true,
-      stats: {
+      data: {
         global: globalStats,
-        bySubject: progressBySubject,
-        recentActivity: recentResults,
-        premium: premiumInfo
+        bySubject: bySubject,
+        recentActivity: recentActivity
       }
     });
 
   } catch (error) {
-    console.error('❌ Erreur getDashboardStats:', error);
+    console.error('❌ Erreur getDashboard:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la récupération des stats'
+      message: 'Erreur serveur'
     });
   }
 };
 
+/**
+ * GET /api/stats/subject/:subject
+ * Stats par matière
+ */
+exports.getSubjectStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { subject } = req.params;
+
+    const progress = await UserProgress.findOne({ userId, subject });
+
+    if (!progress) {
+      return res.status(404).json({
+        success: false,
+        message: 'Aucune progression'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: progress
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur getSubjectStats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+/**
+ * GET /api/stats/quiz-history
+ * Historique quiz
+ */
+exports.getQuizHistory = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId).select('quizHistory');
+
+    res.json({
+      success: true,
+      history: user.quizHistory || []
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur getQuizHistory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+/**
+ * GET /api/stats/recommendations
+ * Recommandations
+ */
+exports.getRecommendations = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Récupérer matières avec faible score
+    const weakSubjects = await UserProgress.find({
+      userId,
+      averageMastery: { $lt: 70 }
+    })
+    .select('subject averageMastery')
+    .sort({ averageMastery: 1 })
+    .limit(3);
+
+    res.json({
+      success: true,
+      recommendations: weakSubjects.map(s => ({
+        subject: s.subject,
+        reason: `Score moyen : ${s.averageMastery}%`
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur getRecommendations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+/**
+ * GET /api/stats/performance-chart
+ * Graphique performance
+ */
+exports.getPerformanceChart = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId).select('quizHistory');
+
+    // Derniers 30 quiz
+    const recentQuizzes = (user.quizHistory || []).slice(-30);
+
+    const chartData = recentQuizzes.map((quiz, index) => ({
+      x: index + 1,
+      y: quiz.score || 0,
+      date: quiz.completedAt
+    }));
+
+    res.json({
+      success: true,
+      data: chartData
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur getPerformanceChart:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
 /**
  * ================================================================
  * GET /api/stats/subject/:subject
