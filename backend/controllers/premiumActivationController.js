@@ -125,7 +125,7 @@ exports.resendActivationCode = async (req, res) => {
     const transaction = await Transaction.findOne({
       transactionId: transactionId,
       userId: userId,
-      status: 'approved',
+      status: 'completed',
       codeUsed: false
     }).populate('userId');
 
