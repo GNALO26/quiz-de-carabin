@@ -33,7 +33,7 @@ exports.validateActivationCode = async (req, res) => {
     const transaction = await Transaction.findOne({
       activationCode: code,
       userId: userId,
-      status: 'approved'
+      status: 'completed'
     }).populate('userId');
 
     if (!transaction) {
@@ -230,7 +230,7 @@ exports.getPendingActivations = async (req, res) => {
 
     const pendingTransactions = await Transaction.find({
       userId: userId,
-      status: 'approved',
+      status: 'completed',
       codeUsed: false,
       codeExpiresAt: { $gt: new Date() } // Code non expiré
     }).sort({ createdAt: -1 });
