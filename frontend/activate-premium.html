@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activer mon Premium - Quiz de Carabin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .activation-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            margin: 20px;
+        }
+        
+        .header-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            font-size: 50px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .code-input-group {
+            margin: 30px 0;
+        }
+        
+        .code-input {
+            text-align: center;
+            font-size: 2.5rem;
+            letter-spacing: 15px;
+            padding: 20px;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .code-input:focus {
+            border-color: #764ba2;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-activate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-activate:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-activate:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .success-box {
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .error-box {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+        
+        .spinner-border {
+            width: 1.5rem;
+            height: 1.5rem;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="activation-card">
+        <div class="header-icon">👑</div>
+        
+        <h1>Activer mon Premium</h1>
+        <p class="subtitle">Entrez le code à 6 chiffres reçu par email</p>
+        
+        <div class="info-box">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Vous avez reçu un email</strong> avec votre code d'activation après votre paiement.
+            Vérifiez également vos spams si vous ne le trouvez pas.
+        </div>
+        
+        <div class="code-input-group">
+            <input 
+                type="text" 
+                id="codeInput" 
+                class="form-control code-input" 
+                placeholder="000000"
+                maxlength="6"
+                pattern="[0-9]{6}"
+                autocomplete="off"
+            >
+        </div>
+        
+        <button id="activateBtn" class="btn-activate" onclick="activateCode()">
+            <i class="fas fa-check-circle me-2"></i>
+            Activer mon Premium
+        </button>
+        
+        <div id="successBox" class="success-box">
+            <h4><i class="fas fa-check-circle me-2"></i>Activation réussie !</h4>
+            <p class="mb-0">Votre accès Premium est maintenant actif. Redirection vers le dashboard...</p>
+        </div>
+        
+        <div id="errorBox" class="error-box">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span id="errorMessage">Une erreur est survenue</span>
+        </div>
+        
+        <div class="warning-box">
+            <i class="fas fa-clock me-2"></i>
+            <strong>Code expiré ou perdu ?</strong><br>
+            Contactez notre support : <strong>quizdecarabin4@gmail.com</strong>
+        </div>
+        
+        <div class="back-link">
+            <a href="/dashboard.html"><i class="fas fa-arrow-left me-2"></i>Retour au dashboard</a>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'https://quiz-de-carabin-backend.onrender.com';
+        
+        // Auto-focus sur l'input
+        document.getElementById('codeInput').focus();
+        
+        // Forcer seulement des chiffres
+        document.getElementById('codeInput').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+        
+        // Permettre Enter pour valider
+        document.getElementById('codeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && this.value.length === 6) {
+                activateCode();
+            }
+        });
+        
+        async function activateCode() {
+            const code = document.getElementById('codeInput').value.trim();
+            const btn = document.getElementById('activateBtn');
+            const errorBox = document.getElementById('errorBox');
+            const successBox = document.getElementById('successBox');
+            
+            // Reset
+            errorBox.style.display = 'none';
+            successBox.style.display = 'none';
+            
+            // Validation
+            if (!code || code.length !== 6) {
+                showError('Veuillez entrer un code à 6 chiffres');
+                return;
+            }
+            
+            if (!/^\d{6}$/.test(code)) {
+                showError('Le code doit contenir uniquement des chiffres');
+                return;
+            }
+            
+            // Récupérer le token
+            const token = localStorage.getItem('quizToken');
+            if (!token) {
+                showError('Vous devez être connecté pour activer votre Premium');
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 2000);
+                return;
+            }
+            
+            // Désactiver le bouton
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border"></span>Activation en cours...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/premium/validate-code`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ code })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Succès !
+                    successBox.style.display = 'block';
+                    
+                    // Mettre à jour le localStorage
+                    if (data.user) {
+                        localStorage.setItem('quizUser', JSON.stringify(data.user));
+                    }
+                    
+                    // Redirection après 2 secondes
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html?premium=activated';
+                    }, 2000);
+                    
+                } else {
+                    // Erreur
+                    showError(data.message || 'Code invalide ou expiré');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Activer mon Premium';
+                }
+                
+            } catch (error) {
+                console.error('Erreur activation:', error);
+                showError('Erreur de connexion. Vérifiez votre connexion internet.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Activer mon Premium';
+            }
+        }
+        
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorBox.style.display = 'block';
+            
+            // Scroll vers l'erreur
+            errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        // Si un code est dans l'URL (pour pré-remplissage)
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlCode = urlParams.get('code');
+        if (urlCode && /^\d{6}$/.test(urlCode)) {
+            document.getElementById('codeInput').value = urlCode;
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

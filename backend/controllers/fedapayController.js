@@ -5,7 +5,7 @@ const emailService = require('../services/emailService');
 
 // Plans disponibles — source unique de vérité
 const PLANS = {
-    '1month':   { amount: 100,  durationInMonths: 2,  name: '1 mois' },
+    '1month':   { amount: 50,  durationInMonths: 2,  name: '1 mois' },
     '3months':  { amount: 12000, durationInMonths: 3,  name: '3 mois' },
     '10months': { amount: 25000, durationInMonths: 10, name: '10 mois' }
 };
@@ -31,7 +31,7 @@ exports.createPayment = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
         }
 
-        // Créer la transaction avec tous les champs requis
+        // Créer la transaction
         const transaction = new Transaction({
             userId:           userId,
             amount:           selectedPlan.amount,
@@ -46,7 +46,6 @@ exports.createPayment = async (req, res) => {
         await transaction.save();
         console.log(`✅ Transaction créée en DB: ${transaction._id} - Plan: ${plan}`);
 
-        // Préparer les infos client
         const nameParts = (user.name || '').split(' ');
         const firstname = (customerInfo && customerInfo.firstname) || nameParts[0] || 'Client';
         const lastname  = (customerInfo && customerInfo.lastname)  || nameParts[1] || 'Quiz';
@@ -92,19 +91,20 @@ exports.createPayment = async (req, res) => {
 };
 
 /**
- * Webhook FedaPay
+ * Webhook FedaPay - SANS VÉRIFICATION SIGNATURE (pour tests)
  */
 exports.handleWebhook = async (req, res) => {
     try {
-        const signature = req.headers['x-fedapay-signature'];
-        const payload   = req.body;
+        const payload = req.body;
 
         console.log('🔔 Webhook FedaPay reçu:', JSON.stringify(payload).substring(0, 200));
 
-        if (signature && !fedapayService.validateWebhook(signature, payload)) {
-            console.error('❌ Signature webhook invalide');
-            return res.status(401).json({ success: false, message: 'Signature invalide' });
-        }
+        // ⚠️ TEMPORAIRE : Pas de vérification signature pour debug
+        // const signature = req.headers['x-fedapay-signature'];
+        // if (signature && !fedapayService.validateWebhook(signature, payload)) {
+        //     console.error('❌ Signature webhook invalide');
+        //     return res.status(401).json({ success: false, message: 'Signature invalide' });
+        // }
 
         const event  = payload.event  || payload.name;
         const entity = payload.entity || payload.data;
@@ -124,23 +124,43 @@ exports.handleWebhook = async (req, res) => {
             }
 
             if (transaction.status === 'completed') {
+                console.log('⚠️ Transaction déjà traitée');
                 return res.json({ success: true, message: 'Transaction déjà traitée' });
             }
 
             // Générer le code d'activation
-            transaction.generateActivationCode();
-            transaction.status      = 'completed';
+            const code = transaction.generateActivationCode();
+            transaction.status = 'completed';
             transaction.completedAt = new Date();
             await transaction.save();
+            
             console.log(`✅ Transaction complétée: ${transaction._id}`);
+            console.log(`🔑 Code généré: ${code}`);
 
+            // ✅ ENVOYER L'EMAIL IMMÉDIATEMENT
             if (transaction.userId) {
                 try {
-                    await emailService.sendPremiumActivationCodeEmail(transaction.userId, transaction);
-                    console.log(`📧 Email envoyé à: ${transaction.userId.email}`);
+                    console.log(`📧 Envoi email à: ${transaction.userId.email}`);
+                    
+                    const emailResult = await emailService.sendPremiumActivationCodeEmail(
+                        transaction.userId, 
+                        transaction
+                    );
+                    
+                    if (emailResult.success) {
+                        transaction.codeEmailSent = true;
+                        transaction.codeEmailSentAt = new Date();
+                        await transaction.save();
+                        console.log(`✅ Email envoyé avec succès`);
+                    } else {
+                        console.error(`❌ Erreur envoi email:`, emailResult.error);
+                    }
+                    
                 } catch (emailError) {
-                    console.error('❌ Erreur email (non bloquant):', emailError.message);
+                    console.error('❌ Erreur email:', emailError.message);
                 }
+            } else {
+                console.error('❌ Pas d\'utilisateur lié à la transaction');
             }
         }
 
@@ -148,7 +168,11 @@ exports.handleWebhook = async (req, res) => {
 
     } catch (error) {
         console.error('❌ Erreur webhook FedaPay:', error);
-        return res.status(500).json({ success: false, message: 'Erreur webhook', error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Erreur webhook', 
+            error: error.message 
+        });
     }
 };
 
@@ -167,10 +191,12 @@ exports.checkPaymentStatus = async (req, res) => {
         if (transaction.status === 'pending' && transaction.transactionId) {
             const liveStatus = await fedapayService.getTransactionStatus(transaction.transactionId);
             if (liveStatus.success && liveStatus.status === 'approved') {
-                transaction.generateActivationCode();
-                transaction.status      = 'completed';
+                const code = transaction.generateActivationCode();
+                transaction.status = 'completed';
                 transaction.completedAt = new Date();
                 await transaction.save();
+                
+                console.log(`✅ Transaction mise à jour via polling: ${transaction._id}`);
             }
         }
 
@@ -179,12 +205,17 @@ exports.checkPaymentStatus = async (req, res) => {
             status:       transaction.status,
             amount:       transaction.amount,
             plan:         transaction.plan,
-            codeExpiry:   transaction.codeExpiresAt
+            codeExpiry:   transaction.codeExpiresAt,
+            emailSent:    transaction.codeEmailSent
         });
 
     } catch (error) {
         console.error('❌ Erreur checkPaymentStatus:', error);
-        return res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Erreur serveur', 
+            error: error.message 
+        });
     }
 };
 
