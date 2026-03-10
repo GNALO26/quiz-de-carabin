@@ -21,6 +21,8 @@ exports.validateActivationCode = async (req, res) => {
     const { code } = req.body;
     const userId = req.user._id;
 
+    console.log(`🔑 Tentative validation code: ${code} pour user: ${userId}`);
+
     // Validation du code
     if (!code || code.length !== 6) {
       return res.status(400).json({
@@ -29,24 +31,28 @@ exports.validateActivationCode = async (req, res) => {
       });
     }
 
-    // Chercher la transaction avec ce code
+    // ✅ FIX: Chercher avec status 'completed' ET 'approved'
     const transaction = await Transaction.findOne({
       activationCode: code,
       userId: userId,
-      status: 'completed'
+      status: { $in: ['completed', 'approved'] }
     }).populate('userId');
 
     if (!transaction) {
+      console.log('❌ Transaction non trouvée');
       return res.status(404).json({
         success: false,
-        message: 'Code introuvable ou déjà utilisé par un autre compte.'
+        message: 'Code introuvable ou déjà utilisé.'
       });
     }
+
+    console.log(`✅ Transaction trouvée: ${transaction._id}`);
 
     // Vérifier la validité du code
     const validation = transaction.isCodeValid(code);
     
     if (!validation.valid) {
+      console.log(`❌ Code invalide: ${validation.reason}`);
       return res.status(400).json({
         success: false,
         message: validation.reason
@@ -65,9 +71,11 @@ exports.validateActivationCode = async (req, res) => {
 
     // Marquer le code comme utilisé
     await transaction.markCodeAsUsed();
+    console.log('✅ Code marqué comme utilisé');
 
     // Activer Premium dans la transaction
     await transaction.activatePremium();
+    console.log('✅ Premium activé dans transaction');
 
     // Activer Premium dans le profil utilisateur
     user.isPremium = true;
@@ -75,24 +83,37 @@ exports.validateActivationCode = async (req, res) => {
     user.premiumUntil = transaction.premiumExpiresAt;
     user.premiumActivatedAt = new Date();
     await user.save();
+    console.log('✅ Premium activé dans profil user');
 
     // Envoyer email de bienvenue Premium
-    await emailService.sendPremiumActivationEmail(
-      user,
-      transaction.plan,
-      transaction.premiumExpiresAt
-    );
+    try {
+      await emailService.sendPremiumActivationEmail(
+        user,
+        transaction.plan,
+        transaction.premiumExpiresAt
+      );
+      
+      transaction.welcomeEmailSent = true;
+      await transaction.save();
+      console.log('✅ Email bienvenue envoyé');
+    } catch (emailError) {
+      console.error('⚠️ Erreur email (non bloquant):', emailError.message);
+    }
 
-    // Marquer email comme envoyé
-    transaction.welcomeEmailSent = true;
-    await transaction.save();
-
-    console.log('✅ Premium activé pour:', user.email);
+    console.log('🎉 Premium activé pour:', user.email);
 
     // Retourner la réponse
     res.json({
       success: true,
       message: 'Compte Premium activé avec succès !',
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        isPremium: true,
+        premiumPlan: user.premiumPlan,
+        premiumUntil: user.premiumUntil
+      },
       data: {
         isPremium: true,
         plan: transaction.plan,
@@ -105,7 +126,8 @@ exports.validateActivationCode = async (req, res) => {
     console.error('❌ Erreur validateActivationCode:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la validation du code'
+      message: 'Erreur lors de la validation du code',
+      error: error.message
     });
   }
 };
@@ -121,11 +143,10 @@ exports.resendActivationCode = async (req, res) => {
     const { transactionId } = req.body;
     const userId = req.user._id;
 
-    // Trouver la transaction
     const transaction = await Transaction.findOne({
       transactionId: transactionId,
       userId: userId,
-      status: 'completed',
+      status: { $in: ['completed', 'approved'] },
       codeUsed: false
     }).populate('userId');
 
@@ -136,7 +157,6 @@ exports.resendActivationCode = async (req, res) => {
       });
     }
 
-    // Vérifier si code expiré
     if (new Date() > transaction.codeExpiresAt) {
       return res.status(400).json({
         success: false,
@@ -144,7 +164,6 @@ exports.resendActivationCode = async (req, res) => {
       });
     }
 
-    // Renvoyer l'email
     await emailService.sendPremiumActivationCodeEmail(
       transaction.userId,
       transaction
@@ -178,7 +197,7 @@ exports.checkCode = async (req, res) => {
     const transaction = await Transaction.findOne({
       activationCode: code,
       userId: userId,
-      status: 'approved'
+      status: { $in: ['completed', 'approved'] }
     });
 
     if (!transaction) {
@@ -197,7 +216,6 @@ exports.checkCode = async (req, res) => {
       });
     }
 
-    // Code valide - retourner les infos
     res.json({
       success: true,
       data: {
@@ -230,9 +248,9 @@ exports.getPendingActivations = async (req, res) => {
 
     const pendingTransactions = await Transaction.find({
       userId: userId,
-      status: 'completed',
+      status: { $in: ['completed', 'approved'] },
       codeUsed: false,
-      codeExpiresAt: { $gt: new Date() } // Code non expiré
+      codeExpiresAt: { $gt: new Date() }
     }).sort({ createdAt: -1 });
 
     res.json({
