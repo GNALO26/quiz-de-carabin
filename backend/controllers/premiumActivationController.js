@@ -2,8 +2,6 @@
  * ================================================================
  * PREMIUM ACTIVATION CONTROLLER - QUIZ DE CARABIN
  * ================================================================
- * Gestion de l'activation Premium via code
- * ================================================================
  */
 
 const Transaction = require('../models/Transaction');
@@ -11,19 +9,16 @@ const User = require('../models/User');
 const emailService = require('../services/emailService');
 
 /**
- * ================================================================
  * POST /api/premium/validate-code
  * Valider un code d'activation Premium
- * ================================================================
  */
-exports.validateActivationCode = async (req, res) => {
+const validateActivationCode = async (req, res) => {
   try {
     const { code } = req.body;
     const userId = req.user._id;
 
-    console.log(`🔑 Tentative validation code: ${code} pour user: ${userId}`);
+    console.log(`🔑 Validation code: ${code} pour user: ${userId}`);
 
-    // Validation du code
     if (!code || code.length !== 6) {
       return res.status(400).json({
         success: false,
@@ -31,7 +26,7 @@ exports.validateActivationCode = async (req, res) => {
       });
     }
 
-    // ✅ FIX: Chercher avec status 'completed' ET 'approved'
+    // Chercher avec status completed OU approved
     const transaction = await Transaction.findOne({
       activationCode: code,
       userId: userId,
@@ -48,7 +43,7 @@ exports.validateActivationCode = async (req, res) => {
 
     console.log(`✅ Transaction trouvée: ${transaction._id}`);
 
-    // Vérifier la validité du code
+    // Vérifier validité
     const validation = transaction.isCodeValid(code);
     
     if (!validation.valid) {
@@ -59,9 +54,7 @@ exports.validateActivationCode = async (req, res) => {
       });
     }
 
-    // Récupérer l'utilisateur
     const user = await User.findById(userId);
-
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -69,23 +62,23 @@ exports.validateActivationCode = async (req, res) => {
       });
     }
 
-    // Marquer le code comme utilisé
+    // Marquer code utilisé
     await transaction.markCodeAsUsed();
-    console.log('✅ Code marqué comme utilisé');
+    console.log('✅ Code marqué utilisé');
 
-    // Activer Premium dans la transaction
+    // Activer Premium transaction
     await transaction.activatePremium();
-    console.log('✅ Premium activé dans transaction');
+    console.log('✅ Premium activé transaction');
 
-    // Activer Premium dans le profil utilisateur
+    // Activer Premium user
     user.isPremium = true;
     user.premiumPlan = transaction.plan;
     user.premiumUntil = transaction.premiumExpiresAt;
     user.premiumActivatedAt = new Date();
     await user.save();
-    console.log('✅ Premium activé dans profil user');
+    console.log('✅ Premium activé user');
 
-    // Envoyer email de bienvenue Premium
+    // Email bienvenue
     try {
       await emailService.sendPremiumActivationEmail(
         user,
@@ -97,12 +90,11 @@ exports.validateActivationCode = async (req, res) => {
       await transaction.save();
       console.log('✅ Email bienvenue envoyé');
     } catch (emailError) {
-      console.error('⚠️ Erreur email (non bloquant):', emailError.message);
+      console.error('⚠️ Erreur email:', emailError.message);
     }
 
-    console.log('🎉 Premium activé pour:', user.email);
+    console.log('🎉 Premium activé:', user.email);
 
-    // Retourner la réponse
     res.json({
       success: true,
       message: 'Compte Premium activé avec succès !',
@@ -113,12 +105,6 @@ exports.validateActivationCode = async (req, res) => {
         isPremium: true,
         premiumPlan: user.premiumPlan,
         premiumUntil: user.premiumUntil
-      },
-      data: {
-        isPremium: true,
-        plan: transaction.plan,
-        expiresAt: transaction.premiumExpiresAt,
-        activatedAt: transaction.premiumActivatedAt
       }
     });
 
@@ -126,19 +112,16 @@ exports.validateActivationCode = async (req, res) => {
     console.error('❌ Erreur validateActivationCode:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la validation du code',
+      message: 'Erreur validation code',
       error: error.message
     });
   }
 };
 
 /**
- * ================================================================
  * POST /api/premium/resend-code
- * Renvoyer le code d'activation
- * ================================================================
  */
-exports.resendActivationCode = async (req, res) => {
+const resendActivationCode = async (req, res) => {
   try {
     const { transactionId } = req.body;
     const userId = req.user._id;
@@ -153,14 +136,14 @@ exports.resendActivationCode = async (req, res) => {
     if (!transaction) {
       return res.status(404).json({
         success: false,
-        message: 'Transaction non trouvée ou code déjà utilisé'
+        message: 'Transaction non trouvée'
       });
     }
 
     if (new Date() > transaction.codeExpiresAt) {
       return res.status(400).json({
         success: false,
-        message: 'Le code a expiré. Veuillez contacter le support.'
+        message: 'Code expiré'
       });
     }
 
@@ -171,25 +154,22 @@ exports.resendActivationCode = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Code renvoyé par email avec succès'
+      message: 'Code renvoyé par email'
     });
 
   } catch (error) {
     console.error('❌ Erreur resendActivationCode:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors du renvoi du code'
+      message: 'Erreur renvoi code'
     });
   }
 };
 
 /**
- * ================================================================
  * GET /api/premium/check-code/:code
- * Vérifier un code sans l'activer (preview)
- * ================================================================
  */
-exports.checkCode = async (req, res) => {
+const checkCode = async (req, res) => {
   try {
     const { code } = req.params;
     const userId = req.user._id;
@@ -222,7 +202,6 @@ exports.checkCode = async (req, res) => {
         valid: true,
         plan: transaction.plan,
         amount: transaction.amount,
-        durationInMonths: transaction.durationInMonths,
         expiresAt: transaction.codeExpiresAt
       }
     });
@@ -231,22 +210,19 @@ exports.checkCode = async (req, res) => {
     console.error('❌ Erreur checkCode:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la vérification du code'
+      message: 'Erreur vérification'
     });
   }
 };
 
 /**
- * ================================================================
  * GET /api/premium/pending-activations
- * Liste des transactions en attente d'activation
- * ================================================================
  */
-exports.getPendingActivations = async (req, res) => {
+const getPendingActivations = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const pendingTransactions = await Transaction.find({
+    const pending = await Transaction.find({
       userId: userId,
       status: { $in: ['completed', 'approved'] },
       codeUsed: false,
@@ -255,8 +231,8 @@ exports.getPendingActivations = async (req, res) => {
 
     res.json({
       success: true,
-      count: pendingTransactions.length,
-      data: pendingTransactions.map(t => ({
+      count: pending.length,
+      data: pending.map(t => ({
         transactionId: t.transactionId,
         plan: t.plan,
         amount: t.amount,
@@ -269,11 +245,12 @@ exports.getPendingActivations = async (req, res) => {
     console.error('❌ Erreur getPendingActivations:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la récupération des activations en attente'
+      message: 'Erreur récupération'
     });
   }
 };
 
+// ✅ EXPORTS
 module.exports = {
   validateActivationCode,
   resendActivationCode,
