@@ -9,37 +9,146 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard-modern.css">
 </head>
+<script>
+fetch('/navbar-complete.html')
+    .then(res => res.text())
+    .then(html => {
+        const nav = document.createElement('div');
+        nav.innerHTML = html;
+        document.body.insertBefore(nav.firstElementChild, document.body.firstChild);
+        
+        // Réinitialiser les scripts de la navbar
+        updateNavbar();
+    });
+</script>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.html">
-                <i class="fas fa-brain me-2"></i> Quiz de Carabin
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="dashboard-modern.html">
-                            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="quiz.html">
-                            <i class="fas fa-gamepad me-1"></i> Quiz
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="stats.html">
-                            <i class="fas fa-chart-line me-1"></i> Stats
-                        </a>
-                    </li>
-                </ul>
-            </div>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <!-- Logo avec image -->
+        <a class="navbar-brand d-flex align-items-center" href="/index.html">
+            <img src="/assets/images/logo.png" alt="Quiz de Carabin" height="40" class="me-2">
+            <span class="fw-bold text-primary">Quiz de Carabin</span>
+        </a>
+        
+        <!-- Toggle mobile -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <!-- Menu -->
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item">
+                    <a class="nav-link active" href="/index.html">
+                        Accueil
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/quiz-modern.html">
+                        Quiz
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/about.html">
+                        À propos
+                    </a>
+                </li>
+                
+                <!-- Dashboard (seulement si connecté) -->
+                <li class="nav-item" id="nav-dashboard" style="display: none;">
+                    <a class="nav-link" href="/dashboard-modern.html">
+                        Dashboard
+                    </a>
+                </li>
+                
+                <!-- Boutons NON connecté -->
+                <li class="nav-item" id="nav-login">
+                    <a class="btn btn-outline-primary ms-2" href="/login.html">
+                        <i class="fas fa-sign-in-alt me-1"></i>Se connecter
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-register">
+                    <a class="btn btn-primary ms-2" href="/register.html">
+                        <i class="fas fa-user-plus me-1"></i>S'inscrire
+                    </a>
+                </li>
+                
+                <!-- Menu utilisateur connecté -->
+                <li class="nav-item dropdown" id="nav-user" style="display: none;">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
+                       id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        <img src="/assets/images/logo.png" alt="User" class="rounded-circle me-2" 
+                             width="32" height="32">
+                        <span id="user-name">Utilisateur</span>
+                        <span id="user-premium-badge" class="badge bg-warning ms-2" style="display: none;">
+                            <i class="fas fa-crown"></i> Premium
+                        </span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="/dashboard-modern.html">
+                                Mon Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/premium.html">
+                                <i class="fas fa-crown me-2"></i>Premium
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="#" id="nav-logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
         </div>
-    </nav>
+    </div>
+</nav>
+
+<!-- Avant </body> -->
+<script>
+// Navbar dynamique
+document.addEventListener('DOMContentLoaded', function() {
+    updateNavbar();
+    
+    document.getElementById('nav-logout')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        localStorage.removeItem('quizToken');
+        localStorage.removeItem('quizUser');
+        localStorage.removeItem('userIsPremium');
+        localStorage.removeItem('premiumExpiresAt');
+        window.location.href = '/index.html';
+    });
+});
+
+function updateNavbar() {
+    const token = localStorage.getItem('quizToken');
+    const userStr = localStorage.getItem('quizUser');
+    
+    if (token && userStr && token !== 'null' && userStr !== 'null') {
+        try {
+            const user = JSON.parse(userStr);
+            
+            document.getElementById('nav-dashboard').style.display = 'block';
+            document.getElementById('nav-user').style.display = 'block';
+            document.getElementById('nav-login').style.display = 'none';
+            document.getElementById('nav-register').style.display = 'none';
+            
+            document.getElementById('user-name').textContent = user.name || 'Utilisateur';
+            
+            if (user.isPremium) {
+                document.getElementById('user-premium-badge').style.display = 'inline-block';
+            }
+        } catch (e) {
+            console.error('Erreur:', e);
+        }
+    }
+}
+</script>
 
     <div class="dashboard-container">
         <!-- Header -->

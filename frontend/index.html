@@ -492,6 +492,18 @@
         });
     });
 </script>
+<script>
+fetch('/navbar-complete.html')
+    .then(res => res.text())
+    .then(html => {
+        const nav = document.createElement('div');
+        nav.innerHTML = html;
+        document.body.insertBefore(nav.firstElementChild, document.body.firstChild);
+        
+        // Réinitialiser les scripts de la navbar
+        updateNavbar();
+    });
+</script>
 <body>
   <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
     <div class="container">
@@ -511,24 +523,24 @@
             <ul class="navbar-nav ms-auto align-items-center">
                 <li class="nav-item">
                     <a class="nav-link active" href="/index.html">
-                        <i class="fas fa-home me-1"></i>Accueil
+                        Accueil
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/quiz-modern.html">
-                        <i class="fas fa-gamepad me-1"></i>Quiz
+                        Quiz
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/about.html">
-                        <i class="fas fa-info-circle me-1"></i>À propos
+                        À propos
                     </a>
                 </li>
                 
                 <!-- Dashboard (seulement si connecté) -->
                 <li class="nav-item" id="nav-dashboard" style="display: none;">
                     <a class="nav-link" href="/dashboard-modern.html">
-                        <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        Dashboard
                     </a>
                 </li>
                 
@@ -558,7 +570,7 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
                             <a class="dropdown-item" href="/dashboard-modern.html">
-                                <i class="fas fa-tachometer-alt me-2"></i>Mon Dashboard
+                                Mon Dashboard
                             </a>
                         </li>
                         <li>

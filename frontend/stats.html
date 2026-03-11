@@ -3,522 +3,341 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mes Statistiques - Quiz de Carabin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <title>Statistiques - Quiz de Carabin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
         }
-
-        .container {
+        
+        body {
+            background: #f8f9fa;
+        }
+        
+        .stats-container {
             max-width: 1200px;
-            margin: 0 auto;
+            margin: 2rem auto;
+            padding: 0 1rem;
         }
-
-        .header {
-            background: white;
-            padding: 30px;
+        
+        .stats-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
             border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
         }
-
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .premium-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
-            color: #333;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-left: 10px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
+        
         .stat-card {
             background: white;
-            padding: 25px;
             border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            text-align: center;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-
-        .stat-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
-        }
-
-        .stat-value {
+        
+        .stat-number {
             font-size: 2.5rem;
             font-weight: 700;
             color: #667eea;
-            margin-bottom: 5px;
         }
-
+        
         .stat-label {
             color: #666;
             font-size: 0.9rem;
         }
-
-        .chart-container {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        
+        .progress-bar-custom {
+            height: 25px;
+            border-radius: 10px;
         }
-
-        .chart-container h2 {
-            color: #333;
-            margin-bottom: 20px;
-            text-align: center;
+        
+        .subject-stat {
+            padding: 1rem;
+            border-left: 4px solid #667eea;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+            border-radius: 5px;
         }
-
-        .chart-wrapper {
-            position: relative;
-            height: 400px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            background: #f0f0f0;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .tab.active {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-        }
-
+        
         .loader {
             text-align: center;
-            padding: 50px;
+            padding: 3rem;
         }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .subject-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 15px;
-        }
-
-        .subject-item {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            border-left: 5px solid #667eea;
-        }
-
-        .subject-item:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .subject-name {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-        }
-
-        .subject-stats {
-            display: flex;
-            justify-content: space-between;
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        .rank-badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-top: 5px;
-        }
-
-        .rank-debutant { background: #e3f2fd; color: #1976d2; }
-        .rank-novice { background: #f3e5f5; color: #7b1fa2; }
-        .rank-intermediaire { background: #fff3e0; color: #f57c00; }
-        .rank-avance { background: #e8f5e9; color: #388e3c; }
-        .rank-expert { background: #fce4ec; color: #c2185b; }
-        .rank-maitre { background: #fff9c4; color: #f57f17; }
-
-        @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .chart-wrapper {
-                height: 300px;
-            }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
         }
     </style>
 </head>
+<script>
+fetch('/navbar-complete.html')
+    .then(res => res.text())
+    .then(html => {
+        const nav = document.createElement('div');
+        nav.innerHTML = html;
+        document.body.insertBefore(nav.firstElementChild, document.body.firstChild);
+        
+        // Réinitialiser les scripts de la navbar
+        updateNavbar();
+    });
+</script>
 <body>
-    <div class="container">
+    <!-- NAVBAR (copier navbar-complete.html ici) -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/index.html">
+                <img src="/assets/images/logo.png" alt="Quiz de Carabin" height="40" class="me-2">
+                <span class="fw-bold text-primary">Quiz de Carabin</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.html">
+                            <i class="fas fa-home me-1"></i>Accueil
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/quiz-modern.html" id="nav-quiz-link">
+                            <i class="fas fa-gamepad me-1"></i>Quiz
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about.html">
+                            <i class="fas fa-info-circle me-1"></i>À propos
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item" id="nav-dashboard" style="display: none;">
+                        <a class="nav-link" href="/dashboard-modern.html">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item" id="nav-login">
+                        <a class="btn btn-outline-primary ms-2" href="/login.html">
+                            <i class="fas fa-sign-in-alt me-1"></i>Se connecter
+                        </a>
+                    </li>
+                    <li class="nav-item" id="nav-register">
+                        <a class="btn btn-primary ms-2" href="/register.html">
+                            <i class="fas fa-user-plus me-1"></i>S'inscrire
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item dropdown" id="nav-user" style="display: none;">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
+                           id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <img src="/assets/images/logo.png" alt="User" class="rounded-circle me-2" 
+                                 width="32" height="32">
+                            <span id="user-name">Utilisateur</span>
+                            <span id="user-premium-badge" class="badge bg-warning ms-2" style="display: none;">
+                                <i class="fas fa-crown"></i> Premium
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/dashboard-modern.html">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+                            <li><a class="dropdown-item" href="/stats.html">
+                                <i class="fas fa-chart-line me-2"></i>Statistiques</a></li>
+                            <li><a class="dropdown-item" href="/history.html">
+                                <i class="fas fa-history me-2"></i>Historique</a></li>
+                            <li><a class="dropdown-item" href="/premium.html">
+                                <i class="fas fa-crown me-2"></i>Premium</a></li>
+                            <li><a class="dropdown-item" href="/help.html">
+                                <i class="fas fa-question-circle me-2"></i>Aide</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="nav-logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="stats-container">
         <!-- Header -->
-        <div class="header">
-            <h1>📊 Mes Statistiques
-                <span id="premiumBadge" class="premium-badge" style="display: none;">👑 Premium</span>
-            </h1>
-            <p>Suivez votre progression et améliorez vos performances</p>
+        <div class="stats-header">
+            <h1><i class="fas fa-chart-line me-2"></i>Mes Statistiques</h1>
+            <p class="mb-0">Analysez vos performances et progressez</p>
         </div>
 
-        <!-- Stats rapides -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">🎯</div>
-                <div class="stat-value" id="totalQuizzes">0</div>
-                <div class="stat-label">Quiz complétés</div>
+        <!-- Loader -->
+        <div id="loader" class="loader">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
             </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">📝</div>
-                <div class="stat-value" id="totalQuestions">0</div>
-                <div class="stat-label">Questions répondues</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">✅</div>
-                <div class="stat-value" id="averageScore">0%</div>
-                <div class="stat-label">Score moyen</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">⏱️</div>
-                <div class="stat-value" id="totalTime">0h</div>
-                <div class="stat-label">Temps total</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">🔥</div>
-                <div class="stat-value" id="streak">0</div>
-                <div class="stat-label">Jours de suite</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">⭐</div>
-                <div class="stat-value" id="level">1</div>
-                <div class="stat-label">Niveau</div>
-            </div>
+            <p class="mt-3">Chargement de vos statistiques...</p>
         </div>
 
-        <!-- Graphique progression -->
-        <div class="chart-container">
-            <h2>📈 Ma Progression</h2>
-            <div class="tabs">
-                <button class="tab active" onclick="loadProgressChart(7)">7 jours</button>
-                <button class="tab" onclick="loadProgressChart(30)">30 jours</button>
-                <button class="tab" onclick="loadProgressChart(90)">90 jours</button>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="progressChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Graphiques côte à côte -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 20px;">
-            <!-- Temps par matière -->
-            <div class="chart-container">
-                <h2>⏱️ Temps par Matière</h2>
-                <div class="chart-wrapper">
-                    <canvas id="timeChart"></canvas>
+        <!-- Contenu -->
+        <div id="stats-content" style="display: none;">
+            <!-- Stats générales -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <div class="stat-number" id="totalQuizzes">0</div>
+                        <div class="stat-label">Quiz complétés</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <div class="stat-number" id="averageScore">0%</div>
+                        <div class="stat-label">Score moyen</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <div class="stat-number" id="totalQuestions">0</div>
+                        <div class="stat-label">Questions répondues</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <div class="stat-number" id="successRate">0%</div>
+                        <div class="stat-label">Taux de réussite</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Performance par matière -->
-            <div class="chart-container">
-                <h2>📊 Performance par Matière</h2>
-                <div class="chart-wrapper">
-                    <canvas id="performanceChart"></canvas>
-                </div>
+            <!-- Par matière -->
+            <div class="stat-card">
+                <h4><i class="fas fa-book me-2"></i>Performance par matière</h4>
+                <div id="subjectStats"></div>
             </div>
-        </div>
 
-        <!-- Mes matières -->
-        <div class="chart-container">
-            <h2>📚 Mes Matières</h2>
-            <div id="subjectsList" class="subject-list">
-                <div class="loader">
-                    <div class="spinner"></div>
-                    <p>Chargement...</p>
-                </div>
+            <!-- Historique récent -->
+            <div class="stat-card">
+                <h4><i class="fas fa-history me-2"></i>Quiz récents</h4>
+                <div id="recentQuizzes"></div>
             </div>
         </div>
     </div>
 
-    <script src="js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let progressChart, timeChart, performanceChart;
-
-        // Charger les stats au chargement
-        window.addEventListener('DOMContentLoaded', async () => {
-            const token = localStorage.getItem('token');
+        const API_URL = 'https://quiz-de-carabin-backend.onrender.com';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNavbar();
+            loadStats();
+            
+            document.getElementById('nav-logout')?.addEventListener('click', function(e) {
+                e.preventDefault();
+                localStorage.clear();
+                window.location.href = '/index.html';
+            });
+        });
+        
+        function updateNavbar() {
+            const token = localStorage.getItem('quizToken');
+            const userStr = localStorage.getItem('quizUser');
+            
+            if (token && userStr && token !== 'null') {
+                try {
+                    const user = JSON.parse(userStr);
+                    document.getElementById('nav-dashboard').style.display = 'block';
+                    document.getElementById('nav-user').style.display = 'block';
+                    document.getElementById('nav-login').style.display = 'none';
+                    document.getElementById('nav-register').style.display = 'none';
+                    document.getElementById('user-name').textContent = user.name || 'Utilisateur';
+                    
+                    if (user.isPremium) {
+                        document.getElementById('user-premium-badge').style.display = 'inline-block';
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+        
+        async function loadStats() {
+            const token = localStorage.getItem('quizToken');
+            
             if (!token) {
                 window.location.href = '/login.html';
                 return;
             }
-
-            await loadDashboardStats();
-            await loadProgressChart(7);
-            await loadTimeBySubject();
-            await loadPerformanceBySubject();
-        });
-
-        // Charger stats dashboard
-        async function loadDashboardStats() {
+            
             try {
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/stats/dashboard`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    const stats = data.stats.global;
-
-                    // Mettre à jour les cartes
-                    document.getElementById('totalQuizzes').textContent = stats.totalQuizzes;
-                    document.getElementById('totalQuestions').textContent = stats.totalQuestions;
-                    document.getElementById('averageScore').textContent = stats.averageScore + '%';
-                    
-                    const hours = Math.floor(stats.timeSpent / 3600);
-                    const minutes = Math.floor((stats.timeSpent % 3600) / 60);
-                    document.getElementById('totalTime').textContent = `${hours}h${minutes}m`;
-                    
-                    document.getElementById('streak').textContent = stats.streak;
-                    document.getElementById('level').textContent = stats.level;
-
-                    // Badge Premium
-                    if (data.stats.premium.isActive) {
-                        document.getElementById('premiumBadge').style.display = 'inline-block';
+                const response = await fetch(`${API_URL}/api/user/progress`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
                     }
-
-                    // Afficher les matières
-                    displaySubjects(data.stats.bySubject);
-                }
-            } catch (error) {
-                console.error('Erreur:', error);
-            }
-        }
-
-        // Graphique progression
-        async function loadProgressChart(period) {
-            try {
-                // Retirer classe active
-                document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-                event.target.classList.add('active');
-
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/stats/progress-chart?period=${period}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    const ctx = document.getElementById('progressChart').getContext('2d');
-
-                    if (progressChart) progressChart.destroy();
-
-                    progressChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: result.data.map(d => d.date),
-                            datasets: [{
-                                label: 'Score moyen (%)',
-                                data: result.data.map(d => d.averageScore),
-                                borderColor: '#667eea',
-                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                tension: 0.4,
-                                fill: true
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    max: 100
-                                }
-                            }
-                        }
-                    });
-                }
+                
+                if (!response.ok) throw new Error('Erreur chargement stats');
+                
+                const data = await response.json();
+                displayStats(data);
+                
             } catch (error) {
                 console.error('Erreur:', error);
-            }
-        }
-
-        // Temps par matière
-        async function loadTimeBySubject() {
-            try {
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/stats/time-by-subject`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    const ctx = document.getElementById('timeChart').getContext('2d');
-
-                    if (timeChart) timeChart.destroy();
-
-                    timeChart = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: result.data.map(d => d.subject),
-                            datasets: [{
-                                data: result.data.map(d => d.timeSpent),
-                                backgroundColor: [
-                                    '#667eea',
-                                    '#764ba2',
-                                    '#f093fb',
-                                    '#4facfe',
-                                    '#43e97b',
-                                    '#fa709a'
-                                ]
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { position: 'bottom' }
-                            }
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Erreur:', error);
-            }
-        }
-
-        // Performance par matière
-        async function loadPerformanceBySubject() {
-            try {
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/stats/performance-by-subject`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    const ctx = document.getElementById('performanceChart').getContext('2d');
-
-                    if (performanceChart) performanceChart.destroy();
-
-                    performanceChart = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: result.data.map(d => d.subject),
-                            datasets: [{
-                                label: 'Score moyen (%)',
-                                data: result.data.map(d => d.averageScore),
-                                backgroundColor: '#667eea'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    max: 100
-                                }
-                            }
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Erreur:', error);
-            }
-        }
-
-        // Afficher liste matières
-        function displaySubjects(subjects) {
-            const container = document.getElementById('subjectsList');
-
-            if (subjects.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666;">Aucune matière pour le moment. Commencez un quiz !</p>';
-                return;
-            }
-
-            container.innerHTML = subjects.map(subject => `
-                <div class="subject-item" onclick="viewSubjectDetails('${subject.subject}')">
-                    <div class="subject-name">${subject.subject}</div>
-                    <div class="subject-stats">
-                        <span>📝 ${subject.totalQuizzes} quiz</span>
-                        <span>📊 ${subject.averageScore}%</span>
-                        <span>⭐ Niveau ${subject.level}</span>
+                document.getElementById('loader').innerHTML = `
+                    <div class="alert alert-danger">
+                        Erreur lors du chargement des statistiques
                     </div>
-                    <span class="rank-badge rank-${subject.rank.toLowerCase().replace('é', 'e').replace('î', 'i')}">${subject.rank}</span>
-                </div>
-            `).join('');
+                `;
+            }
         }
-
-        // Voir détails matière
-        function viewSubjectDetails(subject) {
-            window.location.href = `/subject-stats.html?subject=${encodeURIComponent(subject)}`;
+        
+        function displayStats(data) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('stats-content').style.display = 'block';
+            
+            // Stats générales
+            document.getElementById('totalQuizzes').textContent = data.totalQuizzes || 0;
+            document.getElementById('averageScore').textContent = Math.round(data.averageScore || 0) + '%';
+            document.getElementById('totalQuestions').textContent = data.totalQuestions || 0;
+            document.getElementById('successRate').textContent = Math.round(data.successRate || 0) + '%';
+            
+            // Par matière
+            const subjectStats = document.getElementById('subjectStats');
+            if (data.subjectStats && data.subjectStats.length > 0) {
+                subjectStats.innerHTML = data.subjectStats.map(s => `
+                    <div class="subject-stat">
+                        <div class="d-flex justify-content-between mb-2">
+                            <strong>${s.subject}</strong>
+                            <span>${Math.round(s.averageScore)}%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: ${s.averageScore}%"></div>
+                        </div>
+                        <small class="text-muted">${s.quizzesCompleted} quiz complétés</small>
+                    </div>
+                `).join('');
+            } else {
+                subjectStats.innerHTML = '<p class="text-muted">Aucune donnée disponible</p>';
+            }
+            
+            // Quiz récents
+            const recentQuizzes = document.getElementById('recentQuizzes');
+            if (data.recentQuizzes && data.recentQuizzes.length > 0) {
+                recentQuizzes.innerHTML = data.recentQuizzes.map(q => `
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <div>
+                            <strong>${q.quizTitle}</strong><br>
+                            <small class="text-muted">${new Date(q.completedAt).toLocaleDateString()}</small>
+                        </div>
+                        <div>
+                            <span class="badge ${q.score >= 70 ? 'bg-success' : 'bg-warning'} fs-6">
+                                ${q.score}%
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                recentQuizzes.innerHTML = '<p class="text-muted">Aucun quiz récent</p>';
+            }
         }
     </script>
 </body>
