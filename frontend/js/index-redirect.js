@@ -1,36 +1,18 @@
 // =======================================
 // SCRIPT POUR INDEX.HTML
-// Rediriger les boutons d'auth vers pages dédiées
+// Gérer les boutons d'auth SANS redirection forcée
 // =======================================
 
 document.addEventListener('DOMContentLoaded', function() {
     
-    // Si déjà connecté, rediriger vers dashboard
-    const token = localStorage.getItem('quizToken');
-    const user = localStorage.getItem('quizUser');
-    
-    if (token && user && token !== 'null' && user !== 'null') {
-        // Vérifier si admin
-        try {
-            const userData = JSON.parse(user);
-            if (userData.role === 'admin') {
-                window.location.href = '/admin-dashboard.html';
-                return;
-            }
-        } catch (e) {
-            console.error('Erreur parse user:', e);
-        }
-        
-        // Sinon rediriger vers dashboard
-        window.location.href = '/dashboard-modern.html';
-        return;
-    }
+    // ❌ SUPPRIMÉ: Pas de redirection automatique vers dashboard
+    // Les utilisateurs PEUVENT rester sur l'accueil même connectés
     
     // ========================================
-    // REMPLACER LES BOUTONS DE MODAL PAR DES LIENS
+    // REMPLACER LES MODALS PAR DES LIENS
     // ========================================
     
-    // Bouton "Se connecter" dans la navbar
+    // Bouton "Se connecter"
     const loginButtons = document.querySelectorAll('[data-bs-toggle="modal"][data-bs-target="#loginModal"]');
     loginButtons.forEach(btn => {
         btn.removeAttribute('data-bs-toggle');
@@ -42,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Bouton "S'inscrire" dans la navbar
+    // Bouton "S'inscrire"
     const registerButtons = document.querySelectorAll('[data-bs-toggle="modal"][data-bs-target="#registerModal"]');
     registerButtons.forEach(btn => {
         btn.removeAttribute('data-bs-toggle');
@@ -54,14 +36,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Boutons "Commencer" dans le hero
-    const ctaButtons = document.querySelectorAll('.btn-primary, .btn-hero');
+    // Boutons CTA "Commencer" → Register si non connecté, Quiz si connecté
+    const ctaButtons = document.querySelectorAll('.btn-hero, .cta-button');
     ctaButtons.forEach(btn => {
         if (btn.textContent.includes('Commencer')) {
-            btn.href = '/register.html';
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                window.location.href = '/register.html';
+                
+                const token = localStorage.getItem('quizToken');
+                
+                if (token && token !== 'null') {
+                    // Connecté → Quiz
+                    window.location.href = '/quiz-modern.html';
+                } else {
+                    // Non connecté → Register
+                    window.location.href = '/register.html';
+                }
             });
         }
     });
@@ -75,19 +65,18 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             
-            // Vérifier si connecté
             const token = localStorage.getItem('quizToken');
             
             if (!token || token === 'null') {
-                // Pas connecté → Rediriger vers register
-                alert('Veuillez vous créer un compte pour vous abonner');
+                // Pas connecté → Register
+                alert('Veuillez créer un compte pour vous abonner');
                 window.location.href = '/register.html';
             } else {
-                // Connecté → Rediriger vers premium.html
+                // Connecté → Premium
                 window.location.href = '/premium.html';
             }
         });
     });
     
-    console.log('✅ Redirections d\'authentification configurées');
+    console.log('✅ Redirections configurées (sans forcer dashboard)');
 });
