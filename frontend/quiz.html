@@ -2,329 +2,156 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta property="og:url" content="https://quiz-de-carabin.com">
-    <link rel="canonical" href="https://quiz-de-carabin.com">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz - Quiz de Carabin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <style>
+        * { font-family: 'Poppins', sans-serif; }
+        body { background: #f8f9fa; }
+        
+        .quiz-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .quiz-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .quiz-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .quiz-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        
+        .badge-free {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+        }
+        
+        .badge-premium {
+            background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+            color: white;
+        }
+        
+        .subject-section {
+            margin-bottom: 3rem;
+        }
+        
+        .subject-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3436;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .loader {
+            text-align: center;
+            padding: 3rem;
+        }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+    </style>
 </head>
 <body>
-   <!-- NAVBAR -->
-   <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-    <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="/index.html">
-            <img src="/assets/images/logo.png" alt="Quiz de Carabin" height="40" class="me-2">
-            <span class="fw-bold text-primary">Quiz de Carabin</span>
-        </a>
-        
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        
-        <div class="collapse navbar-collapse" id="navbarMain">
-            <ul class="navbar-nav ms-auto align-items-center">
-                <li class="nav-item"><a class="nav-link" href="/index.html">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/quiz.html">Quiz</a></li>
-                <li class="nav-item"><a class="nav-link" href="/about.html">À propos</a></li>
-                
-                <li class="nav-item" id="nav-dashboard" style="display: none;">
-                    <a class="nav-link" href="/dashboard-modern.html">Dashboard</a>
-                </li>
-                
-                <li class="nav-item" id="nav-login">
-                    <a class="btn btn-outline-primary ms-2" href="/login.html">
-                        <i class="fas fa-sign-in-alt me-1"></i>Se connecter
-                    </a>
-                </li>
-                <li class="nav-item" id="nav-register">
-                    <a class="btn btn-primary ms-2" href="/register.html">
-                        <i class="fas fa-user-plus me-1"></i>S'inscrire
-                    </a>
-                </li>
-                
-                <li class="nav-item dropdown" id="nav-user" style="display: none;">
-                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
-                       id="userDropdown" role="button" data-bs-toggle="dropdown">
-                        <span id="user-name">Utilisateur</span>
-                        <span id="user-premium-badge" class="badge bg-warning ms-2" style="display: none;">
-                            <i class="fas fa-crown"></i> Premium
-                        </span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="/help.html"><i class="fas fa-question-circle me-2"></i>Aide</a></li>
-                        <li><a class="dropdown-item" href="/stats.html"><i class="fas fa-chart-line me-2"></i>Statistiques</a></li>
-                        <li><a class="dropdown-item" href="/history.html"><i class="fas fa-history me-2"></i>Historique</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="#" id="nav-logout"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
-    <section class="quiz-hero text-white">
-        <div class="container position-relative z-2">
-            <div class="row">
-                <div class="col-lg-8 mx-auto text-center animate-fadeInUp">
-                    <h1 class="display-4 fw-bold mb-4">Quiz de Carabin</h1>
-                    <p class="lead mb-4">Testez vos connaissances médicales avec nos quiz spécialisés</p>
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <!-- SECTION QUIZ (ANCIEN FORMAT - Géré par js/quiz.js) -->
-    <section class="py-5" id="quiz-list-section">
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
         <div class="container">
-            <div class="row mb-4">
-                <div class="col">
-                    <h2 class="fw-bold section-title">Quiz par Matière</h2>
-                </div>
-            </div>
-            <div class="row" id="quiz-list">
-                <div class="col-12">
-                    <div class="quiz-loader">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Chargement...</span>
-                        </div>
-                        <p class="mt-3">Chargement des quiz...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- INTERFACE QUIZ (ANCIEN FORMAT - Géré par js/quiz.js) -->
-    <section id="quiz-interface" class="py-5" style="display: none;">
-        <div class="container">
-            <div class="quiz-container">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 id="quiz-title">Titre du Quiz</h3>
-                    <div class="timer" id="quiz-timer">20:00</div>
-                </div>
-                
-                <div class="progress mb-4" style="height: 8px;">
-                    <div id="quiz-progress" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                
-                <div id="question-container"></div>
-                
-                <div class="d-flex justify-content-between mt-4">
-                    <button class="btn btn-secondary" id="prev-btn" disabled>Précédent</button>
-                    <button class="btn btn-primary" id="next-btn">Suivant</button>
-                    <button class="btn btn-success" id="submit-quiz" style="display: none;">Soumettre</button>
-                </div>
-            </div>
+            <a class="navbar-brand d-flex align-items-center" href="/index.html">
+                <img src="/assets/images/logo.png" alt="Quiz de Carabin" height="40" class="me-2">
+                <span class="fw-bold text-primary">Quiz de Carabin</span>
+            </a>
             
-            <div class="results-container mt-5" id="results-container" style="display: none;">
-                <h3 class="text-center mb-4">Résultats du Quiz</h3>
-                <div class="text-center mb-4">
-                    <div class="score-circle mb-3">
-                        <span id="score-value">0</span>%
-                    </div>
-                    <h4 id="score-text">Bravo!</h4>
-                    <p id="score-description">Vous avez bien répondu aux questions</p>
-                </div>
-                <div id="results-content"></div>
-                <div class="text-center mt-4">
-                    <button class="btn btn-primary me-2" id="review-btn">Revoir les réponses</button>
-                    <button class="btn btn-outline-secondary" id="back-to-quizzes">Retour aux quiz</button>
-                </div>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="/index.html"><i class="fas fa-home me-1"></i>Accueil</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/quiz.html"><i class="fas fa-gamepad me-1"></i>Quiz</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/about.html"><i class="fas fa-info-circle me-1"></i>À propos</a></li>
+                    
+                    <li class="nav-item" id="nav-dashboard" style="display: none;">
+                        <a class="nav-link" href="/dashboard-modern.html"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
+                    </li>
+                    
+                    <li class="nav-item" id="nav-login">
+                        <a class="btn btn-outline-primary ms-2" href="/login.html"><i class="fas fa-sign-in-alt me-1"></i>Se connecter</a>
+                    </li>
+                    <li class="nav-item" id="nav-register">
+                        <a class="btn btn-primary ms-2" href="/register.html"><i class="fas fa-user-plus me-1"></i>S'inscrire</a>
+                    </li>
+                    
+                    <li class="nav-item dropdown" id="nav-user" style="display: none;">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <img src="/assets/images/logo.png" alt="User" class="rounded-circle me-2" width="32" height="32">
+                            <span id="user-name">Utilisateur</span>
+                            <span id="user-premium-badge" class="badge bg-warning ms-2" style="display: none;">
+                                <i class="fas fa-crown"></i> Premium
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/help.html"><i class="fas fa-question-circle me-2"></i>Aide</a></li>
+                            <li><a class="dropdown-item" href="/stats.html"><i class="fas fa-chart-line me-2"></i>Statistiques</a></li>
+                            <li><a class="dropdown-item" href="/history.html"><i class="fas fa-history me-2"></i>Historique</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="nav-logout"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
+                        </ul>
+                    </li>
+                </ul>
             </div>
         </div>
-    </section>
+    </nav>
 
-     <!-- SECTION PREMIUM -->
-     <section class="pricing-section" id="pricing-section">
-        <div class="container">
-            <div class="row text-center mb-5">
-                <div class="col">
-                    <h2 class="section-title">Abonnement Premium</h2>
-                    <p class="section-subtitle">Accédez à tous les quiz avec une de nos formules</p>
-                </div>
-            </div>
-            <div class="row justify-content-center">
-                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp">
-                    <div class="pricing-card card-1">
-                        <div class="pricing-card-header card-1">
-                            <h3>Accès 1 Mois</h3>
-                        </div>
-                        <div class="pricing-card-body">
-                            <div class="price">
-                                <span class="price-amount">5.000</span>
-                                <span class="price-currency">XOF</span>
-                                <span class="price-period d-block">/ mois</span>
-                            </div>
-                            <p class="text-center text-muted" style="font-size: 0.9rem;">La formule la plus flexible pour commencer.</p>
-                            <div class="pricing-features">
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Accès à tous les quiz premium</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Tableau de bord de suivi</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Support technique</span>
-                                </div>
-                            </div>
-                            <button class="btn subscribe-btn" data-plan-id="1-month" data-plan-price="5000">
-                                S'abonner maintenant
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-100">
-                    <div class="pricing-card card-2 popular">
-                        <div class="popular-badge">Le plus populaire</div>
-                        <div class="pricing-card-header card-2">
-                            <h3>Accès 3 Mois</h3>
-                        </div>
-                        <div class="pricing-card-body">
-                            <div class="price">
-                                <span class="price-amount">12.000</span>
-                                <span class="price-currency">XOF</span>
-                                <span class="price-period d-block">/ 3 mois</span>
-                                <span class="savings-badge">Économisez 3.000 XOF</span>
-                            </div>
-                            <p class="text-center text-muted" style="font-size: 0.9rem;">Idéal pour une préparation intensive.</p>
-                            <div class="pricing-features">
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Accès à tous les quiz premium</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Tableau de bord de suivi</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Support technique</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Historique des performances</span>
-                                </div>
-                            </div>
-                            <button class="btn subscribe-btn" data-plan-id="3-months" data-plan-price="12000">
-                                Choisir cette offre
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-200">
-                    <div class="pricing-card card-3">
-                        <div class="pricing-card-header card-3">
-                            <h3>Accès VIP</h3>
-                            <small>(9 mois + 1 mois offert)</small>
-                        </div>
-                        <div class="pricing-card-body">
-                            <div class="price">
-                                <span class="price-amount">25.000</span>
-                                <span class="price-currency">XOF</span>
-                                <span class="price-period d-block">/ 10 mois</span>
-                                <span class="savings-badge">Économisez 20.000 XOF</span>
-                            </div>
-                            <p class="text-center text-muted" style="font-size: 0.9rem;">La solution complète pour votre année.</p>
-                            <div class="pricing-features">
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Accès à tous les quiz premium</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Tableau de bord de suivi</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Support technique prioritaire</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Historique complet des quiz</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon"><i class="fas fa-check"></i></div>
-                                    <span>Accès aux nouvelles fonctionnalités</span>
-                                </div>
-                            </div>
-                            <button class="btn subscribe-btn" data-plan-id="10-months" data-plan-price="25000">
-                                Optez pour l'excellence
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="quiz-container">
+        <!-- Header -->
+        <div class="quiz-header">
+            <h1><i class="fas fa-gamepad me-2"></i>Choisissez votre Quiz</h1>
+            <p class="mb-0">Testez vos connaissances médicales</p>
         </div>
-    </section>
 
-    <!-- FOOTER -->
-    <footer class="footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-4 mb-4 mb-lg-0">
-                    <h4>Quiz de Carabin</h4>
-                    <p class="mt-3">La plateforme interactive de quiz spécialement conçue pour les étudiants en médecine.</p>
-                    <div class="footer-social mt-4">
-                        <a href="#"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                    </div>
-                </div>
-                <div class="col-lg-4 mb-4 mb-lg-0">
-                    <h4>Contact</h4>
-                    <ul class="list-unstyled mt-3">
-                        <li class="mb-2"><i class="fas fa-phone me-2"></i> +229 01 56 03 58 88</li>
-                        <li class="mb-2"><i class="fas fa-phone me-2"></i> +229 01 97 59 46 66</li>
-                        <li class="mb-2"><i class="fas fa-phone me-2"></i> +229 01 57 17 41 09</li>
-                    </ul>
-                </div>
-                <div class="col-lg-4">
-                    <h4>Email</h4>
-                    <ul class="list-unstyled mt-3">
-                        <li class="mb-2"><i class="fas fa-envelope me-2"></i> contact@quizdecarabin.bj</li>
-                        <li class="mb-2"><i class="fas fa-envelope me-2"></i> quizdecarabin4@gmail.com</li>
-                        <li class="mb-2">
-                            <a href="https://wa.me/22953914648" class="d-inline-block mt-2">
-                                <i class="fab fa-whatsapp me-2"></i>Whatsapp
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+        <!-- Loader -->
+        <div id="loader" class="loader">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
             </div>
-            <hr class="my-4">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <p class="mb-0">&copy; 2023 Quiz de Carabin. Tous droits réservés.</p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <a href="/politique-confidentialite.html" class="text-white me-3">Politique de confidentialité</a>
-                    <a href="/mentions-legales.html" class="text-white">Mentions légales</a>
-                </div>
-            </div>
+            <p class="mt-3">Chargement des quiz...</p>
         </div>
-    </footer>
+
+        <!-- Liste des quiz (par matière) -->
+        <div id="quiz-list" style="display: none;"></div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module" src="js/config.js"></script>
-    <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/payment.js"></script>
-    <script type="module" src="js/quiz.js"></script>
-    <script type="module" src="js/app.js"></script>
-    
     <script>
-        // Navbar update
+        const API_URL = 'https://quiz-de-carabin-backend.onrender.com';
+        
         document.addEventListener('DOMContentLoaded', function() {
             updateNavbar();
+            loadQuizzes();
             
             document.getElementById('nav-logout')?.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -351,6 +178,109 @@
                     }
                 } catch (e) {}
             }
+        }
+        
+        async function loadQuizzes() {
+            try {
+                const token = localStorage.getItem('quizToken');
+                
+                const headers = { 'Content-Type': 'application/json' };
+                if (token && token !== 'null') {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(`${API_URL}/api/quiz`, { headers });
+                
+                if (!response.ok) throw new Error('Erreur chargement');
+                
+                const data = await response.json();
+                displayQuizzes(data.quizzes || data.data || []);
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+                document.getElementById('loader').innerHTML = `
+                    <div class="alert alert-danger">
+                        Erreur lors du chargement des quiz
+                    </div>
+                `;
+            }
+        }
+        
+        function displayQuizzes(quizzes) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('quiz-list').style.display = 'block';
+            
+            if (quizzes.length === 0) {
+                document.getElementById('quiz-list').innerHTML = `
+                    <div class="alert alert-info">Aucun quiz disponible</div>
+                `;
+                return;
+            }
+            
+            // Grouper par matière
+            const bySubject = {};
+            quizzes.forEach(quiz => {
+                const subject = quiz.subject || 'Autres';
+                if (!bySubject[subject]) bySubject[subject] = [];
+                bySubject[subject].push(quiz);
+            });
+            
+            // Afficher
+            const listHTML = Object.keys(bySubject).sort().map(subject => {
+                const subjectQuizzes = bySubject[subject];
+                
+                const quizzesHTML = subjectQuizzes.map(quiz => {
+                    const isFree = quiz.free || false;
+                    const userStr = localStorage.getItem('quizUser');
+                    let isPremium = false;
+                    
+                    try {
+                        if (userStr && userStr !== 'null') {
+                            const user = JSON.parse(userStr);
+                            isPremium = user.isPremium || false;
+                        }
+                    } catch (e) {}
+                    
+                    const hasAccess = isFree || isPremium;
+                    
+                    return `
+                        <div class="quiz-card" onclick="startQuiz('${quiz._id}', ${!hasAccess && !isFree})">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="mb-0">${quiz.title}</h5>
+                                <span class="badge ${isFree ? 'badge-free' : 'badge-premium'}">
+                                    ${isFree ? 'GRATUIT' : 'PREMIUM'}
+                                </span>
+                            </div>
+                            <p class="text-muted mb-2">${quiz.description || ''}</p>
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span><i class="fas fa-question-circle me-1"></i>${quiz.questions?.length || 0} questions</span>
+                                <span><i class="fas fa-clock me-1"></i>${quiz.duration || 10} min</span>
+                            </div>
+                            ${!hasAccess && !isFree ? '<div class="text-danger mt-2"><i class="fas fa-lock me-1"></i>Premium requis</div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                return `
+                    <div class="subject-section">
+                        <h2 class="subject-title">${subject}</h2>
+                        ${quizzesHTML}
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('quiz-list').innerHTML = listHTML;
+        }
+        
+        function startQuiz(quizId, needsPremium) {
+            if (needsPremium) {
+                alert('Ce quiz nécessite un abonnement Premium');
+                window.location.href = '/premium.html';
+                return;
+            }
+            
+            // ✅ REDIRECTION VERS quiz-modern.html avec l'ID du quiz
+            window.location.href = `/quiz-modern.html?quizId=${quizId}`;
         }
     </script>
 </body>
