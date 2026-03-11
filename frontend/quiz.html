@@ -2,1320 +2,286 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta property="og:url" content="https://quiz-de-carabin.com">
-    <link rel="canonical" href="https://quiz-de-carabin.com">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz - Quiz de Carabin</title>
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-HYJK4EQKLZ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-HYJK4EQKLZ');
-</script>
-<meta name="google-site-verification" content="NIHqw9mpmJSFFre5VvEZL5tLbLPJusIHvmk8O6dTuUc" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
     <style>
-        :root {
-            --primary: #1a4b8c;
-            --secondary: #4a90e2;
-            --accent: #e63946;
-            --success: #2a9d8f;
-            --warning: #f4a261;
-            --info: #17a2b8;
-            --purple: #6f42c1;
-            --pink: #e83e8c;
-            
-            --card-1-color: #4a90e2;
-            --card-2-color: #2a9d8f;
-            --card-3-color: #e83e8c;
-            
-            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, #2a5a8c 100%);
+        * { font-family: 'Poppins', sans-serif; }
+        body { background: #f8f9fa; }
+        
+        .quiz-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
         }
         
-        * {
-            font-family: 'Poppins', sans-serif;
-        }
-        
-        /* Section Abonnement améliorée */
-        .pricing-section {
-            padding: 5rem 0;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .pricing-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" opacity="0.05"><path d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%231a4b8c"/></svg>');
-        }
-        
-        .section-title {
-            position: relative;
-            margin-bottom: 1rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 4px;
-            background: var(--card-2-color);
-            border-radius: 2px;
-        }
-        
-        .section-subtitle {
-            color: #6c757d;
-            margin-bottom: 3rem;
-        }
-        
-        /* Cartes de prix compactes et colorées */
-        .pricing-card {
-            border: none;
+        .quiz-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
             border-radius: 15px;
-            overflow: hidden;
-            transition: all 0.4s ease;
-            height: auto; 
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-            position: relative;
-            background: white;
-            margin-bottom: 1.5rem;
-        }
-        
-        .pricing-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-        }
-        
-        .pricing-card.popular {
-            border: 3px solid var(--card-2-color);
-            transform: scale(1.02);
-        }
-        
-        .pricing-card.popular:hover {
-            transform: scale(1.02) translateY(-5px);
-        }
-        
-        .popular-badge {
-            position: absolute;
-            top: -10px;
-            right: 20px;
-            background: var(--card-2-color);
-            color: white;
-            padding: 6px 15px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            z-index: 2;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* En-têtes de cartes avec différentes couleurs */
-        .pricing-card-header.card-1 {
-            background: linear-gradient(135deg, var(--card-1-color) 0%, #6ba2e7 100%);
-        }
-        
-        .pricing-card-header.card-2 {
-            background: linear-gradient(135deg, var(--card-2-color) 0%, #34c9a8 100%);
-        }
-        
-        .pricing-card-header.card-3 {
-            background: linear-gradient(135deg, var(--card-3-color) 0%, #f06292 100%);
-        }
-        
-        .pricing-card-header {
-            color: white;
-            padding: 1.2rem 1rem; 
+            margin-bottom: 2rem;
             text-align: center;
-            position: relative;
         }
         
-        .pricing-card-header h3 {
-            margin: 0;
-            font-weight: 700;
-            font-size: 1.2rem; 
-        }
-        
-        .pricing-card-header small {
-            opacity: 0.9;
-            font-size: 0.8rem;
-        }
-        
-        .pricing-card-body {
-            padding: 1.5rem 1rem; 
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-        
-        .price {
-            text-align: center;
-            margin-bottom: 1rem; 
-        }
-        
-        .price-amount {
-            font-size: 2rem; 
-            font-weight: 700;
-            color: var(--primary);
-            line-height: 1;
-        }
-        
-        .price-currency {
-            font-size: 1.2rem; 
-            font-weight: 600;
-            color: var(--primary);
-        }
-        
-        .price-period {
-            color: #6c757d;
-            font-size: 0.9rem;
-        }
-        
-        .pricing-features {
-            flex-grow: 1;
-            margin-bottom: 1.5rem; 
-        }
-        
-        .feature-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.7rem; 
-            font-size: 0.85rem; 
-        }
-        
-        .feature-icon {
-            width: 20px; 
-            height: 20px; 
-            border-radius: 50%;
-            background: #e8f4ff;
-            color: var(--secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 0.7rem; 
-            font-size: 0.7rem; 
-            flex-shrink: 0;
-        }
-        
-        /* Couleurs différentes pour les icônes selon la carte */
-        .card-1 .feature-icon {
-            background: #e3f2fd;
-            color: var(--card-1-color);
-        }
-        
-        .card-2 .feature-icon {
-            background: #e8f5e9;
-            color: var(--card-2-color);
-        }
-        
-        .card-3 .feature-icon {
-            background: #fce4ec;
-            color: var(--card-3-color);
-        }
-        
-        .savings-badge {
-            display: inline-block;
-            background: #e8f5e9;
-            color: var(--success);
-            padding: 0.2rem 0.6rem;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            margin-top: 0.3rem;
-        }
-        
-        .subscribe-btn {
-            border: none;
-            color: white;
-            padding: 0.8rem 1.5rem; 
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 0.9rem; 
-            transition: all 0.3s ease;
-            width: 100%;
-            margin-top: auto;
-        }
-        
-        /* Boutons avec couleurs correspondant aux cartes */
-        .card-1 .subscribe-btn {
-            background: linear-gradient(135deg, var(--card-1-color) 0%, #6ba2e7 100%);
-        }
-        
-        .card-2 .subscribe-btn {
-            background: linear-gradient(135deg, var(--card-2-color) 0%, #34c9a8 100%);
-        }
-        
-        .card-3 .subscribe-btn {
-            background: linear-gradient(135deg, var(--card-3-color) 0%, #f06292 100%);
-        }
-        
-        .subscribe-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
-            opacity: 0.9;
-        }
-        
-        /* Animation d'apparition */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .animate-fadeInUp {
-            animation: fadeInUp 0.6s ease forwards;
-        }
-        
-        .delay-100 {
-            animation-delay: 0.1s;
-        }
-        
-        .delay-200 {
-            animation-delay: 0.2s;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .pricing-card.popular {
-                transform: scale(1);
-            }
-            
-            .pricing-card.popular:hover {
-                transform: translateY(-5px);
-            }
-            
-            .price-amount {
-                font-size: 1.8rem;
-            }
-            
-            .pricing-section {
-                padding: 3rem 0;
-            }
-        }
-        
-        /* Garantie de satisfaction */
-        .satisfaction-guarantee {
-            text-align: center;
-            margin-top: 2rem;
-            padding: 1.5rem;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-        }
-        
-        .guarantee-icon {
-            font-size: 2.5rem;
-            color: var(--success);
-            margin-bottom: 0.8rem;
-        }
-        
-        .satisfaction-guarantee h4 {
-            font-size: 1.2rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .satisfaction-guarantee p {
-            font-size: 0.9rem;
-            margin-bottom: 0;
-        }
-        :root {
-            --primary: #1a4b8c;
-            --secondary: #4a90e2;
-            --accent: #e63946;
-            --light: #f8f9fa;
-            --dark: #1d3557;
-            --success: #2a9d8f;
-            --warning: #f4a261;
-            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
-            --gradient-secondary: linear-gradient(135deg, var(--secondary) 0%, #6ba2e7 100%);
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
-        
-        body {
-            background-color: #f8f9fa;
-            color: #333;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-        
-        /* Navigation améliorée */
-        .navbar {
-            background: var(--gradient-primary);
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
-            padding: 0.8rem 0;
-        }
-        
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: white !important;
-        }
-        
-        .navbar-brand i {
-            color: var(--secondary);
-        }
-        
-        .nav-link {
-            color: rgba(255, 255, 255, 0.85) !important;
-            font-weight: 500;
-            padding: 0.5rem 1rem !important;
-            margin: 0 0.2rem;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-        }
-        
-        .nav-link:hover, .nav-link.active {
-            color: white !important;
-            background-color: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-        }
-        
-        .btn-outline-primary {
-            border-color: var(--secondary);
-            color: var(--secondary);
-        }
-        
-        .btn-outline-primary:hover {
-            background-color: var(--secondary);
-            border-color: var(--secondary);
-        }
-        
-        /* Hero Section améliorée */
-        .quiz-hero {
-            background: var(--gradient-primary), url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') no-repeat center center/cover;
-            padding: 6rem 0;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .quiz-hero::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 100px;
-            background: linear-gradient(to top, #f8f9fa, transparent);
-            z-index: 1;
-        }
-        
-        .quiz-hero h1 {
-            font-weight: 800;
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
-            margin-bottom: 1.5rem;
-        }
-        
-        .quiz-hero .lead {
-            font-size: 1.3rem;
-            max-width: 700px;
-            margin: 0 auto;
-        }
-        
-        /* Sections générales */
-        section {
-            padding: 5rem 0;
-            position: relative;
-        }
-        
-        .section-title {
-            position: relative;
-            margin-bottom: 3rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 4px;
-            background: var(--gradient-secondary);
-            border-radius: 2px;
-        }
-        
-        /* Quiz Cards */
         .quiz-card {
-            border: none;
+            background: white;
             border-radius: 15px;
-            overflow: hidden;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: all 0.3s ease;
-            height: 100%;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
         }
         
         .quiz-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-        }
-        
-        .quiz-card-header {
-            background: var(--gradient-primary);
-            color: white;
-            padding: 1.5rem;
-            text-align: center;
-        }
-        
-        .quiz-card-body {
-            padding: 1.5rem;
-        }
-        
-        .quiz-card-footer {
-            padding: 1rem 1.5rem;
-            background: #f8f9fa;
-            border-top: 1px solid #eee;
-        }
-        
-        .quiz-difficulty {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        
-        .difficulty-easy {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-        
-        .difficulty-medium {
-            background-color: #fff3e0;
-            color: #ef6c00;
-        }
-        
-        .difficulty-hard {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-        
-        .quiz-tags {
-            margin-top: 1rem;
-        }
-        
-        .quiz-tag {
-            display: inline-block;
-            background: #f1f5fd;
-            color: var(--primary);
-            padding: 0.3rem 0.8rem;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            margin-right: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        /* Premium Section améliorée */
-        .premium-card {
-            border: none;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .premium-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
         }
         
-        .premium-card-header {
-            background: var(--gradient-primary);
+        .badge-free {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
             color: white;
-            padding: 2rem;
-            text-align: center;
         }
         
-        .premium-card-body {
-            padding: 2rem;
+        .badge-premium {
+            background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+            color: white;
         }
         
-        .premium-feature {
-            display: flex;
-            align-items: center;
+        .subject-section {
+            margin-bottom: 3rem;
+        }
+        
+        .subject-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3436;
             margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #667eea;
         }
         
-        .premium-feature i {
-            color: var(--secondary);
-            margin-right: 1rem;
-            font-size: 1.2rem;
+        .loader {
+            text-align: center;
+            padding: 3rem;
         }
         
-        /* Quiz Interface améliorée */
-        .quiz-container {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-        }
-        
-        .timer {
-            background: var(--gradient-primary);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 30px;
-            font-weight: 600;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .question-card {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .option-item {
-            background: white;
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .option-item:hover {
-            border-color: var(--secondary);
-            background: #f1f5fd;
-        }
-        
-        .option-item.selected {
-            border-color: var(--secondary);
-            background: #f1f5fd;
-        }
-        
-        .option-item.correct {
-            border-color: var(--success);
-            background: #e8f5e9;
-        }
-        
-        .option-item.incorrect {
-            border-color: var(--accent);
-            background: #ffebee;
-        }
-        
-        /* Results Container */
-        .results-container {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-        }
-        
-        .score-circle {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            background: var(--gradient-primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-            font-size: 2.5rem;
-            font-weight: 700;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* Footer amélioré */
-        .footer {
-            background: var(--gradient-primary);
-            color: white;
-            padding: 4rem 0 1.5rem;
-        }
-        
-        .footer h4 {
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            position: relative;
-            padding-bottom: 0.8rem;
-        }
-        
-        .footer h4::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 50px;
-            height: 3px;
-            background: var(--secondary);
-        }
-        
-        .footer a {
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-        
-        .footer a:hover {
-            color: white;
-            padding-left: 5px;
-        }
-        
-        .footer-social a {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            margin-right: 0.8rem;
-            transition: all 0.3s ease;
-        }
-        
-        .footer-social a:hover {
-            background: var(--secondary);
-            transform: translateY(-3px);
-        }
-        
-        /* Animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .animate-fadeInUp {
-            animation: fadeInUp 0.6s ease forwards;
-        }
-        
-        .delay-100 {
-            animation-delay: 0.1s;
-        }
-        
-        .delay-200 {
-            animation-delay: 0.2s;
-        }
-        
-        .delay-300 {
-            animation-delay: 0.3s;
-        }
-        
-        /* Responsive Design */
-        @media (max-width: 992px) {
-            .navbar-collapse {
-                background: var(--dark);
-                padding: 1rem;
-                border-radius: 10px;
-                margin-top: 1rem;
-            }
-            
-            .section-title {
-                font-size: 2rem;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .quiz-hero {
-                padding: 4rem 0;
-            }
-            
-            .quiz-hero h1 {
-                font-size: 2.5rem;
-            }
-            
-            section {
-                padding: 3rem 0;
-            }
-            
-            .score-circle {
-                width: 120px;
-                height: 120px;
-                font-size: 2rem;
-            }
-        }
-        
-        /* Loader personnalisé */
-        .quiz-loader {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            height: 200px;
-        }
-        
-        .quiz-loader .spinner-border {
+        .spinner-border {
             width: 3rem;
             height: 3rem;
-            color: var(--primary);
-        }
-        
-        /* Badge Premium */
-        .premium-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: var(--gradient-secondary);
-            color: white;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            z-index: 1;
         }
     </style>
 </head>
-<script>
-fetch('/navbar-complete.html')
-    .then(res => res.text())
-    .then(html => {
-        const nav = document.createElement('div');
-        nav.innerHTML = html;
-        document.body.insertBefore(nav.firstElementChild, document.body.firstChild);
-        
-        // Réinitialiser les scripts de la navbar
-        updateNavbar();
-    });
-</script>
 <body>
-   <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-    <div class="container">
-        <!-- Logo avec image -->
-        <a class="navbar-brand d-flex align-items-center" href="/index.html">
-            <img src="/assets/images/logo.png" alt="Quiz de Carabin" height="40" class="me-2">
-            <span class="fw-bold text-primary">Quiz de Carabin</span>
-        </a>
-        
-        <!-- Toggle mobile -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        
-        <!-- Menu -->
-        <div class="collapse navbar-collapse" id="navbarMain">
-            <ul class="navbar-nav ms-auto align-items-center">
-                <li class="nav-item">
-                    <a class="nav-link active" href="/index.html">
-                        Accueil
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/quiz-modern.html">
-                        Quiz
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/about.html">
-                        À propos
-                    </a>
-                </li>
-                
-                <!-- Dashboard (seulement si connecté) -->
-                <li class="nav-item" id="nav-dashboard" style="display: none;">
-                    <a class="nav-link" href="/dashboard-modern.html">
-                        Dashboard
-                    </a>
-                </li>
-                
-                <!-- Boutons NON connecté -->
-                <li class="nav-item" id="nav-login">
-                    <a class="btn btn-outline-primary ms-2" href="/login.html">
-                        <i class="fas fa-sign-in-alt me-1"></i>Se connecter
-                    </a>
-                </li>
-                <li class="nav-item" id="nav-register">
-                    <a class="btn btn-primary ms-2" href="/register.html">
-                        <i class="fas fa-user-plus me-1"></i>S'inscrire
-                    </a>
-                </li>
-                
-                <!-- Menu utilisateur connecté -->
-                <li class="nav-item dropdown" id="nav-user" style="display: none;">
-                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
-                       id="userDropdown" role="button" data-bs-toggle="dropdown">
-                        <img src="/assets/images/logo.png" alt="User" class="rounded-circle me-2" 
-                             width="32" height="32">
-                        <span id="user-name">Utilisateur</span>
-                        <span id="user-premium-badge" class="badge bg-warning ms-2" style="display: none;">
-                            <i class="fas fa-crown"></i> Premium
-                        </span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <a class="dropdown-item" href="/dashboard-modern.html">
-                                Mon Dashboard
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="/premium.html">
-                                <i class="fas fa-crown me-2"></i>Premium
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item text-danger" href="#" id="nav-logout">
-                                <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
-<!-- Avant </body> -->
-<script>
-// Navbar dynamique
-document.addEventListener('DOMContentLoaded', function() {
-    updateNavbar();
-    
-    document.getElementById('nav-logout')?.addEventListener('click', function(e) {
-        e.preventDefault();
-        localStorage.removeItem('quizToken');
-        localStorage.removeItem('quizUser');
-        localStorage.removeItem('userIsPremium');
-        localStorage.removeItem('premiumExpiresAt');
-        window.location.href = '/index.html';
-    });
-});
-
-function updateNavbar() {
-    const token = localStorage.getItem('quizToken');
-    const userStr = localStorage.getItem('quizUser');
-    
-    if (token && userStr && token !== 'null' && userStr !== 'null') {
-        try {
-            const user = JSON.parse(userStr);
-            
-            document.getElementById('nav-dashboard').style.display = 'block';
-            document.getElementById('nav-user').style.display = 'block';
-            document.getElementById('nav-login').style.display = 'none';
-            document.getElementById('nav-register').style.display = 'none';
-            
-            document.getElementById('user-name').textContent = user.name || 'Utilisateur';
-            
-            if (user.isPremium) {
-                document.getElementById('user-premium-badge').style.display = 'inline-block';
-            }
-        } catch (e) {
-            console.error('Erreur:', e);
-        }
-    }
-}
-</script>
-
-    <section class="quiz-hero text-white">
-        <div class="container position-relative z-2">
-            <div class="row">
-                <div class="col-lg-8 mx-auto text-center animate-fadeInUp">
-                    <h1 class="display-4 fw-bold mb-4">Quiz de Carabin</h1>
-                    <p class="lead mb-4">Testez vos connaissances médicales avec nos quiz spécialisés</p>
-                </div>
-            </div>
-        </div>
-    </section>
-    <section class="py-5" id="quiz-list-section">
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
         <div class="container">
-            <div class="row mb-4">
-                <div class="col">
-                    <h2 class="fw-bold section-title">Quiz par Matière</h2>
-                    </div>
-            </div>
-            <div class="row" id="quiz-list">
-                <div class="col-12">
-                    <div class="quiz-loader">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Chargement...</span>
-                        </div>
-                        <p class="mt-3">Chargement des quiz...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-     <section id="quiz-interface" class="py-5" style="display: none;">
-        <div class="container">
-            <div class="quiz-container">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 id="quiz-title">Titre du Quiz</h3>
-                    <div class="timer" id="quiz-timer">20:00</div>
-                </div>
-                
-                <div class="progress mb-4" style="height: 8px;">
-                    <div id="quiz-progress" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                
-                <div id="question-container">
-                    </div>
-                <div class="d-flex justify-content-between mt-4">
-                    <button class="btn btn-secondary" id="prev-btn" disabled>Précédent</button>
-                    <button class="btn btn-primary" id="next-btn">Suivant</button>
-                    <button class="btn btn-success" id="submit-quiz" style="display: none;">Soumettre</button>
-                </div>
-            </div>
+            <a class="navbar-brand d-flex align-items-center" href="/index.html">
+                <img src="/assets/images/logo.png" alt="Quiz de Carabin" height="40" class="me-2">
+                <span class="fw-bold text-primary">Quiz de Carabin</span>
+            </a>
             
-            <div class="results-container mt-5" id="results-container" style="display: none;">
-                <h3 class="text-center mb-4">Résultats du Quiz</h3>
-                <div class="text-center mb-4">
-                    <div class="score-circle mb-3">
-                        <span id="score-value">0</span>%
-                    </div>
-                    <h4 id="score-text">Bravo!</h4>
-                    <p id="score-description">Vous avez bien répondu aux questions</p>
-                </div>
-                <div id="results-content">
-                    </div>
-                <div class="text-center mt-4">
-                    <button class="btn btn-primary me-2" id="review-btn">Revoir les réponses</button>
-                    <button class="btn btn-outline-secondary" id="back-to-quizzes">Retour aux quiz</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-     <section class="pricing-section" id="pricing-section">
-        <div class="container">
-            <div class="row text-center mb-5">
-                <div class="col">
-                    <h2 class="section-title">Abonnement Premium</h2>
-                    <p class="section-subtitle">Accédez à tous les quiz avec une de nos formules</p>
-                </div>
-            </div>
-            <div class="row justify-content-center">
-                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp">
-                    <div class="pricing-card card-1">
-                        <div class="pricing-card-header card-1">
-                            <h3>Accès 1 Mois</h3>
-                        </div>
-                        <div class="pricing-card-body">
-                            <div class="price">
-                                <span class="price-amount">5.000</span>
-                                <span class="price-currency">XOF</span>
-                                <span class="price-period d-block">/ mois</span>
-                            </div>
-                            <p class="text-center text-muted" style="font-size: 0.9rem;">La formule la plus flexible pour commencer.</p>
-                            <div class="pricing-features">
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Accès à tous les quiz premium</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Tableau de bord de suivi</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Support technique</span>
-                                </div>
-                            </div>
-                            <button class="btn subscribe-btn" data-plan-id="1-month" data-plan-price="5000">
-                                S'abonner maintenant
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-100">
-                    <div class="pricing-card card-2 popular">
-                        <div class="popular-badge">Le plus populaire</div>
-                        <div class="pricing-card-header card-2">
-                            <h3>Accès 3 Mois</h3>
-                        </div>
-                        <div class="pricing-card-body">
-                            <div class="price">
-                                <span class="price-amount">12.000</span>
-                                <span class="price-currency">XOF</span>
-                                <span class="price-period d-block">/ 3 mois</span>
-                                <span class="savings-badge">Économisez 3.000 XOF</span>
-                            </div>
-                            <p class="text-center text-muted" style="font-size: 0.9rem;">Idéal pour une préparation intensive.</p>
-                            <div class="pricing-features">
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Accès à tous les quiz premium</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Tableau de bord de suivi</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Support technique</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Historique des performances</span>
-                                </div>
-                            </div>
-                            <button class="btn subscribe-btn" data-plan-id="3-months" data-plan-price="12000">
-                                Choisir cette offre
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4 col-md-6 mb-4 animate-fadeInUp delay-200">
-                    <div class="pricing-card card-3">
-                        <div class="pricing-card-header card-3">
-                            <h3>Accès VIP</h3>
-                            <small>(9 mois + 1 mois offert)</small>
-                        </div>
-                        <div class="pricing-card-body">
-                            <div class="price">
-                                <span class="price-amount">25.000</span>
-                                <span class="price-currency">XOF</span>
-                                <span class="price-period d-block">/ 10 mois</span>
-                                <span class="savings-badge">Économisez 20.000 XOF</span>
-                            </div>
-                            <p class="text-center text-muted" style="font-size: 0.9rem;">La solution complète pour votre année.</p>
-                            <div class="pricing-features">
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Accès à tous les quiz premium</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Tableau de bord de suivi</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Support technique prioritaire</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Historique complet des quiz</span>
-                                </div>
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <i class="fas fa-check"></i>
-                                    </div>
-                                    <span>Accès aux nouvelles fonctionnalités</span>
-                                </div>
-                            </div>
-                            <button class="btn subscribe-btn" data-plan-id="10-months" data-plan-price="25000">
-                                Optez pour l'excellence
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-    </section>
-    <footer class="footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-4 mb-4 mb-lg-0">
-                    <h4>Quiz de Carabin</h4>
-                    <p class="mt-3">La plateforme interactive de quiz spécialement conçue pour les étudiants en médecine.</p>
-                    <div class="footer-social mt-4">
-                        <a href="#"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                    </div>
-                </div>
-                <div class="col-lg-4 mb-4 mb-lg-0">
-                    <h4>Contact</h4>
-                    <ul class="list-unstyled mt-3">
-                        <li class="mb-2"><i class="fas fa-phone me-2"></i> +229 01 56 03 58 88</li>
-                        <li class="mb-2"><i class="fas fa-phone me-2"></i> +229 01 97 59 46 66</li>
-                        <li class="mb-2"><i class="fas fa-phone me-2"></i> +229 01 57 17 41 09</li>
-                    </ul>
-                </div>
-                <div class="col-lg-4">
-                    <h4>Email</h4>
-                    <ul class="list-unstyled mt-3">
-                        <li class="mb-2"><i class="fas fa-envelope me-2"></i> contact@quizdecarabin.bj</li>
-                        <li class="mb-2"><i class="fas fa-envelope me-2"></i> quizdecarabin4@gmail.com</li>
-                        <li class="mb-2">
-                            <a href="https://wa.me/22953914648" class="d-inline-block mt-2">
-                                <i class="fab fa-whatsapp me-2"></i>Whatsapp
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="lead mb-4">
-                    <h4>Légal</h4>
-                    <ul class="list-unstyled mt-3">
-                        <ul> 
-                        <li class="mb-2"><a href="/politique-confidentialite.html" class="text-white me-3">Politique de confidentialité</a></li>
-                        <li class="mb-2"><a href="/mentions-legales.html">Mentions légales</a></li>
-                        <li class="mb-2">
-                           <a href="/cgv.html">CGV</a>
-                        </li>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="/index.html"><i class="fas fa-home me-1"></i>Accueil</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/quiz.html"><i class="fas fa-gamepad me-1"></i>Quiz</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/about.html"><i class="fas fa-info-circle me-1"></i>À propos</a></li>
+                    
+                    <li class="nav-item" id="nav-dashboard" style="display: none;">
+                        <a class="nav-link" href="/dashboard-modern.html"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
+                    </li>
+                    
+                    <li class="nav-item" id="nav-login">
+                        <a class="btn btn-outline-primary ms-2" href="/login.html"><i class="fas fa-sign-in-alt me-1"></i>Se connecter</a>
+                    </li>
+                    <li class="nav-item" id="nav-register">
+                        <a class="btn btn-primary ms-2" href="/register.html"><i class="fas fa-user-plus me-1"></i>S'inscrire</a>
+                    </li>
+                    
+                    <li class="nav-item dropdown" id="nav-user" style="display: none;">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <img src="/assets/images/logo.png" alt="User" class="rounded-circle me-2" width="32" height="32">
+                            <span id="user-name">Utilisateur</span>
+                            <span id="user-premium-badge" class="badge bg-warning ms-2" style="display: none;">
+                                <i class="fas fa-crown"></i> Premium
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/help.html"><i class="fas fa-question-circle me-2"></i>Aide</a></li>
+                            <li><a class="dropdown-item" href="/stats.html"><i class="fas fa-chart-line me-2"></i>Statistiques</a></li>
+                            <li><a class="dropdown-item" href="/history.html"><i class="fas fa-history me-2"></i>Historique</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="nav-logout"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
                         </ul>
-                    </ul>
-                </div>
-            </div>
-            <hr class="my-4">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <p class="mb-0">&copy; 2023 Quiz de Carabin. Tous droits réservés.</p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <a href="#" class="text-white me-3">Politique de confidentialité</a>
-                    <a href="#" class="text-white">Conditions d'utilisation</a>
-                </div>
+                    </li>
+                </ul>
             </div>
         </div>
-    </footer>
-<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Connexion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="loginEmail" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="loginEmail" placeholder="votre@email.com">
-                </div>
-                <div class="mb-3">
-                    <label for="loginPassword" class="form-label">Mot de passe</label>
-                    <input type="password" class="form-control" id="loginPassword" placeholder="Votre mot de passe">
-                </div>
-                <div class="mb-3 text-end">
-                    <a href="forgot-password.html" class="text-decoration-none" onclick="closeLoginModal()">
-                        Mot de passe oublié ?
-                    </a>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                <button type="button" class="btn btn-primary" id="login-btn">Se connecter</button>
-            </div>
+    </nav>
+
+    <div class="quiz-container">
+        <!-- Header -->
+        <div class="quiz-header">
+            <h1><i class="fas fa-gamepad me-2"></i>Choisissez votre Quiz</h1>
+            <p class="mb-0">Testez vos connaissances médicales</p>
         </div>
-    </div>
-</div>
 
-<div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Créer un compte</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <!-- Loader -->
+        <div id="loader" class="loader">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
             </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="registerName" class="form-label">Nom complet</label>
-                    <input type="text" class="form-control" id="registerName" placeholder="Votre nom">
-                </div>
-                <div class="mb-3">
-                    <label for="registerEmail" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="registerEmail" placeholder="votre@email.com">
-                </div>
-                <div class="mb-3">
-                    <label for="registerPassword" class="form-label">Mot de passe</label>
-                    <input type="password" class="form-control" id="registerPassword" placeholder="Créez un mot de passe">
-                </div>
-                <div class="mb-3">
-                    <label for="registerConfirmPassword" class="form-label">Confirmer le mot de passe</label>
-                    <input type="password" class="form-control" id="registerConfirmPassword" placeholder="Confirmez votre mot de passe">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                <button type="button" class="btn btn-primary" id="register-btn">Créer le compte</button>
-            </div>
-            </div>
-    </div>
-</div>
-
-<div class="modal fade" id="codeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Entrer le code d'accès</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Veuillez saisir le code à 6 chiffres reçu par email après votre paiement.</p>
-                <div class="mb-3">
-                    <label for="accessCode" class="form-label">Code d'accès</label>
-                    <input type="text" class="form-control" id="accessCode" placeholder="XXXXXX" maxlength="6">
-                </div>
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>Ce code est valable pendant 30 minutes et à usage unique.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                <button type="button" class="btn btn-primary" id="validate-code">Valider le code</button>
-            </div>
+            <p class="mt-3">Chargement des quiz...</p>
         </div>
-    </div>
-</div>
-<script>
-function closeLoginModal() {
-    const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-    if (loginModal) {
-        loginModal.hide();
-    }
-}
-</script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script type="module" src="js/config.js"></script>
-<script type="module" src="js/auth.js"></script>
-<script type="module" src="js/payment.js"></script>
-<script type="module" src="js/quiz.js"></script>
-<script type="module" src="js/app.js"></script>
 
-<script>
-// Initialisation de l'authentification
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('auth-buttons') || document.getElementById('user-menu')) {
-        window.auth = new Auth();
-    }
-});
-</script>
+        <!-- Liste des quiz (par matière) -->
+        <div id="quiz-list" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_URL = 'https://quiz-de-carabin-backend.onrender.com';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNavbar();
+            loadQuizzes();
+            
+            document.getElementById('nav-logout')?.addEventListener('click', function(e) {
+                e.preventDefault();
+                localStorage.clear();
+                window.location.href = '/index.html';
+            });
+        });
+        
+        function updateNavbar() {
+            const token = localStorage.getItem('quizToken');
+            const userStr = localStorage.getItem('quizUser');
+            
+            if (token && userStr && token !== 'null') {
+                try {
+                    const user = JSON.parse(userStr);
+                    document.getElementById('nav-dashboard').style.display = 'block';
+                    document.getElementById('nav-user').style.display = 'block';
+                    document.getElementById('nav-login').style.display = 'none';
+                    document.getElementById('nav-register').style.display = 'none';
+                    document.getElementById('user-name').textContent = user.name || 'Utilisateur';
+                    
+                    if (user.isPremium) {
+                        document.getElementById('user-premium-badge').style.display = 'inline-block';
+                    }
+                } catch (e) {}
+            }
+        }
+        
+        async function loadQuizzes() {
+            try {
+                const token = localStorage.getItem('quizToken');
+                
+                const headers = { 'Content-Type': 'application/json' };
+                if (token && token !== 'null') {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(`${API_URL}/api/quiz`, { headers });
+                
+                if (!response.ok) throw new Error('Erreur chargement');
+                
+                const data = await response.json();
+                displayQuizzes(data.quizzes || data.data || []);
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+                document.getElementById('loader').innerHTML = `
+                    <div class="alert alert-danger">
+                        Erreur lors du chargement des quiz
+                    </div>
+                `;
+            }
+        }
+        
+        function displayQuizzes(quizzes) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('quiz-list').style.display = 'block';
+            
+            if (quizzes.length === 0) {
+                document.getElementById('quiz-list').innerHTML = `
+                    <div class="alert alert-info">Aucun quiz disponible</div>
+                `;
+                return;
+            }
+            
+            // Grouper par matière
+            const bySubject = {};
+            quizzes.forEach(quiz => {
+                const subject = quiz.subject || 'Autres';
+                if (!bySubject[subject]) bySubject[subject] = [];
+                bySubject[subject].push(quiz);
+            });
+            
+            // Afficher
+            const listHTML = Object.keys(bySubject).sort().map(subject => {
+                const subjectQuizzes = bySubject[subject];
+                
+                const quizzesHTML = subjectQuizzes.map(quiz => {
+                    const isFree = quiz.free || false;
+                    const userStr = localStorage.getItem('quizUser');
+                    let isPremium = false;
+                    
+                    try {
+                        if (userStr && userStr !== 'null') {
+                            const user = JSON.parse(userStr);
+                            isPremium = user.isPremium || false;
+                        }
+                    } catch (e) {}
+                    
+                    const hasAccess = isFree || isPremium;
+                    
+                    return `
+                        <div class="quiz-card" onclick="startQuiz('${quiz._id}', ${!hasAccess && !isFree})">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="mb-0">${quiz.title}</h5>
+                                <span class="badge ${isFree ? 'badge-free' : 'badge-premium'}">
+                                    ${isFree ? 'GRATUIT' : 'PREMIUM'}
+                                </span>
+                            </div>
+                            <p class="text-muted mb-2">${quiz.description || ''}</p>
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span><i class="fas fa-question-circle me-1"></i>${quiz.questions?.length || 0} questions</span>
+                                <span><i class="fas fa-clock me-1"></i>${quiz.duration || 10} min</span>
+                            </div>
+                            ${!hasAccess && !isFree ? '<div class="text-danger mt-2"><i class="fas fa-lock me-1"></i>Premium requis</div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                return `
+                    <div class="subject-section">
+                        <h2 class="subject-title">${subject}</h2>
+                        ${quizzesHTML}
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('quiz-list').innerHTML = listHTML;
+        }
+        
+        function startQuiz(quizId, needsPremium) {
+            if (needsPremium) {
+                alert('Ce quiz nécessite un abonnement Premium');
+                window.location.href = '/premium.html';
+                return;
+            }
+            
+            // ✅ REDIRECTION VERS quiz-modern.html avec l'ID du quiz
+            window.location.href = `/quiz-modern.html?quizId=${quizId}`;
+        }
+    </script>
 </body>
 </html>

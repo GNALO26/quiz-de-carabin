@@ -36,7 +36,8 @@ fetch('/navbar-complete.html')
 </script>
 <body>
     <!-- Navbar (copier depuis index.html) -->
-   <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+  <!-- NAVBAR FINALE - Menu profil simplifié -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
     <div class="container">
         <!-- Logo avec image -->
         <a class="navbar-brand d-flex align-items-center" href="/index.html">
@@ -52,26 +53,27 @@ fetch('/navbar-complete.html')
         <!-- Menu -->
         <div class="collapse navbar-collapse" id="navbarMain">
             <ul class="navbar-nav ms-auto align-items-center">
+                <!-- Liens toujours visibles -->
                 <li class="nav-item">
-                    <a class="nav-link active" href="/index.html">
-                        Accueil
+                    <a class="nav-link" href="/index.html">
+                       Accueil
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/quiz-modern.html">
+                    <a class="nav-link" href="#" id="nav-quiz-link">
                         Quiz
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/about.html">
-                        À propos
+                        </i>À propos
                     </a>
                 </li>
                 
                 <!-- Dashboard (seulement si connecté) -->
                 <li class="nav-item" id="nav-dashboard" style="display: none;">
                     <a class="nav-link" href="/dashboard-modern.html">
-                        Dashboard
+                        <i class="fas fa-tachometer-alt me-1"></i>Dashboard
                     </a>
                 </li>
                 
@@ -92,7 +94,7 @@ fetch('/navbar-complete.html')
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
                        id="userDropdown" role="button" data-bs-toggle="dropdown">
                         <img src="/assets/images/logo.png" alt="User" class="rounded-circle me-2" 
-                             width="32" height="32">
+                             width="32" height="32" style="object-fit: cover;">
                         <span id="user-name">Utilisateur</span>
                         <span id="user-premium-badge" class="badge bg-warning ms-2" style="display: none;">
                             <i class="fas fa-crown"></i> Premium
@@ -100,13 +102,18 @@ fetch('/navbar-complete.html')
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
-                            <a class="dropdown-item" href="/dashboard-modern.html">
-                                Mon Dashboard
+                            <a class="dropdown-item" href="/help.html">
+                                <i class="fas fa-question-circle me-2"></i>Aide
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="/premium.html">
-                                <i class="fas fa-crown me-2"></i>Premium
+                            <a class="dropdown-item" href="/stats.html">
+                                Statistiques
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/history.html">
+                                Historique
                             </a>
                         </li>
                         <li><hr class="dropdown-divider"></li>
@@ -122,18 +129,25 @@ fetch('/navbar-complete.html')
     </div>
 </nav>
 
-<!-- Avant </body> -->
 <script>
-// Navbar dynamique
+// ========================================
+// GESTION NAVBAR DYNAMIQUE
+// ========================================
 document.addEventListener('DOMContentLoaded', function() {
     updateNavbar();
+    setupQuizRedirection();
     
+    // Logout handler
     document.getElementById('nav-logout')?.addEventListener('click', function(e) {
         e.preventDefault();
+        
+        // Clear storage
         localStorage.removeItem('quizToken');
         localStorage.removeItem('quizUser');
         localStorage.removeItem('userIsPremium');
         localStorage.removeItem('premiumExpiresAt');
+        
+        // Redirect
         window.location.href = '/index.html';
     });
 });
@@ -142,26 +156,160 @@ function updateNavbar() {
     const token = localStorage.getItem('quizToken');
     const userStr = localStorage.getItem('quizUser');
     
+    const navDashboard = document.getElementById('nav-dashboard');
+    const navLogin = document.getElementById('nav-login');
+    const navRegister = document.getElementById('nav-register');
+    const navUser = document.getElementById('nav-user');
+    const userName = document.getElementById('user-name');
+    const premiumBadge = document.getElementById('user-premium-badge');
+    
     if (token && userStr && token !== 'null' && userStr !== 'null') {
+        // ✅ CONNECTÉ
         try {
             const user = JSON.parse(userStr);
             
-            document.getElementById('nav-dashboard').style.display = 'block';
-            document.getElementById('nav-user').style.display = 'block';
-            document.getElementById('nav-login').style.display = 'none';
-            document.getElementById('nav-register').style.display = 'none';
+            // Afficher
+            navDashboard.style.display = 'block';
+            navUser.style.display = 'block';
             
-            document.getElementById('user-name').textContent = user.name || 'Utilisateur';
+            // Cacher
+            navLogin.style.display = 'none';
+            navRegister.style.display = 'none';
             
+            // Nom utilisateur
+            userName.textContent = user.name || 'Utilisateur';
+            
+            // Badge Premium
             if (user.isPremium) {
-                document.getElementById('user-premium-badge').style.display = 'inline-block';
+                premiumBadge.style.display = 'inline-block';
+            } else {
+                premiumBadge.style.display = 'none';
             }
+            
         } catch (e) {
-            console.error('Erreur:', e);
+            console.error('Erreur parse user:', e);
+            showNotConnected();
         }
+    } else {
+        // ❌ NON CONNECTÉ
+        showNotConnected();
+    }
+}
+
+function showNotConnected() {
+    document.getElementById('nav-dashboard').style.display = 'none';
+    document.getElementById('nav-user').style.display = 'none';
+    document.getElementById('nav-login').style.display = 'block';
+    document.getElementById('nav-register').style.display = 'block';
+}
+
+// ========================================
+// REDIRECTION QUIZ : Passer par Accueil EN DOUCEUR
+// ========================================
+function setupQuizRedirection() {
+    const quizLink = document.getElementById('nav-quiz-link');
+    
+    if (quizLink) {
+        quizLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const currentPage = window.location.pathname;
+            
+            // Si pas sur accueil, rediriger DOUCEMENT vers accueil
+            if (currentPage !== '/index.html' && currentPage !== '/') {
+                // Sauvegarder l'intention
+                sessionStorage.setItem('redirectToQuiz', 'true');
+                
+                // Redirection douce (pas d'alerte)
+                window.location.href = '/index.html';
+            } else {
+                // Sur accueil, aller directement aux quiz
+                window.location.href = '/quiz-modern.html';
+            }
+        });
+    }
+    
+    // ✅ Si redirection quiz en attente (depuis autre page)
+    if (sessionStorage.getItem('redirectToQuiz') === 'true') {
+        sessionStorage.removeItem('redirectToQuiz');
+        
+        // Afficher message discret + redirection
+        const message = document.createElement('div');
+        message.className = 'alert alert-info alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+        message.style.zIndex = '9999';
+        message.innerHTML = `
+            <i class="fas fa-info-circle me-2"></i>
+            Redirection vers les quiz...
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(message);
+        
+        setTimeout(() => {
+            window.location.href = '/quiz-modern.html';
+        }, 1000);
     }
 }
 </script>
+
+<style>
+.navbar {
+    transition: all 0.3s ease;
+}
+
+.navbar-brand img {
+    transition: transform 0.3s ease;
+}
+
+.navbar-brand:hover img {
+    transform: scale(1.05);
+}
+
+.nav-link {
+    transition: color 0.3s ease;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    color: var(--bs-primary) !important;
+}
+
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    min-width: 200px;
+}
+
+.dropdown-item {
+    transition: all 0.3s ease;
+    padding: 0.75rem 1.25rem;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+    padding-left: 1.5rem;
+}
+
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Message redirection douce */
+.alert-info {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+</style>
 
     <!-- Hero Section -->
     <section class="legal-hero">
