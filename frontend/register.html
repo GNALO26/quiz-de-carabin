@@ -1,335 +1,285 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta property="og:url" content="https://quiz-de-carabin.com">
-    <link rel="canonical" href="https://quiz-de-carabin.com">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscription - Quiz de Carabin</title>
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-HYJK4EQKLZ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-HYJK4EQKLZ');
-</script>
-<meta name="google-site-verification" content="NIHqw9mpmJSFFre5VvEZL5tLbLPJusIHvmk8O6dTuUc" />
-    <link rel="stylesheet" href="css/auth.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px 0;
+        }
+        
+        .register-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            margin: 20px;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo h1 {
+            color: #667eea;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-control, .form-select {
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-register {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-register:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-register:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .links a:hover {
+            text-decoration: underline;
+        }
+        
+        .spinner-border {
+            width: 1.2rem;
+            height: 1.2rem;
+            margin-right: 8px;
+        }
+        
+        .password-requirements {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
-    <!-- Background animé -->
-    <div class="auth-background">
-        <div class="floating-orb orb-1"></div>
-        <div class="floating-orb orb-2"></div>
-        <div class="floating-orb orb-3"></div>
-        <div class="particles" id="particles"></div>
-    </div>
-
-    <!-- Container principal -->
-    <div class="auth-container">
-        <!-- Logo & Retour -->
-        <div class="auth-header">
-            <a href="index.html" class="back-link">
-                <i class="fas fa-arrow-left"></i>
-                <span>Retour à l'accueil</span>
-            </a>
+    <div class="register-card">
+        <div class="logo">
+            <h1>🎓 Quiz de Carabin</h1>
+            <p>Créer votre compte</p>
         </div>
-
-        <!-- Card d'inscription -->
-        <div class="auth-card register-card">
-            <!-- Logo -->
-            <div class="auth-logo">
-                <div class="logo-icon">
-                    <i class="fas fa-graduation-cap"></i>
-                </div>
-                <h1>Quiz de Carabin</h1>
-                <p class="tagline">Rejoignez des milliers d'étudiants</p>
+        
+        <div id="alert" class="alert d-none"></div>
+        
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="name">Nom complet *</label>
+                <input type="text" class="form-control" id="name" required>
             </div>
-
-            <!-- Progress Steps -->
-            <div class="progress-steps" id="progressSteps">
-                <div class="step active" data-step="1">
-                    <div class="step-number">1</div>
-                    <span class="step-label">Informations</span>
-                </div>
-                <div class="step" data-step="2">
-                    <div class="step-number">2</div>
-                    <span class="step-label">Université</span>
-                </div>
-                <div class="step" data-step="3">
-                    <div class="step-number">3</div>
-                    <span class="step-label">Confirmation</span>
+            
+            <div class="form-group">
+                <label for="email">Email *</label>
+                <input type="email" class="form-control" id="email" required autocomplete="email">
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">Téléphone</label>
+                <input type="tel" class="form-control" id="phone" placeholder="+229...">
+            </div>
+            
+            <div class="form-group">
+                <label for="university">Université</label>
+                <input type="text" class="form-control" id="university" placeholder="Ex: UNSTIM">
+            </div>
+            
+            <div class="form-group">
+                <label for="studyYear">Année d'étude</label>
+                <select class="form-select" id="studyYear">
+                    <option value="">Sélectionner</option>
+                    <option value="1">1ère année</option>
+                    <option value="2">2ème année</option>
+                    <option value="3">3ème année</option>
+                    <option value="4">4ème année</option>
+                    <option value="5">5ème année</option>
+                    <option value="6">6ème année</option>
+                    <option value="7">7ème année</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Mot de passe *</label>
+                <input type="password" class="form-control" id="password" required autocomplete="new-password">
+                <div class="password-requirements">
+                    Minimum 6 caractères
                 </div>
             </div>
-
-            <!-- Formulaire d'inscription -->
-            <form id="registerForm" class="auth-form">
-                <!-- ÉTAPE 1 : Informations personnelles -->
-                <div class="form-step active" data-step="1">
-                    <h2 class="form-title">Créer votre compte</h2>
-                    <p class="form-subtitle">Commencez gratuitement dès maintenant 🚀</p>
-
-                    <!-- Nom complet -->
-                    <div class="form-group">
-                        <label for="name">
-                            <i class="fas fa-user"></i>
-                            Nom Complet
-                        </label>
-                        <input 
-                            type="text" 
-                            id="name" 
-                            name="name"
-                            placeholder="Ex: Jean Dupont"
-                            required
-                            autocomplete="name"
-                        >
-                        <span class="error-message" id="nameError"></span>
-                    </div>
-
-                    <!-- Email -->
-                    <div class="form-group">
-                        <label for="registerEmail">
-                            <i class="fas fa-envelope"></i>
-                            Adresse Email
-                        </label>
-                        <input 
-                            type="email" 
-                            id="registerEmail" 
-                            name="email"
-                            placeholder="votre.email@exemple.com"
-                            required
-                            autocomplete="email"
-                        >
-                        <span class="error-message" id="registerEmailError"></span>
-                        <span class="helper-text">
-                            <i class="fas fa-info-circle"></i>
-                            Utilisez votre email universitaire pour des avantages
-                        </span>
-                    </div>
-
-                    <!-- Mot de passe -->
-                    <div class="form-group">
-                        <label for="registerPassword">
-                            <i class="fas fa-lock"></i>
-                            Mot de Passe
-                        </label>
-                        <div class="password-input">
-                            <input 
-                                type="password" 
-                                id="registerPassword" 
-                                name="password"
-                                placeholder="••••••••"
-                                required
-                                autocomplete="new-password"
-                            >
-                            <button type="button" class="toggle-password" id="toggleRegisterPassword">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        <!-- Force du mot de passe -->
-                        <div class="password-strength">
-                            <div class="strength-bar">
-                                <div class="strength-fill" id="strengthFill"></div>
-                            </div>
-                            <span class="strength-text" id="strengthText">Faible</span>
-                        </div>
-                        <span class="error-message" id="registerPasswordError"></span>
-                    </div>
-
-                    <!-- Confirmer mot de passe -->
-                    <div class="form-group">
-                        <label for="confirmPassword">
-                            <i class="fas fa-lock"></i>
-                            Confirmer le Mot de Passe
-                        </label>
-                        <div class="password-input">
-                            <input 
-                                type="password" 
-                                id="confirmPassword" 
-                                name="confirmPassword"
-                                placeholder="••••••••"
-                                required
-                                autocomplete="new-password"
-                            >
-                            <button type="button" class="toggle-password" id="toggleConfirmPassword">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        <span class="error-message" id="confirmPasswordError"></span>
-                    </div>
-
-                    <button type="button" class="btn-submit" onclick="nextStep(2)">
-                        <span>Continuer</span>
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-                </div>
-
-                <!-- ÉTAPE 2 : Université et préférences -->
-                <div class="form-step" data-step="2">
-                    <h2 class="form-title">Votre Université</h2>
-                    <p class="form-subtitle">Personnalisez votre expérience 🎓</p>
-
-                    <!-- Université -->
-                    <div class="form-group">
-                        <label for="university">
-                            <i class="fas fa-university"></i>
-                            Université / Faculté
-                        </label>
-                        <select id="university" name="university" required>
-                            <option value="">Sélectionnez votre université</option>
-                            <option value="FMOS">🇨🇮 FMOS - Abidjan, Côte d'Ivoire</option>
-                            <option value="FMPOS">🇸🇳 FMPOS - Dakar, Sénégal</option>
-                            <option value="FSS">🇹🇬 FSS - Lomé, Togo</option>
-                            <option value="UNB">🇧🇯 UNB - Cotonou, Bénin</option>
-                            <option value="GENERAL">🌍 Autre / Programme Général</option>
-                        </select>
-                        <span class="error-message" id="universityError"></span>
-                    </div>
-
-                    <!-- Année d'étude -->
-                    <div class="form-group">
-                        <label for="academicYear">
-                            <i class="fas fa-calendar-alt"></i>
-                            Année d'Étude (Optionnel)
-                        </label>
-                        <select id="academicYear" name="academicYear">
-                            <option value="">Choisissez votre année</option>
-                            <option value="1ère année">1ère année</option>
-                            <option value="2ème année">2ème année</option>
-                            <option value="3ème année">3ème année</option>
-                            <option value="4ème année">4ème année</option>
-                            <option value="5ème année">5ème année</option>
-                            <option value="6ème année">6ème année</option>
-                            <option value="7ème année (Internat)">7ème année (Internat)</option>
-                        </select>
-                    </div>
-
-                    <!-- Notifications -->
-                    <div class="form-group checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="emailNotifications" name="emailNotifications" checked>
-                            <span class="checkmark"></span>
-                            <div class="checkbox-content">
-                                <span class="checkbox-title">Notifications par email</span>
-                                <span class="checkbox-desc">Recevez des rappels et des mises à jour</span>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div class="form-buttons">
-                        <button type="button" class="btn-secondary" onclick="prevStep(1)">
-                            <i class="fas fa-arrow-left"></i>
-                            <span>Retour</span>
-                        </button>
-                        <button type="button" class="btn-submit" onclick="nextStep(3)">
-                            <span>Continuer</span>
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ÉTAPE 3 : Confirmation -->
-                <div class="form-step" data-step="3">
-                    <h2 class="form-title">Dernière étape ! 🎉</h2>
-                    <p class="form-subtitle">Vérifiez vos informations</p>
-
-                    <!-- Résumé -->
-                    <div class="summary-box">
-                        <div class="summary-item">
-                            <i class="fas fa-user"></i>
-                            <div>
-                                <span class="summary-label">Nom</span>
-                                <span class="summary-value" id="summaryName">-</span>
-                            </div>
-                        </div>
-                        <div class="summary-item">
-                            <i class="fas fa-envelope"></i>
-                            <div>
-                                <span class="summary-label">Email</span>
-                                <span class="summary-value" id="summaryEmail">-</span>
-                            </div>
-                        </div>
-                        <div class="summary-item">
-                            <i class="fas fa-university"></i>
-                            <div>
-                                <span class="summary-label">Université</span>
-                                <span class="summary-value" id="summaryUniversity">-</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Conditions générales -->
-                    <div class="form-group checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="acceptTerms" name="acceptTerms" required>
-                            <span class="checkmark"></span>
-                            <div class="checkbox-content">
-                                <span class="checkbox-title">
-                                    J'accepte les <a href="terms.html" target="_blank">conditions d'utilisation</a> 
-                                    et la <a href="privacy.html" target="_blank">politique de confidentialité</a>
-                                </span>
-                            </div>
-                        </label>
-                        <span class="error-message" id="termsError"></span>
-                    </div>
-
-                    <div class="form-buttons">
-                        <button type="button" class="btn-secondary" onclick="prevStep(2)">
-                            <i class="fas fa-arrow-left"></i>
-                            <span>Retour</span>
-                        </button>
-                        <button type="submit" class="btn-submit" id="submitBtn">
-                            <span class="btn-text">Créer mon Compte</span>
-                            <span class="btn-loader" style="display: none;">
-                                <i class="fas fa-spinner fa-spin"></i>
-                            </span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Message d'erreur global -->
-                <div class="alert alert-error" id="globalError" style="display: none;">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <span id="globalErrorMessage"></span>
-                </div>
-            </form>
-
-            <!-- Lien vers connexion -->
-            <div class="auth-footer">
-                <p>Vous avez déjà un compte ?</p>
-                <a href="login.html" class="switch-link">
-                    Se connecter
-                    <i class="fas fa-arrow-right"></i>
-                </a>
+            
+            <div class="form-group">
+                <label for="confirmPassword">Confirmer mot de passe *</label>
+                <input type="password" class="form-control" id="confirmPassword" required autocomplete="new-password">
             </div>
-        </div>
-
-        <!-- Features -->
-        <div class="auth-features">
-            <div class="feature">
-                <i class="fas fa-check-circle"></i>
-                <span>Gratuit pour toujours</span>
-            </div>
-            <div class="feature">
-                <i class="fas fa-shield-alt"></i>
-                <span>Données sécurisées</span>
-            </div>
-            <div class="feature">
-                <i class="fas fa-clock"></i>
-                <span>Inscription en 2 min</span>
-            </div>
+            
+            <button type="submit" id="registerBtn" class="btn-register">
+                <i class="fas fa-user-plus me-2"></i>
+                S'inscrire
+            </button>
+        </form>
+        
+        <div class="links">
+            <p>Vous avez déjà un compte ? <a href="/login.html">Se connecter</a></p>
         </div>
     </div>
-
-    <!-- Toast Container -->
-    <div id="toastContainer" class="toast-container"></div>
-
-    <!-- Scripts -->
-    <script src="js/config.js"></script>
-    <script src="js/toast.js"></script>
-    <script src="js/auth-register.js"></script>
+    
+    <script>
+        const API_URL = 'https://quiz-de-carabin-backend.onrender.com';
+        
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const university = document.getElementById('university').value.trim();
+            const studyYear = document.getElementById('studyYear').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            const btn = document.getElementById('registerBtn');
+            const alert = document.getElementById('alert');
+            
+            // Reset
+            alert.classList.add('d-none');
+            
+            // Validation
+            if (!name || !email || !password) {
+                showError('Veuillez remplir tous les champs obligatoires');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showError('Le mot de passe doit contenir au moins 6 caractères');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showError('Les mots de passe ne correspondent pas');
+                return;
+            }
+            
+            // Désactiver bouton
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border"></span>Inscription...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        password,
+                        phone,
+                        university,
+                        studyYear: studyYear ? parseInt(studyYear) : undefined
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Sauvegarder token et user
+                    localStorage.setItem('quizToken', data.token);
+                    localStorage.setItem('quizUser', JSON.stringify(data.user));
+                    
+                    // Message succès
+                    showSuccess('Compte créé avec succès ! Redirection...');
+                    
+                    // Redirection après 1.5s
+                    setTimeout(() => {
+                        window.location.href = '/dashboard-modern.html';
+                    }, 1500);
+                    
+                } else {
+                    showError(data.message || 'Erreur lors de l\'inscription');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-user-plus me-2"></i>S\'inscrire';
+                }
+                
+            } catch (error) {
+                console.error('Erreur register:', error);
+                showError('Erreur de connexion. Vérifiez votre connexion internet.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-user-plus me-2"></i>S\'inscrire';
+            }
+        });
+        
+        function showError(message) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = 'alert alert-danger';
+            alert.classList.remove('d-none');
+        }
+        
+        function showSuccess(message) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = 'alert alert-success';
+            alert.classList.remove('d-none');
+        }
+        
+        // Si déjà connecté, rediriger
+        if (localStorage.getItem('quizToken')) {
+            window.location.href = '/dashboard-modern.html';
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
