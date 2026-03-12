@@ -4,7 +4,7 @@ const Transaction = require('../models/Transaction');
 
 // GET /api/admin/stats
 // Statistiques du dashboard admin
-exports.getStats = async (req, res) => {
+const getStats = async (req, res) => {
   try {
     // Vérifier si admin
     if (!req.user.isAdmin) {
@@ -86,7 +86,7 @@ exports.getStats = async (req, res) => {
 
 // GET /api/admin/users
 // Liste de tous les utilisateurs
-exports.getUsers = async (req, res) => {
+const getUsers = async (req, res) => {
   try {
     // Vérifier si admin
     if (!req.user.isAdmin) {
@@ -152,7 +152,7 @@ exports.getUsers = async (req, res) => {
 
 // GET /api/admin/user/:id
 // Détails d'un utilisateur spécifique
-exports.getUserDetails = async (req, res) => {
+const getUserDetails = async (req, res) => {
   try {
     if (!req.user.isAdmin) {
       return res.status(403).json({
@@ -187,7 +187,7 @@ exports.getUserDetails = async (req, res) => {
 
 // PUT /api/admin/user/:id/premium
 // Activer/Désactiver Premium manuellement
-exports.togglePremium = async (req, res) => {
+const togglePremium = async (req, res) => {
   try {
     if (!req.user.isAdmin) {
       return res.status(403).json({
@@ -243,7 +243,7 @@ exports.togglePremium = async (req, res) => {
 
 // GET /api/admin/transactions
 // Liste des transactions
-exports.getTransactions = async (req, res) => {
+const getTransactions = async (req, res) => {
   try {
     if (!req.user.isAdmin) {
       return res.status(403).json({
@@ -291,7 +291,7 @@ exports.getTransactions = async (req, res) => {
 
 // GET /api/admin/quizzes
 // Liste des quiz avec stats
-exports.getQuizzes = async (req, res) => {
+const getQuizzes = async (req, res) => {
   try {
     if (!req.user.isAdmin) {
       return res.status(403).json({
@@ -337,6 +337,7 @@ exports.getQuizzes = async (req, res) => {
 
 console.log('✅ adminController chargé avec données réelles');
 
+// ✅ EXPORTS À LA FIN
 module.exports = {
   getStats,
   getUsers,
