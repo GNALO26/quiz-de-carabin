@@ -256,17 +256,17 @@ async function seedFromDocx() {
       'Anatomie': [
         {
           path: path.join(__dirname, '../uploads/OSTEOLOGIE ET ARTHROLOGIE GENERALE.docx'),
-          category: 'OSTEOLOGIE ET ARTHROLOGIE GENERALE',
+          category: 'Ostéologie et Arthrologie Générale',
           free: false
         },
         {
           path: path.join(__dirname, '../uploads/MYOLOGIE GENERALE ET GLANDE.docx'), 
-          category: 'MYOLOGIE GENERALE ET GLANDE',
+          category: 'Myologie général et glande',
           free: true 
         },
         {
           path: path.join(__dirname, '../uploads/generalite.docx'), 
-          category: 'GENERALITES',
+          category: 'Généralité',
           free: false 
         },
         
