@@ -66,5 +66,26 @@ router.get('/quiz-history', authMiddleware, async (req, res) => {
     });
   }
 });
+// Progress (pour stats.html)
+router.get('/progress', authMiddleware, async (req, res) => {
+  try {
+    const userController = require('../controllers/userController');
+    await userController.getProgress(req, res);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Dashboard stats (pour dashboard.html)
+router.get('/dashboard-stats', authMiddleware, async (req, res) => {
+  try {
+    const userController = require('../controllers/userController');
+    await userController.getDashboardStats(req, res);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
 
 module.exports = router;
