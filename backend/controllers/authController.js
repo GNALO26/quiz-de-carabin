@@ -320,53 +320,55 @@ exports.forceLogout = async (req, res) => {
 };
 
 // Demande de réinitialisation de mot de passe
+// Demande de réinitialisation de mot de passe
 exports.requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
-
+ 
     if (!email) {
       return res.status(400).json({
         success: false,
         message: "L'email est requis"
       });
     }
-
+ 
     // Normaliser l'email
     const normalizedEmail = email.toLowerCase().trim();
     
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Aucun utilisateur trouvé avec cet email"
+      // Pour la sécurité, on retourne success même si l'utilisateur n'existe pas
+      return res.status(200).json({
+        success: true,
+        message: "Si cet email existe, un code de réinitialisation a été envoyé"
       });
     }
-
+ 
     // Limite de tentatives (sécurité)
     const recentRequests = await PasswordReset.countDocuments({
       email: normalizedEmail,
       createdAt: { $gt: new Date(Date.now() - 15 * 60 * 1000) }
     });
-
+ 
     if (recentRequests >= 3) {
       return res.status(429).json({
         success: false,
         message: 'Trop de demandes. Veuillez réessayer dans 15 minutes.'
       });
     }
-
-    // Générer un code à 6 chiffres
-    const code = generateCode();
-
+ 
+    // ✅ CORRECTION : Générer un code à 6 chiffres SANS utiliser generateCode()
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+ 
     // Sauvegarder la demande de réinitialisation
     const passwordReset = new PasswordReset({
       email: normalizedEmail,
-      code,
-      expiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000)
+      code: code, // ✅ Utiliser directement le code généré
+      expiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 heure
     });
-
+ 
     await passwordReset.save();
-
+ 
     // Envoyer l'email de réinitialisation
     try {
       await transporter.sendMail({
@@ -375,20 +377,33 @@ exports.requestPasswordReset = async (req, res) => {
         subject: 'Code de réinitialisation - Quiz de Carabin',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #4CAF50;">Réinitialisation de mot de passe</h2>
-            <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
-            <p>Votre code de réinitialisation est :</p>
-            <div style="text-align: center; margin: 20px 0;">
-              <span style="font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #4CAF50;">${code}</span>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <h1 style="color: white; margin: 0;">Quiz de Carabin</h1>
             </div>
-            <p>Ce code expirera dans 1 heure.</p>
-            <p>Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email.</p>
-            <br>
-            <p>L'équipe Quiz de Carabin</p>
+            <div style="padding: 30px; background: #f8f9fa; border-radius: 0 0 10px 10px;">
+              <h2 style="color: #333;">Réinitialisation de mot de passe</h2>
+              <p style="color: #666; font-size: 16px;">Vous avez demandé à réinitialiser votre mot de passe.</p>
+              <p style="color: #666; font-size: 16px;">Voici votre code de réinitialisation :</p>
+              
+              <div style="background: white; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
+                <h1 style="color: #667eea; font-size: 48px; letter-spacing: 10px; margin: 0;">${code}</h1>
+              </div>
+              
+              <p style="color: #666; font-size: 14px;">Ce code expire dans <strong>1 heure</strong>.</p>
+              <p style="color: #666; font-size: 14px;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+              
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+                <p style="color: #999; font-size: 12px; text-align: center;">
+                  © 2024 Quiz de Carabin. Tous droits réservés.
+                </p>
+              </div>
+            </div>
           </div>
         `
       });
-
+ 
+      console.log(`✅ Code de réinitialisation envoyé à ${normalizedEmail}: ${code}`);
+ 
       res.status(200).json({
         success: true,
         message: "Code de réinitialisation envoyé par email"
