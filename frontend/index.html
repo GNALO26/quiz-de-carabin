@@ -64,9 +64,16 @@
             font-weight: 700;
             font-size: 1.5rem;
             color: white !important;
+            display: flex;
+            align-items: center;
         }
-        .navbar-brand i {
-            color: var(--secondary);
+        .navbar-brand img {
+            border-radius: 8px; /* Coins légèrement arrondis pour un look carré professionnel */
+            object-fit: cover;
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         .nav-link {
             color: rgba(255,255,255,0.85) !important;
@@ -90,9 +97,9 @@
             border-color: var(--secondary);
         }
         
-        /* Hero Section */
+        /* Hero Section - version avec dégradé semi-transparent (ancien style) */
         .hero-section {
-            background: var(--gradient-primary), url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') no-repeat center center/cover;
+            background: linear-gradient(rgba(44, 110, 181, 0.8), rgba(44, 110, 181, 0.9)), url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') no-repeat center center/cover;
             color: white;
             padding: 100px 0;
             text-align: center;
@@ -535,7 +542,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="/index.html">
-                <img src="/assets/images/logo.png" alt="Quiz de Carabin" height="40" class="me-2">
+                <img src="/assets/images/logo.png" alt="Quiz de Carabin">
                 <span>Quiz de Carabin</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
@@ -567,7 +574,7 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
+    <!-- Hero Section - avec l'ancien arrière-plan -->
     <section class="hero-section">
         <div class="container">
             <h1 class="display-4 fw-bold">Testez vos connaissances médicales</h1>
@@ -662,7 +669,7 @@
                                 <li><i class="fas fa-check"></i><span>Support technique</span></li>
                             </ul>
                             <button class="subscribe-btn" data-plan-id="1-month" data-plan-price="5000">
-                                <i class="fas fa-credit-card me-2"></i>S'abonner
+                                S'abonner
                             </button>
                         </div>
                     </div>
@@ -690,7 +697,7 @@
                                 <li><i class="fas fa-check"></i><span>Historique des performances</span></li>
                             </ul>
                             <button class="subscribe-btn" data-plan-id="3-months" data-plan-price="12000">
-                                <i class="fas fa-crown me-2"></i>S'abonner
+        S'abonner
                             </button>
                         </div>
                     </div>
@@ -718,7 +725,7 @@
                                 <li><i class="fas fa-check"></i><span>Accès aux nouvelles fonctionnalités</span></li>
                             </ul>
                             <button class="subscribe-btn" data-plan-id="10-months" data-plan-price="25000">
-                                <i class="fas fa-star me-2"></i>S'abonner
+    S'abonner
                             </button>
                         </div>
                     </div>
