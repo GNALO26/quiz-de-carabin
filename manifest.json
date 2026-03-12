@@ -1,0 +1,21 @@
+{
+  "name": "QDC",
+  "short_name": "QDC",
+  "description": "Quiz de Carabin - Plateforme de quiz médicaux",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#1a4b8c",
+  "theme_color": "#1a4b8c",
+  "icons": [
+    {
+      "src": "/assets/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
