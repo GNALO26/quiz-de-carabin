@@ -6,7 +6,7 @@
  * ================================================================
  */
 
-import { CONFIG } from './config.js';
+const API_URL = 'https://quiz-de-carabin-backend.onrender.com';
 
 class ModernDashboard {
     constructor() {
@@ -18,19 +18,25 @@ class ModernDashboard {
     async init() {
         // Vérifier authentification
         const token = localStorage.getItem('quizToken');
-        const user = JSON.parse(localStorage.getItem('quizUser') || '{}');
+        const userStr = localStorage.getItem('quizUser');
         
-        if (!token) {
-            window.location.href = 'index.html';
+        if (!token || !userStr) {
+            window.location.href = '/login.html';
             return;
         }
         
-        // Afficher info utilisateur
-        document.getElementById('userName').textContent = user.name || 'Étudiant';
-        
-        // Afficher badge Premium si applicable
-        if (user.isPremium) {
-            this.showPremiumBadge(user);
+        try {
+            const user = JSON.parse(userStr);
+            
+            // Afficher info utilisateur
+            document.getElementById('userName').textContent = user.name || 'Étudiant';
+            
+            // Afficher badge Premium si applicable
+            if (user.isPremium) {
+                this.showPremiumBadge(user);
+            }
+        } catch (e) {
+            console.error('Erreur parse user:', e);
         }
         
         // Charger les données
@@ -39,26 +45,35 @@ class ModernDashboard {
 
     showPremiumBadge(user) {
         const badge = document.getElementById('premiumBadge');
-        badge.style.display = 'flex';
-        
-        if (user.premiumUntil) {
-            const expiryDate = new Date(user.premiumUntil);
-            document.getElementById('premiumExpires').textContent = 
-                `Expire le ${expiryDate.toLocaleDateString('fr-FR')}`;
+        if (badge) {
+            badge.style.display = 'flex';
+            
+            if (user.premiumExpiresAt) {
+                const expiryDate = new Date(user.premiumExpiresAt);
+                const expiresEl = document.getElementById('premiumExpires');
+                if (expiresEl) {
+                    expiresEl.textContent = `Expire le ${expiryDate.toLocaleDateString('fr-FR')}`;
+                }
+            }
         }
     }
 
     async loadDashboardData() {
         try {
             const token = localStorage.getItem('quizToken');
-            const API_BASE_URL = await this.getActiveAPIUrl();
             
-            // Charger stats dashboard
-            const response = await fetch(`${API_BASE_URL}/api/stats/dashboard`, {
+            // ✅ Utiliser la route /api/user/dashboard-stats
+            const response = await fetch(`${API_URL}/api/user/dashboard-stats`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
+
+            if (response.status === 401) {
+                localStorage.clear();
+                window.location.href = '/login.html';
+                return;
+            }
 
             if (!response.ok) {
                 throw new Error('Erreur chargement dashboard');
@@ -67,7 +82,9 @@ class ModernDashboard {
             const data = await response.json();
             
             if (data.success) {
-                this.displayStats(data.data);
+                this.displayStats(data);
+            } else {
+                this.displayDemoData();
             }
         } catch (error) {
             console.error('Erreur loadDashboardData:', error);
@@ -75,61 +92,60 @@ class ModernDashboard {
         }
     }
 
-    async getActiveAPIUrl() {
-        try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`);
-            if (response.ok) return CONFIG.API_BASE_URL;
-        } catch (error) {
-            console.warn('URL principale inaccessible');
-        }
-        return CONFIG.API_BACKUP_URL;
-    }
-
     displayStats(data) {
-        const { global, bySubject, recentActivity } = data;
+        const stats = data.stats || {};
+        const user = data.user || {};
         
         // Quick stats
-        document.getElementById('totalQuizzes').textContent = global.totalQuizzes || 0;
-        document.getElementById('averageScore').textContent = 
-            Math.round(global.averageMastery || 0) + '%';
-        document.getElementById('streak').textContent = global.streak || 0;
-        document.getElementById('level').textContent = global.level || 1;
+        document.getElementById('totalQuizzes').textContent = stats.totalQuizzes || 0;
+        document.getElementById('averageScore').textContent = (stats.averageScore || 0) + '%';
+        document.getElementById('streak').textContent = stats.streak || 0;
+        document.getElementById('level').textContent = stats.level || 1;
         
         // XP Progress
-        this.updateXPProgress(global);
+        this.updateXPProgress({
+            level: stats.level || 1,
+            xp: (stats.totalQuizzes || 0) * 10,
+            nextLevelXP: (stats.level || 1) * 100
+        });
         
-        // Graphiques
-        this.createProgressChart(recentActivity);
-        this.createSubjectChart(bySubject);
+        // Graphiques avec données réelles (à améliorer plus tard)
+        this.createProgressChart([
+            { date: new Date().toISOString(), averageScore: stats.averageScore || 0, quizzesCompleted: stats.totalQuizzes || 0 }
+        ]);
+        
+        this.createSubjectChart([
+            { subject: 'Général', averageMastery: stats.averageScore || 0 }
+        ]);
         
         // Badges
-        this.displayBadges(global.badges || []);
+        const badges = [];
+        if (stats.totalQuizzes >= 1) badges.push('first_quiz');
+        if (stats.totalQuizzes >= 10) badges.push('quiz_10');
+        if (stats.averageScore >= 100) badges.push('score_100');
+        
+        this.displayBadges(badges);
     }
 
     displayDemoData() {
         // Données de démonstration
-        document.getElementById('totalQuizzes').textContent = '12';
-        document.getElementById('averageScore').textContent = '75%';
-        document.getElementById('streak').textContent = '5';
-        document.getElementById('level').textContent = '3';
+        document.getElementById('totalQuizzes').textContent = '0';
+        document.getElementById('averageScore').textContent = '0%';
+        document.getElementById('streak').textContent = '0';
+        document.getElementById('level').textContent = '1';
         
-        this.updateXPProgress({ level: 3, xp: 250, nextLevelXP: 400 });
+        this.updateXPProgress({ level: 1, xp: 0, nextLevelXP: 100 });
         
         // Charts démo
         this.createProgressChart([
-            { date: '2024-01-01', averageScore: 65, quizzesCompleted: 2 },
-            { date: '2024-01-03', averageScore: 70, quizzesCompleted: 3 },
-            { date: '2024-01-05', averageScore: 75, quizzesCompleted: 2 },
-            { date: '2024-01-07', averageScore: 80, quizzesCompleted: 4 }
+            { date: new Date().toISOString(), averageScore: 0, quizzesCompleted: 0 }
         ]);
         
         this.createSubjectChart([
-            { subject: 'Anatomie', averageMastery: 85 },
-            { subject: 'Physiologie', averageMastery: 70 },
-            { subject: 'Pharmacologie', averageMastery: 65 }
+            { subject: 'Aucune donnée', averageMastery: 0 }
         ]);
         
-        this.displayBadges(['first_quiz', 'streak_3', 'score_100']);
+        this.displayBadges([]);
     }
 
     updateXPProgress(data) {
@@ -137,39 +153,36 @@ class ModernDashboard {
         const currentXP = data.xp || 0;
         const nextLevelXP = data.nextLevelXP || 100;
         
-        document.getElementById('currentLevel').textContent = level;
-        document.getElementById('currentXP').textContent = currentXP;
-        document.getElementById('nextLevelXP').textContent = nextLevelXP;
+        const currentLevelEl = document.getElementById('currentLevel');
+        const currentXPEl = document.getElementById('currentXP');
+        const nextLevelXPEl = document.getElementById('nextLevelXP');
+        const xpBarEl = document.getElementById('xpBar');
+        const xpCircleEl = document.getElementById('xpCircle');
+        
+        if (currentLevelEl) currentLevelEl.textContent = level;
+        if (currentXPEl) currentXPEl.textContent = currentXP;
+        if (nextLevelXPEl) nextLevelXPEl.textContent = nextLevelXP;
         
         // Barre XP
-        const percentage = (currentXP / nextLevelXP) * 100;
-        document.getElementById('xpBar').style.width = `${percentage}%`;
+        const percentage = Math.min((currentXP / nextLevelXP) * 100, 100);
+        if (xpBarEl) {
+            xpBarEl.style.width = `${percentage}%`;
+        }
         
         // Cercle XP
-        const circle = document.getElementById('xpCircle');
-        const radius = 65;
-        const circumference = 2 * Math.PI * radius;
-        const offset = circumference - (percentage / 100) * circumference;
-        
-        circle.style.strokeDasharray = circumference;
-        circle.style.strokeDashoffset = offset;
-        
-        // Ajouter gradient SVG
-        if (!document.getElementById('xpGradient')) {
-            const svg = circle.closest('svg');
-            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            defs.innerHTML = `
-                <linearGradient id="xpGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
-                </linearGradient>
-            `;
-            svg.insertBefore(defs, svg.firstChild);
+        if (xpCircleEl) {
+            const radius = 65;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (percentage / 100) * circumference;
+            
+            xpCircleEl.style.strokeDasharray = circumference;
+            xpCircleEl.style.strokeDashoffset = offset;
         }
     }
 
     createProgressChart(data) {
         const ctx = document.getElementById('progressChart');
+        if (!ctx) return;
         
         if (this.progressChart) {
             this.progressChart.destroy();
@@ -180,7 +193,7 @@ class ModernDashboard {
             return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
         });
         
-        const scores = data.map(d => d.averageScore);
+        const scores = data.map(d => d.averageScore || 0);
         
         this.progressChart = new Chart(ctx, {
             type: 'line',
@@ -223,13 +236,14 @@ class ModernDashboard {
 
     createSubjectChart(data) {
         const ctx = document.getElementById('subjectChart');
+        if (!ctx) return;
         
         if (this.subjectChart) {
             this.subjectChart.destroy();
         }
         
         const labels = data.map(d => d.subject);
-        const scores = data.map(d => d.averageMastery);
+        const scores = data.map(d => d.averageMastery || 0);
         
         this.subjectChart = new Chart(ctx, {
             type: 'bar',
@@ -273,6 +287,7 @@ class ModernDashboard {
 
     displayBadges(badges) {
         const container = document.getElementById('badgesContainer');
+        if (!container) return;
         
         const allBadges = [
             { id: 'first_quiz', icon: '🎯', name: 'Premier quiz', unlocked: badges.includes('first_quiz') },
