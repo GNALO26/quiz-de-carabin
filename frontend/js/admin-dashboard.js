@@ -1,6 +1,6 @@
 /**
  * ================================================================
- * ADMIN DASHBOARD - JAVASCRIPT (DEBUG VERSION)
+ * ADMIN DASHBOARD - JAVASCRIPT
  * ================================================================
  */
 
@@ -35,7 +35,7 @@ class AdminDashboard {
             
             this.setupNavigation();
             
-            // Charger données avec logs détaillés
+            // Charger données
             await this.loadDashboardStats();
             await this.loadUsers();
             await this.loadQuizList();
@@ -64,7 +64,7 @@ class AdminDashboard {
                 
                 if (section) {
                     section.classList.add('active');
-                    document.getElementById('pageTitle').textContent = item.textContent.trim();
+                    document.getElementById('pageTitle').textContent = item.querySelector('span').textContent;
                 }
             });
         });
@@ -73,46 +73,29 @@ class AdminDashboard {
     async loadDashboardStats() {
         try {
             const token = localStorage.getItem('quizToken');
-            
-            console.log('🔍 Appel API /api/admin/stats...');
-            console.log('Token:', token ? 'Présent' : 'Absent');
-            
             const response = await fetch(`${API_URL}/api/admin/stats`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             
-            console.log('📡 Réponse status:', response.status);
-            
-            // Lire la réponse même si erreur
             const data = await response.json();
-            console.log('📦 Data reçue:', data);
             
             if (!response.ok) {
-                console.error('❌ Erreur HTTP:', response.status, data);
                 throw new Error(`Erreur ${response.status}: ${data.message || 'Inconnue'}`);
             }
             
             if (data.success) {
-                console.log('✅ Stats reçues:', data.stats);
                 this.displayDashboardStats(data.stats);
             } else {
-                console.error('❌ API retourne success:false:', data.message);
-                alert('Erreur API: ' + data.message);
                 this.displayDemoStats();
             }
             
         } catch (error) {
-            console.error('❌ Erreur loadDashboardStats:', error);
-            alert('Erreur chargement stats: ' + error.message);
+            console.error('Erreur loadDashboardStats:', error);
             this.displayDemoStats();
         }
     }
 
     displayDashboardStats(stats) {
-        console.log('📊 Affichage stats:', stats);
-        
         document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
         document.getElementById('premiumUsers').textContent = stats.premiumUsers || 0;
         document.getElementById('totalQuizzes').textContent = stats.totalQuizzes || 0;
@@ -124,7 +107,6 @@ class AdminDashboard {
     }
 
     displayDemoStats() {
-        console.warn('⚠️ Affichage données DEMO');
         document.getElementById('totalUsers').textContent = '156';
         document.getElementById('premiumUsers').textContent = '42';
         document.getElementById('totalQuizzes').textContent = '87';
@@ -157,18 +139,34 @@ class AdminDashboard {
                 datasets: [{
                     label: 'Inscriptions',
                     data: counts,
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderColor: '#38bdf8',
+                    backgroundColor: 'rgba(56, 189, 248, 0.1)',
                     borderWidth: 3,
                     fill: true,
-                    tension: 0.4
+                    tension: 0.4,
+                    pointBackgroundColor: '#38bdf8',
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true } }
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { backgroundColor: '#0f172a' }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: '#e2e8f0' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
             }
         });
     }
@@ -184,16 +182,23 @@ class AdminDashboard {
                 datasets: [{
                     data: [premium, free],
                     backgroundColor: [
-                        'rgba(255, 193, 7, 0.8)',
-                        'rgba(108, 117, 125, 0.3)'
+                        '#fbbf24',
+                        '#e2e8f0'
                     ],
-                    borderWidth: 0
+                    borderWidth: 0,
+                    hoverOffset: 8
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { position: 'bottom' } }
+                cutout: '70%',
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { usePointStyle: true, boxWidth: 8 }
+                    }
+                }
             }
         });
     }
@@ -201,33 +206,24 @@ class AdminDashboard {
     async loadUsers() {
         try {
             const token = localStorage.getItem('quizToken');
-            
-            console.log('🔍 Appel API /api/admin/users...');
-            
             const response = await fetch(`${API_URL}/api/admin/users`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
-            console.log('📡 Users status:', response.status);
-            
             const data = await response.json();
-            console.log('📦 Users data:', data);
             
             if (!response.ok) {
-                throw new Error(`Erreur ${response.status}: ${data.message || 'Inconnue'}`);
+                throw new Error(`Erreur ${response.status}`);
             }
             
             if (data.success) {
-                console.log('✅ Users reçus:', data.users.length);
                 this.displayUsers(data.users);
             } else {
-                console.error('❌ API users success:false');
                 this.displayDemoUsers();
             }
             
         } catch (error) {
-            console.error('❌ Erreur loadUsers:', error);
-            alert('Erreur chargement users: ' + error.message);
+            console.error('Erreur loadUsers:', error);
             this.displayDemoUsers();
         }
     }
@@ -259,9 +255,18 @@ class AdminDashboard {
     displayDemoUsers() {
         const tbody = document.getElementById('usersTable');
         tbody.innerHTML = `
-            <tr><td>Jean Dupont</td><td>jean@example.com</td>
-            <td><span class="badge bg-warning"><i class="fas fa-crown me-1"></i>Premium</span></td>
-            <td>15/03/2024</td></tr>
+            <tr>
+                <td>Jean Dupont</td>
+                <td>jean@example.com</td>
+                <td><span class="badge bg-warning"><i class="fas fa-crown me-1"></i>Premium</span></td>
+                <td>15/03/2024</td>
+            </tr>
+            <tr>
+                <td>Marie Curie</td>
+                <td>marie@example.com</td>
+                <td><span class="badge bg-secondary">Gratuit</span></td>
+                <td>20/03/2024</td>
+            </tr>
         `;
     }
 
