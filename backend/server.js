@@ -133,7 +133,7 @@ app.post('/api/make-me-admin', async (req, res) => {
   try {
     const { email, secretKey } = req.body;
     
-    if secretKey !== '#@@#CarlazarabrokrishouedarOlympe2025' {
+    if (secretKey !== '#@@#CarlazarabrokrishouedarOlympe2025') {
       return res.status(403).json({ success: false, message: 'Clé secrète invalide' });
     }
     
