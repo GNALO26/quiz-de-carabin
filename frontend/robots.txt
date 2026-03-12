@@ -2,9 +2,7 @@ User-agent: *
 Allow: /
 
 Sitemap: https://quiz-de-carabin.com/sitemap.xml
-```
 
----
 
 ## 9.4 Soumettre à Google Search Console
 
@@ -13,5 +11,4 @@ Sitemap: https://quiz-de-carabin.com/sitemap.xml
 **2. Clique "Ajouter une propriété"**
 
 **3. Entre :**
-```
 https://quiz-de-carabin.com
