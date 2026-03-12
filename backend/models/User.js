@@ -38,6 +38,11 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // ✅ AJOUT DU CHAMP isAdmin
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
   tokenVersion: {
     type: Number,
     default: 0
@@ -112,8 +117,6 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 userSchema.statics.findByEmail = function(email) {
   return this.findOne({ email: email.toLowerCase().trim() });
 };
-
-// ... (le reste du modèle existe déjà)
 
 // Méthode pour vérifier si l'utilisateur a un abonnement premium actif
 userSchema.methods.hasActivePremium = function() {
