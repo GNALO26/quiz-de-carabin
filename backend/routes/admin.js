@@ -1,22 +1,39 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const auth = require('../middleware/auth');
 
 // Middleware pour vérifier les droits admin
-const isAdmin = (req, res, next) => {
-  if (!req.user || !req.user.isAdmin) {
+const requireAdmin = (req, res, next) => {
+  console.log('🔍 requireAdmin - req.user:', {
+    exists: !!req.user,
+    id: req.user?._id,
+    email: req.user?.email,
+    isAdmin: req.user?.isAdmin,
+    hasIsAdminField: req.user?.hasOwnProperty('isAdmin')
+  });
+
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Non authentifié'
+    });
+  }
+
+  if (req.user.isAdmin !== true) {
+    console.log('❌ Accès admin refusé - isAdmin:', req.user.isAdmin);
     return res.status(403).json({
       success: false,
       message: 'Accès refusé. Droits administrateur requis.'
     });
   }
+  
+  console.log('✅ Accès admin autorisé pour:', req.user.email);
   next();
 };
 
-// Appliquer auth à toutes les routes
-router.use(auth);
-router.use(isAdmin);
+// NE PAS réappliquer auth ici (déjà fait globalement dans server.js)
+// Juste vérifier isAdmin
+router.use(requireAdmin);
 
 // ===== STATISTIQUES =====
 router.get('/stats', adminController.getStats);
@@ -32,6 +49,6 @@ router.get('/transactions', adminController.getTransactions);
 // ===== QUIZ =====
 router.get('/quizzes', adminController.getQuizzes);
 
-console.log('✅ Routes admin chargées');
+console.log('✅ Routes admin chargées avec requireAdmin');
 
 module.exports = router;

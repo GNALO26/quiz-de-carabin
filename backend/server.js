@@ -128,38 +128,39 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 
   // Auth publique
   app.use('/api/auth', authRoutes);
-  // ⚠️ ROUTE TEMPORAIRE ADMIN
-app.post('/api/make-me-admin', async (req, res) => {
-  try {
-    const { email, secretKey } = req.body;
-    
-    if (secretKey !== '#@@#CarlazarabrokrishouedarOlympe2025') {
-      return res.status(403).json({ success: false, message: 'Clé secrète invalide' });
+
+  // ⚠️ ROUTE TEMPORAIRE ADMIN - À SUPPRIMER APRÈS USAGE
+  app.post('/api/make-me-admin', async (req, res) => {
+    try {
+      const { email, secretKey } = req.body;
+      
+      if (secretKey !== '#@@#CarlazarabrokrishouedarOlympe2025') {
+        return res.status(403).json({ success: false, message: 'Clé secrète invalide' });
+      }
+      
+      const User = require('./models/User');
+      const user = await User.findOne({ email: email.toLowerCase().trim() });
+      
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      }
+      
+      user.isAdmin = true;
+      await user.save();
+      
+      console.log(`✅ ${email} est maintenant administrateur`);
+      
+      res.status(200).json({
+        success: true,
+        message: `${email} est maintenant administrateur. DÉCONNECTEZ-VOUS et RECONNECTEZ-VOUS pour que les changements prennent effet.`,
+        user: { email: user.email, name: user.name, isAdmin: user.isAdmin }
+      });
+      
+    } catch (error) {
+      console.error('Erreur make-me-admin:', error);
+      res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
-    
-    const User = require('./models/User');
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
-    }
-    
-    user.isAdmin = true;
-    await user.save();
-    
-    console.log(`✅ ${email} est maintenant administrateur`);
-    
-    res.status(200).json({
-      success: true,
-      message: `${email} est maintenant administrateur`,
-      user: { email: user.email, name: user.name, isAdmin: user.isAdmin }
-    });
-    
-  } catch (error) {
-    console.error('Erreur make-me-admin:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
+  });
 
   // Webhooks KkiaPay public
   app.use('/api/webhook', webhookRoutes);
@@ -179,6 +180,26 @@ app.post('/api/make-me-admin', async (req, res) => {
   app.use(auth);
   app.use(checkPremiumStatus);
   app.use(sessionCheck);
+
+  // 🔍 ROUTE DEBUG - À SUPPRIMER APRÈS RÉSOLUTION
+  app.get('/api/debug/check-my-admin', (req, res) => {
+    try {
+      const userObj = req.user ? req.user.toObject() : null;
+      res.json({
+        authenticated: !!req.user,
+        userId: req.user?._id,
+        email: req.user?.email,
+        isAdmin: req.user?.isAdmin,
+        isPremium: req.user?.isPremium,
+        hasIsAdminField: userObj ? 'isAdmin' in userObj : false,
+        userKeys: userObj ? Object.keys(userObj) : [],
+        rawIsAdmin: req.user ? req.user.isAdmin : undefined,
+        isAdminType: req.user ? typeof req.user.isAdmin : 'undefined'
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // ===== ROUTES PROTÉGÉES =====
   const adminRoutes = require('./routes/admin');
@@ -220,6 +241,7 @@ app.post('/api/make-me-admin', async (req, res) => {
     console.log('📋 Routes clés:');
     console.log('   - POST /api/payment/fedapay/create (protégée)');
     console.log('   - POST /api/payment/fedapay/webhooks/fedapay (PUBLIQUE)');
+    console.log('   - GET /api/debug/check-my-admin (DEBUG - À SUPPRIMER)');
     console.log('================================');
   });
 
