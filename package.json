@@ -1,7 +1,7 @@
 {
-  "name": "quiz-de-carabin-react",
+  "name": "QDC",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "Quiz de Carabin - Plateforme e-learning médicale en React",
   "scripts": {
