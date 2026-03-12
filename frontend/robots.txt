@@ -5,6 +5,3 @@ Sitemap: https://quiz-de-carabin.com/sitemap.xml
 
 
 ## 9.4 Soumettre à Google Search Console
-
-
-https://quiz-de-carabin.com
