@@ -128,6 +128,38 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
 
   // Auth publique
   app.use('/api/auth', authRoutes);
+  // ⚠️ ROUTE TEMPORAIRE ADMIN
+app.post('/api/make-me-admin', async (req, res) => {
+  try {
+    const { email, secretKey } = req.body;
+    
+    if secretKey !== '#@@#CarlazarabrokrishouedarOlympe2025' {
+      return res.status(403).json({ success: false, message: 'Clé secrète invalide' });
+    }
+    
+    const User = require('./models/User');
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+    
+    user.isAdmin = true;
+    await user.save();
+    
+    console.log(`✅ ${email} est maintenant administrateur`);
+    
+    res.status(200).json({
+      success: true,
+      message: `${email} est maintenant administrateur`,
+      user: { email: user.email, name: user.name, isAdmin: user.isAdmin }
+    });
+    
+  } catch (error) {
+    console.error('Erreur make-me-admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
 
   // Webhooks KkiaPay public
   app.use('/api/webhook', webhookRoutes);
