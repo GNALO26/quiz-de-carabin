@@ -147,6 +147,17 @@ exports.handleWebhook = async (req, res) => {
                         transaction
                     );
                     
+                    // Dans backend/controllers/fedapayController.js
+// Fonction handleWebhook, après emailService.sendPremiumActivationCode
+
+// ✅ AJOUTER NOTIFICATION IN-APP
+const NotificationService = require('../services/notificationService');
+await NotificationService.notifyPaymentSuccess(
+  transaction.userId,
+  transaction.amount,
+  activationCode
+);
+
                     if (emailResult.success) {
                         transaction.codeEmailSent = true;
                         transaction.codeEmailSentAt = new Date();

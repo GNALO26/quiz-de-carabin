@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - Quiz de Carabin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/notifications.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .notifications-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .notifications-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .notifications-header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .notifications-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .notifications-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 32px;
+            border-bottom: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-tab {
+            padding: 8px 16px;
+            border: none;
+            background: #f7fafc;
+            color: #4a5568;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .filter-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .filter-tab:hover:not(.active) {
+            background: #edf2f7;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #4a5568;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-action:hover {
+            background: #f7fafc;
+            border-color: #cbd5e0;
+        }
+
+        .notifications-list {
+            padding: 0;
+        }
+
+        .notification-item-full {
+            display: flex;
+            gap: 16px;
+            padding: 24px 32px;
+            border-bottom: 1px solid #f7fafc;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .notification-item-full:hover {
+            background: #f7fafc;
+        }
+
+        .notification-item-full.unread {
+            background: #eef2ff;
+        }
+
+        .notification-item-full.unread::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #667eea;
+        }
+
+        .notification-icon-large {
+            font-size: 32px;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f7fafc;
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .notification-content-full {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notification-title-full {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .notification-message-full {
+            font-size: 14px;
+            color: #718096;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .notification-meta {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            font-size: 13px;
+            color: #a0aec0;
+        }
+
+        .notification-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-delete {
+            padding: 6px 12px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #e53e3e;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .btn-delete:hover {
+            background: #fff5f5;
+            border-color: #e53e3e;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 32px;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 24px;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            font-size: 20px;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            color: #a0aec0;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 80px 32px;
+            color: #a0aec0;
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            padding: 24px 32px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .pagination button {
+            padding: 8px 16px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #4a5568;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination button:not(:disabled):hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #718096;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            margin: 24px 32px;
+            background: #f7fafc;
+            color: #4a5568;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            background: #edf2f7;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .priority-urgent {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .priority-high {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        .priority-normal {
+            background: #e6fffa;
+            color: #234e52;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+
+            .notifications-container {
+                border-radius: 0;
+            }
+
+            .notifications-header {
+                padding: 24px;
+            }
+
+            .notifications-toolbar {
+                padding: 16px;
+            }
+
+            .filter-tabs {
+                width: 100%;
+            }
+
+            .filter-tab {
+                flex: 1;
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+
+            .notification-item-full {
+                padding: 20px 16px;
+                gap: 12px;
+            }
+
+            .notification-icon-large {
+                width: 48px;
+                height: 48px;
+                font-size: 24px;
+            }
+
+            .pagination {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<!-- Avant </body> -->
+<script src="js/notifications.js"></script>
+<body>
+    <div class="notifications-container">
+        <!-- Header -->
+        <div class="notifications-header">
+            <h1>🔔 Notifications</h1>
+            <p>Restez informé de toutes vos activités</p>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="notifications-toolbar">
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="all">Toutes</button>
+                <button class="filter-tab" data-filter="unread">Non lues</button>
+                <button class="filter-tab" data-filter="premium">Premium</button>
+                <button class="filter-tab" data-filter="quiz">Quiz</button>
+            </div>
+            <div class="toolbar-actions">
+                <button class="btn-action" id="markAllReadBtn">
+                    <span>✓</span> Tout marquer lu
+                </button>
+                <button class="btn-action" id="deleteReadBtn">
+                    <span>🗑️</span> Supprimer lues
+                </button>
+            </div>
+        </div>
+
+        <!-- Liste des notifications -->
+        <div class="notifications-list" id="notificationsList">
+            <div class="loading-state">
+                <div class="loader"></div>
+                <p>Chargement des notifications...</p>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="paginationContainer" style="display: none;">
+            <button id="prevPageBtn" disabled>← Précédent</button>
+            <span class="pagination-info" id="paginationInfo">Page 1</span>
+            <button id="nextPageBtn" disabled>Suivant →</button>
+        </div>
+
+        <!-- Retour -->
+        <a href="/dashboard-modern.html" class="back-link">
+            <span>←</span> Retour au tableau de bord
+        </a>
+    </div>
+
+    <script>
+        const API_URL = 'https://quiz-de-carabin-backend.onrender.com/api/notifications';
+        let currentPage = 1;
+        let currentFilter = 'all';
+        let totalPages = 1;
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            setupEventListeners();
+            loadNotifications();
+        });
+
+        // Vérifier authentification
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Filtres
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFilter = tab.dataset.filter;
+                    currentPage = 1;
+                    loadNotifications();
+                });
+            });
+
+            // Actions
+            document.getElementById('markAllReadBtn').addEventListener('click', markAllAsRead);
+            document.getElementById('deleteReadBtn').addEventListener('click', deleteAllRead);
+            document.getElementById('prevPageBtn').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadNotifications();
+                }
+            });
+            document.getElementById('nextPageBtn').addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadNotifications();
+                }
+            });
+        }
+
+        // Charger les notifications
+        async function loadNotifications() {
+            const listContainer = document.getElementById('notificationsList');
+            listContainer.innerHTML = '<div class="loading-state"><div class="loader"></div><p>Chargement...</p></div>';
+
+            try {
+                const token = localStorage.getItem('token');
+                let url = `${API_URL}?page=${currentPage}&limit=20`;
+                
+                if (currentFilter === 'unread') {
+                    url += '&unreadOnly=true';
+                }
+
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Erreur chargement');
+
+                const data = await response.json();
+                
+                // Filtrer par type si nécessaire
+                let notifications = data.notifications;
+                if (currentFilter === 'premium') {
+                    notifications = notifications.filter(n => 
+                        ['premium_activated', 'premium_expiring_soon', 'premium_expired', 'payment_success'].includes(n.type)
+                    );
+                }
+                if (currentFilter === 'quiz') {
+                    notifications = notifications.filter(n => 
+                        ['new_record', 'new_quiz', 'weekly_summary'].includes(n.type)
+                    );
+                }
+
+                if (notifications.length === 0) {
+                    showEmptyState();
+                } else {
+                    renderNotifications(notifications);
+                }
+
+                // Pagination
+                totalPages = data.pagination.pages;
+                updatePagination(data.pagination);
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Erreur de chargement</h3>
+                        <p>Impossible de charger les notifications</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Afficher état vide
+        function showEmptyState() {
+            document.getElementById('notificationsList').innerHTML = `
+                <div class="empty-state">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                    <h3>Aucune notification</h3>
+                    <p>Vous n'avez pas de notifications pour le moment</p>
+                </div>
+            `;
+        }
+
+        // Afficher les notifications
+        function renderNotifications(notifications) {
+            const html = notifications.map(notif => {
+                const priorityClass = notif.priority === 'urgent' ? 'priority-urgent' : 
+                                     notif.priority === 'high' ? 'priority-high' : 'priority-normal';
+                
+                return `
+                    <div class="notification-item-full ${notif.read ? '' : 'unread'}" 
+                         data-id="${notif._id}"
+                         onclick="handleNotificationClick('${notif._id}', '${notif.link || ''}')">
+                        <div class="notification-icon-large">${notif.icon}</div>
+                        <div class="notification-content-full">
+                            <div class="notification-title-full">${notif.title}</div>
+                            <div class="notification-message-full">${notif.message}</div>
+                            <div class="notification-meta">
+                                <span>${formatTime(notif.createdAt)}</span>
+                                ${notif.priority !== 'normal' ? `<span class="priority-badge ${priorityClass}">${notif.priority}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="btn-delete" onclick="event.stopPropagation(); deleteNotification('${notif._id}')">
+                                Supprimer
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('notificationsList').innerHTML = html;
+        }
+
+        // Mettre à jour pagination
+        function updatePagination(pagination) {
+            const container = document.getElementById('paginationContainer');
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+            const info = document.getElementById('paginationInfo');
+
+            if (pagination.pages > 1) {
+                container.style.display = 'flex';
+                prevBtn.disabled = currentPage === 1;
+                nextBtn.disabled = currentPage === pagination.pages;
+                info.textContent = `Page ${currentPage} sur ${pagination.pages}`;
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        // Gérer clic notification
+        async function handleNotificationClick(notifId, link) {
+            try {
+                const token = localStorage.getItem('token');
+                
+                await fetch(`${API_URL}/${notifId}/read`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (link) {
+                    window.location.href = link;
+                } else {
+                    loadNotifications();
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        // Marquer toutes comme lues
+        async function markAllAsRead() {
+            try {
+                const token = localStorage.getItem('token');
+                
+                const response = await fetch(`${API_URL}/read-all`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    loadNotifications();
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        // Supprimer toutes les lues
+        async function deleteAllRead() {
+            if (!confirm('Supprimer toutes les notifications lues ?')) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                
+                const response = await fetch(`${API_URL}/read`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    loadNotifications();
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        // Supprimer une notification
+        async function deleteNotification(notifId) {
+            try {
+                const token = localStorage.getItem('token');
+                
+                const response = await fetch(`${API_URL}/${notifId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    loadNotifications();
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        // Formater le temps
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            if (seconds < 60) return 'À l\'instant';
+            if (seconds < 3600) return `Il y a ${Math.floor(seconds / 60)} min`;
+            if (seconds < 86400) return `Il y a ${Math.floor(seconds / 3600)} h`;
+            if (seconds < 604800) return `Il y a ${Math.floor(seconds / 86400)} j`;
+            
+            return date.toLocaleDateString('fr-FR', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    </script>
+</body>
+</html>

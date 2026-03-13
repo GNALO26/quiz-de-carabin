@@ -105,6 +105,13 @@ exports.register = async (req, res) => {
 
     console.log(`✅ Compte créé avec succès pour ${user.email}`);
 
+    // Dans backend/controllers/authController.js
+// Fonction register, après await user.save()
+
+// ✅ AJOUTER NOTIFICATION IN-APP
+const NotificationService = require('../services/notificationService');
+await NotificationService.notifyWelcome(user._id, user.name);
+
     res.status(201).json({
       success: true,
       message: "Compte créé avec succès",
@@ -532,6 +539,14 @@ exports.resetPassword = async (req, res) => {
 
     console.log(`✅ Mot de passe réinitialisé pour ${user.email}`);
 
+// Dans backend/controllers/authController.js
+// Fonction resetPassword, avant res.json({ success: true, ... })
+
+// ✅ AJOUTER NOTIFICATION IN-APP
+const NotificationService = require('../services/notificationService');
+await NotificationService.notifyPasswordChanged(user._id);
+
+// res.json({ success: true, ... })
     res.status(200).json({
       success: true,
       message: "Mot de passe réinitialisé avec succès"

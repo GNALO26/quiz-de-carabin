@@ -8,7 +8,7 @@
 
 const express = require('express');
 const router = express.Router();
-const notificationController = require('../controllers/notificationController');
+const notificationController = require('../controllers/emailNotificationController');
 const auth = require('../middleware/auth');
 
 // Note: Pour les routes admin, ajoute un middleware adminAuth si tu en as un

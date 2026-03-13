@@ -86,6 +86,31 @@ exports.submitQuiz = async (req, res) => {
       await user.save();
     }
 
+    // Dans backend/controllers/quizController.js
+// Après calcul du score et sauvegarde dans quizHistory
+
+// ✅ VÉRIFIER SI NOUVEAU RECORD
+const NotificationService = require('../services/notificationService');
+
+// Récupérer le meilleur score précédent pour ce quiz
+const previousAttempts = user.quizHistory.filter(
+  h => h.quizId.toString() === quizId.toString()
+);
+
+if (previousAttempts.length > 0) {
+  const previousBest = Math.max(...previousAttempts.map(a => a.score));
+  const currentScore = (correctAnswers / totalQuestions) * 100;
+  
+  if (currentScore > previousBest) {
+    await NotificationService.notifyNewRecord(
+      user._id,
+      quiz.title,
+      Math.round(currentScore),
+      Math.round(previousBest)
+    );
+  }
+}
+
     res.status(200).json({
       success: true,
       score,

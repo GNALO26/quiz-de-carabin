@@ -1,211 +1,76 @@
-/**
- * ================================================================
- * NOTIFICATION CONTROLLER - QUIZ DE CARABIN
- * ================================================================
- * Controller pour gérer les notifications (admin)
- * ================================================================
- */
-
-const notificationService = require('../services/notificationService');
 const Notification = require('../models/Notification');
-const Quiz = require('../models/Quiz');
 
 /**
- * ================================================================
- * POST /api/notifications/quiz/:quizId
- * Envoyer notification pour un nouveau quiz
- * ================================================================
+ * Récupérer toutes les notifications de l'utilisateur connecté
  */
-const sendNewQuizNotification = async (req, res) => {
+const getNotifications = async (req, res) => {
   try {
-    const { quizId } = req.params;
-
-    // Vérifier que le quiz existe
-    const quiz = await Quiz.findById(quizId);
-
-    if (!quiz) {
-      return res.status(404).json({
-        success: false,
-        message: 'Quiz non trouvé'
-      });
+    const { page = 1, limit = 20, unreadOnly = false } = req.query;
+    
+    const query = { userId: req.user._id };
+    if (unreadOnly === 'true') {
+      query.read = false;
     }
-
-    // Envoyer les notifications
-    const result = await notificationService.notifyNewQuiz(quiz);
-
-    if (result.success) {
-      res.json({
-        success: true,
-        message: `Notification envoyée à ${result.sent} utilisateur(s)`,
-        data: {
-          sent: result.sent,
-          failed: result.failed,
-          total: result.total,
-          notificationId: result.notificationId
-        }
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Erreur lors de l\'envoi des notifications',
-        error: result.error
-      });
-    }
-
-  } catch (error) {
-    console.error('❌ Erreur sendNewQuizNotification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'envoi des notifications'
-    });
-  }
-};
-
-/**
- * ================================================================
- * POST /api/notifications/weekly-digest
- * Envoyer le digest hebdomadaire
- * ================================================================
- */
-const sendWeeklyDigest = async (req, res) => {
-  try {
-    const result = await notificationService.sendWeeklyDigest();
-
-    if (result.success) {
-      res.json({
-        success: true,
-        message: `Digest envoyé à ${result.sent} utilisateur(s)`,
-        sent: result.sent
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Erreur lors de l\'envoi du digest'
-      });
-    }
-
-  } catch (error) {
-    console.error('❌ Erreur sendWeeklyDigest:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'envoi'
-    });
-  }
-};
-
-/**
- * ================================================================
- * POST /api/notifications/premium-expiring
- * Envoyer rappels expiration Premium
- * ================================================================
- */
-const sendPremiumExpiringNotifications = async (req, res) => {
-  try {
-    const result = await notificationService.notifyPremiumExpiring();
-
-    if (result.success) {
-      res.json({
-        success: true,
-        message: `Rappels envoyés à ${result.sent} utilisateur(s)`,
-        sent: result.sent
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Erreur lors de l\'envoi des rappels'
-      });
-    }
-
-  } catch (error) {
-    console.error('❌ Erreur sendPremiumExpiringNotifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'envoi'
-    });
-  }
-};
-
-/**
- * ================================================================
- * GET /api/notifications/history
- * Historique des notifications envoyées
- * ================================================================
- */
-const getNotificationHistory = async (req, res) => {
-  try {
-    const { page = 1, limit = 20, type } = req.query;
-
-    const query = {};
-    if (type) query.type = type;
 
     const notifications = await Notification.find(query)
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .select('type subject stats status createdAt sentAt');
+      .skip((parseInt(page) - 1) * parseInt(limit));
 
     const total = await Notification.countDocuments(query);
+    const unreadCount = await Notification.getUnreadCount(req.user._id);
 
-    res.json({
+    res.status(200).json({
       success: true,
-      data: notifications,
+      notifications,
       pagination: {
+        total,
         page: parseInt(page),
         limit: parseInt(limit),
-        total: total,
         pages: Math.ceil(total / parseInt(limit))
-      }
+      },
+      unreadCount
     });
-
   } catch (error) {
-    console.error('❌ Erreur getNotificationHistory:', error);
+    console.error('❌ Erreur getNotifications:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la récupération de l\'historique'
+      message: 'Erreur lors de la récupération des notifications'
     });
   }
 };
 
 /**
- * ================================================================
- * GET /api/notifications/stats
- * Statistiques des notifications
- * ================================================================
+ * Obtenir le nombre de notifications non lues
  */
-const getNotificationStats = async (req, res) => {
+const getUnreadCount = async (req, res) => {
   try {
-    const { period = 30 } = req.query;
-
-    const stats = await Notification.getGlobalStats(parseInt(period));
-
-    res.json({
+    const count = await Notification.getUnreadCount(req.user._id);
+    
+    res.status(200).json({
       success: true,
-      period: parseInt(period),
-      stats: stats
+      count
     });
-
   } catch (error) {
-    console.error('❌ Erreur getNotificationStats:', error);
+    console.error('❌ Erreur getUnreadCount:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la récupération des stats'
+      message: 'Erreur lors du comptage des notifications'
     });
   }
 };
 
 /**
- * ================================================================
- * GET /api/notifications/:id
- * Détails d'une notification
- * ================================================================
+ * Marquer une notification comme lue
  */
-const getNotificationDetails = async (req, res) => {
+const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const notification = await Notification.findById(id)
-      .populate('recipients.userId', 'name email')
-      .populate('metadata.quizId', 'title subject');
+    
+    const notification = await Notification.findOne({
+      _id: id,
+      userId: req.user._id
+    });
 
     if (!notification) {
       return res.status(404).json({
@@ -214,37 +79,102 @@ const getNotificationDetails = async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
-      data: {
-        id: notification._id,
-        type: notification.type,
-        subject: notification.subject,
-        status: notification.status,
-        stats: notification.stats,
-        openRate: notification.getOpenRate(),
-        clickRate: notification.getClickRate(),
-        metadata: notification.metadata,
-        recipients: notification.recipients,
-        createdAt: notification.createdAt,
-        sentAt: notification.sentAt
-      }
-    });
+    await notification.markAsRead();
 
+    res.status(200).json({
+      success: true,
+      message: 'Notification marquée comme lue',
+      notification
+    });
   } catch (error) {
-    console.error('❌ Erreur getNotificationDetails:', error);
+    console.error('❌ Erreur markAsRead:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la récupération des détails'
+      message: 'Erreur lors de la mise à jour'
+    });
+  }
+};
+
+/**
+ * Marquer toutes les notifications comme lues
+ */
+const markAllAsRead = async (req, res) => {
+  try {
+    await Notification.markAllAsRead(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Toutes les notifications marquées comme lues'
+    });
+  } catch (error) {
+    console.error('❌ Erreur markAllAsRead:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour'
+    });
+  }
+};
+
+/**
+ * Supprimer une notification
+ */
+const deleteNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const notification = await Notification.findOneAndDelete({
+      _id: id,
+      userId: req.user._id
+    });
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification non trouvée'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification supprimée'
+    });
+  } catch (error) {
+    console.error('❌ Erreur deleteNotification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression'
+    });
+  }
+};
+
+/**
+ * Supprimer toutes les notifications lues
+ */
+const deleteAllRead = async (req, res) => {
+  try {
+    const result = await Notification.deleteMany({
+      userId: req.user._id,
+      read: true
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `${result.deletedCount} notification(s) supprimée(s)`
+    });
+  } catch (error) {
+    console.error('❌ Erreur deleteAllRead:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression'
     });
   }
 };
 
 module.exports = {
-  sendNewQuizNotification,
-  sendWeeklyDigest,
-  sendPremiumExpiringNotifications,
-  getNotificationHistory,
-  getNotificationStats,
-  getNotificationDetails
+  getNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  deleteAllRead
 };

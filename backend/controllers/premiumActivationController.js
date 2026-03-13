@@ -78,6 +78,16 @@ const validateActivationCode = async (req, res) => {
     await user.save();
     console.log('✅ Premium activé user');
 
+    // Dans backend/controllers/premiumActivationController.js
+// Fonction validateActivationCode, après user.save()
+
+// ✅ AJOUTER NOTIFICATION IN-APP
+const NotificationService = require('../services/notificationService');
+await NotificationService.notifyPremiumActivated(
+  user._id,
+  user.premiumExpiresAt
+);
+
     // Email bienvenue
     try {
       await emailService.sendPremiumActivationEmail(

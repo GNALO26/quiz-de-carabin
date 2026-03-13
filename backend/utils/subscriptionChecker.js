@@ -62,7 +62,15 @@ const warnExpiringSubscriptions = async () => {
       user.lastExpiryWarning = new Date();
       await user.save();
     }
-    
+    // Dans backend/utils/subscriptionChecker.js
+// Après chaque appel à emailService.sendPremiumExpiryWarning
+
+const NotificationService = require('../services/notificationService');
+await NotificationService.notifyPremiumExpiringSoon(
+  user._id,
+  daysLeft,
+  user.premiumExpiresAt
+);
     console.log('✅ [CRON] Notifications envoyées');
     
   } catch (error) {
@@ -90,7 +98,7 @@ const sendExpiryNotification = async (user) => {
           </a>
           <p style="color: #666; font-size: 14px;">
             L'équipe Quiz de Carabin<br>
-            📧 support@quizdecarabin.bj
+            📧 quizdecarabin4@gmail.com
           </p>
         </div>
       `
@@ -129,7 +137,7 @@ const sendExpiryWarning = async (user) => {
           </a>
           <p style="color: #666; font-size: 14px;">
             L'équipe Quiz de Carabin<br>
-            📧 support@quizdecarabin.bj
+            📧 quizdecarabin4@gmail.com
           </p>
         </div>
       `

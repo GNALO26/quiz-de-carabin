@@ -130,6 +130,19 @@ const startAllJobs = () => {
   console.log('✅ Calcul stats: Tous les jours à 03h00');
   
   console.log('\n✅ Toutes les tâches automatiques sont actives\n');
+
+  function startAllJobs() {
+  console.log('⏰ Démarrage des tâches planifiées (cron jobs)...');
+  
+  checkExpiredPremium.start();
+  sendExpiryWarnings.start();
+  weeklyCleanup.start();
+  monthlyReport.start();
+  checkPendingTransactions.start();
+  cleanExpiredNotifications.start(); // ← AJOUTER CETTE LIGNE
+  
+  console.log('✅ Toutes les tâches planifiées sont actives');
+};
 };
 
 /**
@@ -168,6 +181,32 @@ const runManually = {
     return await User.deactivateExpiredPremium();
   }
 };
+// À ajouter à la fin de backend/cronJobs.js, AVANT module.exports
+
+/**
+ * ================================================================
+ * NETTOYAGE DES NOTIFICATIONS EXPIRÉES
+ * Chaque jour à 3h du matin
+ * ================================================================
+ */
+const cleanExpiredNotifications = cron.schedule('0 3 * * *', async () => {
+  console.log('\n🧹 ===== NETTOYAGE NOTIFICATIONS EXPIRÉES =====');
+  console.log('⏰', new Date().toLocaleString('fr-FR'));
+
+  try {
+    const NotificationService = require('./services/notificationService');
+    const result = await NotificationService.cleanExpiredNotifications();
+    
+    console.log('✅ Nettoyage terminé');
+  } catch (error) {
+    console.error('❌ Erreur nettoyage notifications:', error);
+  }
+
+  console.log('==============================================\n');
+}, {
+  scheduled: false,
+  timezone: "Africa/Porto-Novo"
+});
 
 module.exports = {
   startAllJobs,

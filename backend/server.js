@@ -215,7 +215,8 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   app.use('/api/auth', tokenRoutes);
   app.use('/api/stats', statsRoutes);
   app.use('/api/premium', require('./routes/premiumActivationRoutes'));
-  app.use('/api/notifications', notificationRoutes);
+  app.use('/api/email-notifications', require('./routes/emailNotificationRoutes'));
+app.use('/api/notifications', require('./routes/notifications'));
   app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
   app.use(handleDatabaseError);
