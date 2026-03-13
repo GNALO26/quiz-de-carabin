@@ -107,4 +107,5 @@ notificationSchema.statics.getUnreadCount = function(userId) {
   return this.countDocuments({ userId, read: false });
 };
 
-module.exports = mongoose.model('Notification', notificationSchema);
+// ✅ Empêcher la redéfinition du modèle
+module.exports = mongoose.models.Notification || mongoose.model('Notification', notificationSchema);
