@@ -53,7 +53,7 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
   const tokenRoutes = require('./routes/token');
   const webhookRoutes = require('./routes/webhook');
   const statsRoutes = require('./routes/stats');
-  const notificationRoutes = require('./routes/notificationRoutes');
+  const notificationRoutes = require('./routes/notifications');
 
   const app = express();
 
